@@ -13,6 +13,8 @@ import java.util.Set;
 import org.joda.beans.Bean;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
+import org.joda.beans.ImmutablePreBuild;
+import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.Property;
@@ -48,8 +50,7 @@ import com.opengamma.strata.collect.id.StandardId;
  * <p>
  * The accrual factor between two dates is computed {@code dayCount}. 
  * The legal entity of this fixed coupon bond is identified by {@link StandardId}.
- * The enum, {@link YieldConvention}, specifies the yield computation convention,
- * and {@link DaysAdjustment} does the number of days between valuation date and settlement date. 
+ * The enum, {@link YieldConvention}, specifies the yield computation convention.
  */
 @BeanDefinition
 public final class FixedCouponBond
@@ -91,6 +92,9 @@ public final class FixedCouponBond
    * <p>
    * The conversion from dates to a numerical value is made based on this day count. 
    * For the fixed bond, the day count convention is used to compute accrued interest.
+   * <p>
+   * Note that the year fraction of a coupon payment is computed based on the unadjusted
+   * dates in the schedule.
    */
   @PropertyDefinition(validate = "notNull")
   private final DayCount dayCount;
@@ -118,22 +122,54 @@ public final class FixedCouponBond
    */
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment settlementDateOffset;
+  /**
+   * Ex-coupon period. 
+   * <p>
+   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+   * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+   * The difference between the two is the ex-coupon period (measured in days).
+   * <p>
+   * Because the detachment date is not after the coupon date, the number of days
+   * stored in this field should be zero or negative. 
+   */
+  @PropertyDefinition(validate = "notNull")
+  private final DaysAdjustment exCouponPeriod;
+
+  //-------------------------------------------------------------------------
+  @ImmutablePreBuild
+  private static void preBuild(Builder builder) {
+    if (builder.exCouponPeriod == null) {
+      builder.exCouponPeriod = DaysAdjustment.NONE;
+    }
+  }
+
+  @ImmutableValidator
+  private void validate() {
+    ArgChecker.isTrue(settlementDateOffset.getDays() >= 0d, "The settlement date offset must be non-negative");
+    ArgChecker.isTrue(exCouponPeriod.getDays() <= 0d,
+        "The ex-coupon period is measured from the payment date, thus the days must be non-positive");
+  }
 
   //-------------------------------------------------------------------------
   @Override
   public ExpandedFixedCouponBond expand() {
-    Schedule accrualSchedule = periodicSchedule.createSchedule();
+    Schedule adjustedSchedule = periodicSchedule.createSchedule();
+    Schedule unadjustedSchedule = adjustedSchedule.toUnadjusted();
     ImmutableList.Builder<FixedCouponBondPaymentPeriod> accrualPeriods = ImmutableList.builder();
-    for (int i = 0; i < accrualSchedule.size(); i++) {
-      SchedulePeriod period = accrualSchedule.getPeriod(i);
+    for (int i = 0; i < adjustedSchedule.size(); i++) {
+      SchedulePeriod period = adjustedSchedule.getPeriod(i);
+      SchedulePeriod unadjustedPeriod = SchedulePeriod.of(period.getUnadjustedStartDate(),
+          period.getUnadjustedEndDate());
       accrualPeriods.add(FixedCouponBondPaymentPeriod.builder()
           .unadjustedStartDate(period.getUnadjustedStartDate())
           .unadjustedEndDate(period.getUnadjustedEndDate())
           .startDate(period.getStartDate())
           .endDate(period.getEndDate())
+          .detachmentDate(exCouponPeriod.adjust(period.getEndDate()))
           .notional(notional)
           .currency(currency)
           .fixedRate(fixedRate)
+          .yearFraction(unadjustedPeriod.yearFraction(dayCount, unadjustedSchedule))
           .build());
     }
     ImmutableList<FixedCouponBondPaymentPeriod> periodicPayments = accrualPeriods.build();
@@ -184,7 +220,8 @@ public final class FixedCouponBond
       DayCount dayCount,
       YieldConvention yieldConvention,
       StandardId legalEntityId,
-      DaysAdjustment settlementDateOffset) {
+      DaysAdjustment settlementDateOffset,
+      DaysAdjustment exCouponPeriod) {
     JodaBeanUtils.notNull(currency, "currency");
     ArgChecker.notNegative(notional, "notional");
     JodaBeanUtils.notNull(periodicSchedule, "periodicSchedule");
@@ -192,6 +229,7 @@ public final class FixedCouponBond
     JodaBeanUtils.notNull(yieldConvention, "yieldConvention");
     JodaBeanUtils.notNull(legalEntityId, "legalEntityId");
     JodaBeanUtils.notNull(settlementDateOffset, "settlementDateOffset");
+    JodaBeanUtils.notNull(exCouponPeriod, "exCouponPeriod");
     this.currency = currency;
     this.notional = notional;
     this.periodicSchedule = periodicSchedule;
@@ -200,6 +238,8 @@ public final class FixedCouponBond
     this.yieldConvention = yieldConvention;
     this.legalEntityId = legalEntityId;
     this.settlementDateOffset = settlementDateOffset;
+    this.exCouponPeriod = exCouponPeriod;
+    validate();
   }
 
   @Override
@@ -270,6 +310,9 @@ public final class FixedCouponBond
    * <p>
    * The conversion from dates to a numerical value is made based on this day count.
    * For the fixed bond, the day count convention is used to compute accrued interest.
+   * <p>
+   * Note that the year fraction of a coupon payment is computed based on the unadjusted
+   * dates in the schedule.
    * @return the value of the property, not null
    */
   public DayCount getDayCount() {
@@ -314,6 +357,22 @@ public final class FixedCouponBond
 
   //-----------------------------------------------------------------------
   /**
+   * Gets ex-coupon period.
+   * <p>
+   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+   * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+   * The difference between the two is the ex-coupon period (measured in days).
+   * <p>
+   * Because the detachment date is not after the coupon date, the number of days
+   * stored in this field should be zero or negative.
+   * @return the value of the property, not null
+   */
+  public DaysAdjustment getExCouponPeriod() {
+    return exCouponPeriod;
+  }
+
+  //-----------------------------------------------------------------------
+  /**
    * Returns a builder that allows this bean to be mutated.
    * @return the mutable builder, not null
    */
@@ -335,7 +394,8 @@ public final class FixedCouponBond
           JodaBeanUtils.equal(getDayCount(), other.getDayCount()) &&
           JodaBeanUtils.equal(getYieldConvention(), other.getYieldConvention()) &&
           JodaBeanUtils.equal(getLegalEntityId(), other.getLegalEntityId()) &&
-          JodaBeanUtils.equal(getSettlementDateOffset(), other.getSettlementDateOffset());
+          JodaBeanUtils.equal(getSettlementDateOffset(), other.getSettlementDateOffset()) &&
+          JodaBeanUtils.equal(getExCouponPeriod(), other.getExCouponPeriod());
     }
     return false;
   }
@@ -351,12 +411,13 @@ public final class FixedCouponBond
     hash = hash * 31 + JodaBeanUtils.hashCode(getYieldConvention());
     hash = hash * 31 + JodaBeanUtils.hashCode(getLegalEntityId());
     hash = hash * 31 + JodaBeanUtils.hashCode(getSettlementDateOffset());
+    hash = hash * 31 + JodaBeanUtils.hashCode(getExCouponPeriod());
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(288);
+    StringBuilder buf = new StringBuilder(320);
     buf.append("FixedCouponBond{");
     buf.append("currency").append('=').append(getCurrency()).append(',').append(' ');
     buf.append("notional").append('=').append(getNotional()).append(',').append(' ');
@@ -365,7 +426,8 @@ public final class FixedCouponBond
     buf.append("dayCount").append('=').append(getDayCount()).append(',').append(' ');
     buf.append("yieldConvention").append('=').append(getYieldConvention()).append(',').append(' ');
     buf.append("legalEntityId").append('=').append(getLegalEntityId()).append(',').append(' ');
-    buf.append("settlementDateOffset").append('=').append(JodaBeanUtils.toString(getSettlementDateOffset()));
+    buf.append("settlementDateOffset").append('=').append(getSettlementDateOffset()).append(',').append(' ');
+    buf.append("exCouponPeriod").append('=').append(JodaBeanUtils.toString(getExCouponPeriod()));
     buf.append('}');
     return buf.toString();
   }
@@ -421,6 +483,11 @@ public final class FixedCouponBond
     private final MetaProperty<DaysAdjustment> settlementDateOffset = DirectMetaProperty.ofImmutable(
         this, "settlementDateOffset", FixedCouponBond.class, DaysAdjustment.class);
     /**
+     * The meta-property for the {@code exCouponPeriod} property.
+     */
+    private final MetaProperty<DaysAdjustment> exCouponPeriod = DirectMetaProperty.ofImmutable(
+        this, "exCouponPeriod", FixedCouponBond.class, DaysAdjustment.class);
+    /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
@@ -432,7 +499,8 @@ public final class FixedCouponBond
         "dayCount",
         "yieldConvention",
         "legalEntityId",
-        "settlementDateOffset");
+        "settlementDateOffset",
+        "exCouponPeriod");
 
     /**
      * Restricted constructor.
@@ -459,6 +527,8 @@ public final class FixedCouponBond
           return legalEntityId;
         case 135924714:  // settlementDateOffset
           return settlementDateOffset;
+        case 1408037338:  // exCouponPeriod
+          return exCouponPeriod;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -543,6 +613,14 @@ public final class FixedCouponBond
       return settlementDateOffset;
     }
 
+    /**
+     * The meta-property for the {@code exCouponPeriod} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<DaysAdjustment> exCouponPeriod() {
+      return exCouponPeriod;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
@@ -563,6 +641,8 @@ public final class FixedCouponBond
           return ((FixedCouponBond) bean).getLegalEntityId();
         case 135924714:  // settlementDateOffset
           return ((FixedCouponBond) bean).getSettlementDateOffset();
+        case 1408037338:  // exCouponPeriod
+          return ((FixedCouponBond) bean).getExCouponPeriod();
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -592,6 +672,7 @@ public final class FixedCouponBond
     private YieldConvention yieldConvention;
     private StandardId legalEntityId;
     private DaysAdjustment settlementDateOffset;
+    private DaysAdjustment exCouponPeriod;
 
     /**
      * Restricted constructor.
@@ -612,6 +693,7 @@ public final class FixedCouponBond
       this.yieldConvention = beanToCopy.getYieldConvention();
       this.legalEntityId = beanToCopy.getLegalEntityId();
       this.settlementDateOffset = beanToCopy.getSettlementDateOffset();
+      this.exCouponPeriod = beanToCopy.getExCouponPeriod();
     }
 
     //-----------------------------------------------------------------------
@@ -634,6 +716,8 @@ public final class FixedCouponBond
           return legalEntityId;
         case 135924714:  // settlementDateOffset
           return settlementDateOffset;
+        case 1408037338:  // exCouponPeriod
+          return exCouponPeriod;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -665,6 +749,9 @@ public final class FixedCouponBond
           break;
         case 135924714:  // settlementDateOffset
           this.settlementDateOffset = (DaysAdjustment) newValue;
+          break;
+        case 1408037338:  // exCouponPeriod
+          this.exCouponPeriod = (DaysAdjustment) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -698,6 +785,7 @@ public final class FixedCouponBond
 
     @Override
     public FixedCouponBond build() {
+      preBuild(this);
       return new FixedCouponBond(
           currency,
           notional,
@@ -706,7 +794,8 @@ public final class FixedCouponBond
           dayCount,
           yieldConvention,
           legalEntityId,
-          settlementDateOffset);
+          settlementDateOffset,
+          exCouponPeriod);
     }
 
     //-----------------------------------------------------------------------
@@ -769,6 +858,9 @@ public final class FixedCouponBond
      * <p>
      * The conversion from dates to a numerical value is made based on this day count.
      * For the fixed bond, the day count convention is used to compute accrued interest.
+     * <p>
+     * Note that the year fraction of a coupon payment is computed based on the unadjusted
+     * dates in the schedule.
      * @param dayCount  the new value, not null
      * @return this, for chaining, not null
      */
@@ -820,10 +912,28 @@ public final class FixedCouponBond
       return this;
     }
 
+    /**
+     * Sets ex-coupon period.
+     * <p>
+     * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+     * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+     * The difference between the two is the ex-coupon period (measured in days).
+     * <p>
+     * Because the detachment date is not after the coupon date, the number of days
+     * stored in this field should be zero or negative.
+     * @param exCouponPeriod  the new value, not null
+     * @return this, for chaining, not null
+     */
+    public Builder exCouponPeriod(DaysAdjustment exCouponPeriod) {
+      JodaBeanUtils.notNull(exCouponPeriod, "exCouponPeriod");
+      this.exCouponPeriod = exCouponPeriod;
+      return this;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(288);
+      StringBuilder buf = new StringBuilder(320);
       buf.append("FixedCouponBond.Builder{");
       buf.append("currency").append('=').append(JodaBeanUtils.toString(currency)).append(',').append(' ');
       buf.append("notional").append('=').append(JodaBeanUtils.toString(notional)).append(',').append(' ');
@@ -832,7 +942,8 @@ public final class FixedCouponBond
       buf.append("dayCount").append('=').append(JodaBeanUtils.toString(dayCount)).append(',').append(' ');
       buf.append("yieldConvention").append('=').append(JodaBeanUtils.toString(yieldConvention)).append(',').append(' ');
       buf.append("legalEntityId").append('=').append(JodaBeanUtils.toString(legalEntityId)).append(',').append(' ');
-      buf.append("settlementDateOffset").append('=').append(JodaBeanUtils.toString(settlementDateOffset));
+      buf.append("settlementDateOffset").append('=').append(JodaBeanUtils.toString(settlementDateOffset)).append(',').append(' ');
+      buf.append("exCouponPeriod").append('=').append(JodaBeanUtils.toString(exCouponPeriod));
       buf.append('}');
       return buf.toString();
     }

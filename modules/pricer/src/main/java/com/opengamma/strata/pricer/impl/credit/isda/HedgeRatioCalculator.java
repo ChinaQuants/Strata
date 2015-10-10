@@ -5,13 +5,13 @@
  */
 package com.opengamma.strata.pricer.impl.credit.isda;
 
-import com.opengamma.analytics.math.linearalgebra.LUDecompositionCommons;
-import com.opengamma.analytics.math.linearalgebra.LUDecompositionResult;
-import com.opengamma.analytics.math.matrix.DoubleMatrix1D;
-import com.opengamma.analytics.math.matrix.DoubleMatrix2D;
-import com.opengamma.analytics.math.matrix.MatrixAlgebra;
-import com.opengamma.analytics.math.matrix.OGMatrixAlgebra;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.math.impl.linearalgebra.LUDecompositionCommons;
+import com.opengamma.strata.math.impl.linearalgebra.LUDecompositionResult;
+import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
+import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.math.impl.matrix.MatrixAlgebra;
+import com.opengamma.strata.math.impl.matrix.OGMatrixAlgebra;
 
 /**
  * Calculates the hedge ratio.
@@ -184,7 +184,7 @@ public class HedgeRatioCalculator {
     ArgChecker.notNull(hedgeCDSSensitivities, "hedgeCDSSensitivities");
     int nRows = hedgeCDSSensitivities.getNumberOfRows();
     int nCols = hedgeCDSSensitivities.getNumberOfColumns();
-    ArgChecker.isTrue(nRows == cdsSensitivities.getNumberOfElements(), "Number of matrix rows does not match vector length");
+    ArgChecker.isTrue(nRows == cdsSensitivities.size(), "Number of matrix rows does not match vector length");
     if (nCols == nRows) {
       LUDecompositionCommons decomp = new LUDecompositionCommons();
       LUDecompositionResult luRes = decomp.evaluate(hedgeCDSSensitivities);
