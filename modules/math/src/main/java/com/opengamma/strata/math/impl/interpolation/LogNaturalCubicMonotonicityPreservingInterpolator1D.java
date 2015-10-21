@@ -18,11 +18,11 @@ import org.joda.beans.impl.light.LightMetaBean;
 
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.math.impl.function.PiecewisePolynomialWithSensitivityFunction1D;
 import com.opengamma.strata.math.impl.interpolation.data.ArrayInterpolator1DDataBundle;
 import com.opengamma.strata.math.impl.interpolation.data.Interpolator1DDataBundle;
 import com.opengamma.strata.math.impl.interpolation.data.Interpolator1DLogPiecewisePoynomialDataBundle;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
 
 /**
  * Find a interpolant F(x) = exp( f(x) ) where f(x) is a Natural cubic spline with Monotonicity cubic fileter. 
@@ -57,8 +57,8 @@ public final class LogNaturalCubicMonotonicityPreservingInterpolator1D
     JodaBeanUtils.notNull(data, "data");
     ArgChecker.isTrue(data instanceof Interpolator1DLogPiecewisePoynomialDataBundle);
     Interpolator1DLogPiecewisePoynomialDataBundle polyData = (Interpolator1DLogPiecewisePoynomialDataBundle) data;
-    DoubleMatrix1D res = FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value);
-    return Math.exp(res.getEntry(0));
+    DoubleArray res = FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value);
+    return Math.exp(res.get(0));
   }
 
   @Override
@@ -67,11 +67,11 @@ public final class LogNaturalCubicMonotonicityPreservingInterpolator1D
     JodaBeanUtils.notNull(data, "data");
     ArgChecker.isTrue(data instanceof Interpolator1DLogPiecewisePoynomialDataBundle);
     Interpolator1DLogPiecewisePoynomialDataBundle polyData = (Interpolator1DLogPiecewisePoynomialDataBundle) data;
-    DoubleMatrix1D resValue = FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value);
-    DoubleMatrix1D resDerivative = FUNC.differentiate(
+    DoubleArray resValue = FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value);
+    DoubleArray resDerivative = FUNC.differentiate(
         polyData.getPiecewisePolynomialResultsWithSensitivity(),
         value);
-    return Math.exp(resValue.getEntry(0)) * resDerivative.getEntry(0);
+    return Math.exp(resValue.get(0)) * resDerivative.get(0);
   }
 
   @Override
@@ -80,8 +80,8 @@ public final class LogNaturalCubicMonotonicityPreservingInterpolator1D
     ArgChecker.notNull(data, "data bundle");
     ArgChecker.isTrue(data instanceof Interpolator1DLogPiecewisePoynomialDataBundle);
     Interpolator1DLogPiecewisePoynomialDataBundle polyData = (Interpolator1DLogPiecewisePoynomialDataBundle) data;
-    double[] resSense = FUNC.nodeSensitivity(polyData.getPiecewisePolynomialResultsWithSensitivity(), value).getData();
-    double resValue = Math.exp(FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value).getEntry(0));
+    double[] resSense = FUNC.nodeSensitivity(polyData.getPiecewisePolynomialResultsWithSensitivity(), value).toArray();
+    double resValue = Math.exp(FUNC.evaluate(polyData.getPiecewisePolynomialResultsWithSensitivity(), value).get(0));
     double[] knotValues = data.getValues();
     int nKnots = knotValues.length;
     double[] res = new double[nKnots];

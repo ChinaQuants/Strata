@@ -6,11 +6,11 @@
 package com.opengamma.strata.math.impl.interpolation;
 
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.math.impl.function.PiecewisePolynomialFunction1D;
 import com.opengamma.strata.math.impl.interpolation.data.ArrayInterpolator1DDataBundle;
 import com.opengamma.strata.math.impl.interpolation.data.Interpolator1DDataBundle;
 import com.opengamma.strata.math.impl.interpolation.data.Interpolator1DPiecewisePoynomialWithExtraKnotsDataBundle;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
 
 /**
  * Wrapping {@link ProductPiecewisePolynomialInterpolator}
@@ -96,10 +96,10 @@ public class ProductPiecewisePolynomialInterpolator1D extends Interpolator1D {
   Double interpolate(Interpolator1DPiecewisePoynomialWithExtraKnotsDataBundle data, Double value,
       PiecewisePolynomialFunction1D function, double small) {
     if (Math.abs(value) < small) {
-      return function.differentiate(data.getPiecewisePolynomialResult(), value).getEntry(0);
+      return function.differentiate(data.getPiecewisePolynomialResult(), value).get(0);
     }
-    DoubleMatrix1D res = function.evaluate(data.getPiecewisePolynomialResult(), value);
-    return res.getEntry(0) / value;
+    DoubleArray res = function.evaluate(data.getPiecewisePolynomialResult(), value);
+    return res.get(0) / value;
   }
 
   /**
@@ -113,11 +113,11 @@ public class ProductPiecewisePolynomialInterpolator1D extends Interpolator1D {
   double firstDerivative(Interpolator1DPiecewisePoynomialWithExtraKnotsDataBundle data, Double value,
       PiecewisePolynomialFunction1D function, double small) {
     if (Math.abs(value) < small) {
-      return 0.5 * function.differentiateTwice(data.getPiecewisePolynomialResult(), value).getEntry(0);
+      return 0.5 * function.differentiateTwice(data.getPiecewisePolynomialResult(), value).get(0);
     }
-    DoubleMatrix1D resValue = function.evaluate(data.getPiecewisePolynomialResult(), value);
-    DoubleMatrix1D resDerivative = function.differentiate(data.getPiecewisePolynomialResult(), value);
-    return resDerivative.getEntry(0) / value - resValue.getEntry(0) / value / value;
+    DoubleArray resValue = function.evaluate(data.getPiecewisePolynomialResult(), value);
+    DoubleArray resDerivative = function.differentiate(data.getPiecewisePolynomialResult(), value);
+    return resDerivative.get(0) / value - resValue.get(0) / value / value;
   }
 
   /**
@@ -137,15 +137,15 @@ public class ProductPiecewisePolynomialInterpolator1D extends Interpolator1D {
     if (Math.abs(value) < small) {
       for (int i = 0; i < nData; ++i) {
         double den = Math.abs(data.getValues()[i]) < smallDiff ? eps : data.getValues()[i] * eps;
-        double up = function.differentiate(data.getPiecewisePolynomialResultUp()[i], value).getData()[0];
-        double dw = function.differentiate(data.getPiecewisePolynomialResultDw()[i], value).getData()[0];
+        double up = function.differentiate(data.getPiecewisePolynomialResultUp()[i], value).get(0);
+        double dw = function.differentiate(data.getPiecewisePolynomialResultDw()[i], value).get(0);
         res[i] = 0.5 * (up - dw) / den;
       }
     } else {
       for (int i = 0; i < nData; ++i) {
         double den = Math.abs(data.getValues()[i]) < smallDiff ? eps : data.getValues()[i] * eps;
-        double up = function.evaluate(data.getPiecewisePolynomialResultUp()[i], value).getData()[0];
-        double dw = function.evaluate(data.getPiecewisePolynomialResultDw()[i], value).getData()[0];
+        double up = function.evaluate(data.getPiecewisePolynomialResultUp()[i], value).get(0);
+        double dw = function.evaluate(data.getPiecewisePolynomialResultDw()[i], value).get(0);
         res[i] = 0.5 * (up - dw) / den / value;
       }
     }

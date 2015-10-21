@@ -55,20 +55,20 @@ public class PiecewisePolynomialWithSensitivityFunction1DTest {
         final PiecewisePolynomialResultsWithSensitivity resultUp = interps[k].interpolateWithSensitivity(xValues, yValuesUp);
         final PiecewisePolynomialResultsWithSensitivity resultDw = interps[k].interpolateWithSensitivity(xValues, yValuesDw);
 
-        final double[] valuesUp = FUNCTION.evaluate(resultUp, xKeys).getData()[0];
-        final double[] valuesDw = FUNCTION.evaluate(resultDw, xKeys).getData()[0];
-        final double[] diffUp = FUNCTION.differentiate(resultUp, xKeys).getData()[0];
-        final double[] diffDw = FUNCTION.differentiate(resultDw, xKeys).getData()[0];
+        final double[] valuesUp = FUNCTION.evaluate(resultUp, xKeys).rowArray(0);
+        final double[] valuesDw = FUNCTION.evaluate(resultDw, xKeys).rowArray(0);
+        final double[] diffUp = FUNCTION.differentiate(resultUp, xKeys).rowArray(0);
+        final double[] diffDw = FUNCTION.differentiate(resultDw, xKeys).rowArray(0);
         for (int i = 0; i < 10 * nData; ++i) {
           final double xKeyUp = xKeys[i] * (1. + EPS);
           final double xKeyDw = xKeys[i] * (1. - EPS);
           double valueFinite = 0.5 * (valuesUp[i] - valuesDw[i]) / EPS / yValues[j];
           double senseFinite = 0.5 * (diffUp[i] - diffDw[i]) / EPS / yValues[j];
-          final double resNodeSensitivity = FUNCTION.nodeSensitivity(result, xKeys[i]).getEntry(j);
-          final double resNodeSensitivityXkeyUp = FUNCTION.nodeSensitivity(result, xKeyUp).getEntry(j);
-          final double resNodeSensitivityXkeyDw = FUNCTION.nodeSensitivity(result, xKeyDw).getEntry(j);
+          final double resNodeSensitivity = FUNCTION.nodeSensitivity(result, xKeys[i]).get(j);
+          final double resNodeSensitivityXkeyUp = FUNCTION.nodeSensitivity(result, xKeyUp).get(j);
+          final double resNodeSensitivityXkeyDw = FUNCTION.nodeSensitivity(result, xKeyDw).get(j);
           final double senseFiniteXkey = 0.5 * (resNodeSensitivityXkeyUp - resNodeSensitivityXkeyDw) / EPS / xKeys[i];
-          final double resDiffNodeSensitivity = FUNCTION.differentiateNodeSensitivity(result, xKeys[i]).getEntry(j);
+          final double resDiffNodeSensitivity = FUNCTION.differentiateNodeSensitivity(result, xKeys[i]).get(j);
           assertEquals(valueFinite, resNodeSensitivity, Math.max(Math.abs(yValues[j]) * EPS, EPS));
           assertEquals(senseFinite, resDiffNodeSensitivity, Math.max(Math.abs(yValues[j]) * EPS, EPS));
           assertEquals(senseFiniteXkey, resDiffNodeSensitivity, Math.max(Math.abs(xKeys[i]) * EPS, EPS));
@@ -107,17 +107,17 @@ public class PiecewisePolynomialWithSensitivityFunction1DTest {
         final PiecewisePolynomialResultsWithSensitivity resultUp = interps[k].interpolateWithSensitivity(xValues, yValuesUp);
         final PiecewisePolynomialResultsWithSensitivity resultDw = interps[k].interpolateWithSensitivity(xValues, yValuesDw);
 
-        final double[] diffUp = FUNCTION.differentiateTwice(resultUp, xKeys).getData()[0];
-        final double[] diffDw = FUNCTION.differentiateTwice(resultDw, xKeys).getData()[0];
+        final double[] diffUp = FUNCTION.differentiateTwice(resultUp, xKeys).toArray()[0];
+        final double[] diffDw = FUNCTION.differentiateTwice(resultDw, xKeys).toArray()[0];
         for (int i = 0; i < 10 * nData; ++i) {
           final double xKeyUp = xKeys[i] * (1. + EPS);
           final double xKeyDw = xKeys[i] * (1. - EPS);
 
           double senseFinite = 0.5 * (diffUp[i] - diffDw[i]) / EPS / yValues[j];
-          final double resdiffNodeSensitivityXkeyUp = FUNCTION.differentiateNodeSensitivity(result, xKeyUp).getEntry(j);
-          final double resdiffNodeSensitivityXkeyDw = FUNCTION.differentiateNodeSensitivity(result, xKeyDw).getEntry(j);
+          final double resdiffNodeSensitivityXkeyUp = FUNCTION.differentiateNodeSensitivity(result, xKeyUp).get(j);
+          final double resdiffNodeSensitivityXkeyDw = FUNCTION.differentiateNodeSensitivity(result, xKeyDw).get(j);
           final double senseFiniteXkey = 0.5 * (resdiffNodeSensitivityXkeyUp - resdiffNodeSensitivityXkeyDw) / EPS / xKeys[i];
-          final double resDiffTwiceNodeSensitivity = FUNCTION.differentiateTwiceNodeSensitivity(result, xKeys[i]).getEntry(j);
+          final double resDiffTwiceNodeSensitivity = FUNCTION.differentiateTwiceNodeSensitivity(result, xKeys[i]).get(j);
 
           assertEquals(senseFinite, resDiffTwiceNodeSensitivity, Math.max(Math.abs(yValues[j]) * EPS, EPS));
           assertEquals(senseFiniteXkey, resDiffTwiceNodeSensitivity, Math.max(Math.abs(xKeys[i]) * EPS, EPS));
@@ -159,20 +159,20 @@ public class PiecewisePolynomialWithSensitivityFunction1DTest {
             final PiecewisePolynomialResultsWithSensitivity resultUp = interps[k].interpolateWithSensitivity(xValues, yValuesUp);
             final PiecewisePolynomialResultsWithSensitivity resultDw = interps[k].interpolateWithSensitivity(xValues, yValuesDw);
 
-            final double[] valuesUp = FUNCTION.evaluate(resultUp, xKeys).getData()[0];
-            final double[] valuesDw = FUNCTION.evaluate(resultDw, xKeys).getData()[0];
-            final double[] diffUp = FUNCTION.differentiate(resultUp, xKeys).getData()[0];
-            final double[] diffDw = FUNCTION.differentiate(resultDw, xKeys).getData()[0];
+            final double[] valuesUp = FUNCTION.evaluate(resultUp, xKeys).toArray()[0];
+            final double[] valuesDw = FUNCTION.evaluate(resultDw, xKeys).toArray()[0];
+            final double[] diffUp = FUNCTION.differentiate(resultUp, xKeys).toArray()[0];
+            final double[] diffDw = FUNCTION.differentiate(resultDw, xKeys).toArray()[0];
             for (int i = 0; i < 10 * nData; ++i) {
               final double xKeyUp = xKeys[i] * (1. + EPS);
               final double xKeyDw = xKeys[i] * (1. - EPS);
               double valueFinite = 0.5 * (valuesUp[i] - valuesDw[i]) / EPS / yValues[j + 1];
               double senseFinite = 0.5 * (diffUp[i] - diffDw[i]) / EPS / yValues[j + 1];
-              final double resNodeSensitivity = FUNCTION.nodeSensitivity(result, xKeys[i]).getEntry(j);
-              final double resNodeSensitivityXkeyUp = FUNCTION.nodeSensitivity(result, xKeyUp).getEntry(j);
-              final double resNodeSensitivityXkeyDw = FUNCTION.nodeSensitivity(result, xKeyDw).getEntry(j);
+              final double resNodeSensitivity = FUNCTION.nodeSensitivity(result, xKeys[i]).get(j);
+              final double resNodeSensitivityXkeyUp = FUNCTION.nodeSensitivity(result, xKeyUp).get(j);
+              final double resNodeSensitivityXkeyDw = FUNCTION.nodeSensitivity(result, xKeyDw).get(j);
               final double senseFiniteXkey = 0.5 * (resNodeSensitivityXkeyUp - resNodeSensitivityXkeyDw) / EPS / xKeys[i];
-              final double resDiffNodeSensitivity = FUNCTION.differentiateNodeSensitivity(result, xKeys[i]).getEntry(j);
+              final double resDiffNodeSensitivity = FUNCTION.differentiateNodeSensitivity(result, xKeys[i]).get(j);
               assertEquals(valueFinite, resNodeSensitivity, Math.max(Math.abs(yValues[j + 1]) * EPS, EPS));
               assertEquals(senseFinite, resDiffNodeSensitivity, Math.max(Math.abs(yValues[j + 1]) * EPS, EPS));
               assertEquals(senseFiniteXkey, resDiffNodeSensitivity, Math.max(Math.abs(xKeys[i]) * EPS, EPS));
@@ -216,17 +216,17 @@ public class PiecewisePolynomialWithSensitivityFunction1DTest {
             final PiecewisePolynomialResultsWithSensitivity resultUp = interps[k].interpolateWithSensitivity(xValues, yValuesUp);
             final PiecewisePolynomialResultsWithSensitivity resultDw = interps[k].interpolateWithSensitivity(xValues, yValuesDw);
 
-            final double[] diffUp = FUNCTION.differentiateTwice(resultUp, xKeys).getData()[0];
-            final double[] diffDw = FUNCTION.differentiateTwice(resultDw, xKeys).getData()[0];
+            final double[] diffUp = FUNCTION.differentiateTwice(resultUp, xKeys).toArray()[0];
+            final double[] diffDw = FUNCTION.differentiateTwice(resultDw, xKeys).toArray()[0];
             for (int i = 0; i < 10 * nData; ++i) {
               final double xKeyUp = xKeys[i] * (1. + EPS);
               final double xKeyDw = xKeys[i] * (1. - EPS);
 
               double senseFinite = 0.5 * (diffUp[i] - diffDw[i]) / EPS / yValues[j + 1];
-              final double resdiffNodeSensitivityXkeyUp = FUNCTION.differentiateNodeSensitivity(result, xKeyUp).getEntry(j);
-              final double resdiffNodeSensitivityXkeyDw = FUNCTION.differentiateNodeSensitivity(result, xKeyDw).getEntry(j);
+              final double resdiffNodeSensitivityXkeyUp = FUNCTION.differentiateNodeSensitivity(result, xKeyUp).get(j);
+              final double resdiffNodeSensitivityXkeyDw = FUNCTION.differentiateNodeSensitivity(result, xKeyDw).get(j);
               final double senseFiniteXkey = 0.5 * (resdiffNodeSensitivityXkeyUp - resdiffNodeSensitivityXkeyDw) / EPS / xKeys[i];
-              final double resDiffTwiceNodeSensitivity = FUNCTION.differentiateTwiceNodeSensitivity(result, xKeys[i]).getEntry(j);
+              final double resDiffTwiceNodeSensitivity = FUNCTION.differentiateTwiceNodeSensitivity(result, xKeys[i]).get(j);
 
               assertEquals(senseFinite, resDiffTwiceNodeSensitivity, Math.max(Math.abs(yValues[j + 1]) * EPS, EPS));
               assertEquals(senseFiniteXkey, resDiffTwiceNodeSensitivity, Math.max(Math.abs(xKeys[i]) * EPS, EPS));

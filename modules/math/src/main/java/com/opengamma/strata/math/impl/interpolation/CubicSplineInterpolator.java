@@ -10,7 +10,7 @@ import java.util.Arrays;
 import com.google.common.primitives.Doubles;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.DoubleArrayMath;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 
 /**
  * C2 cubic spline interpolator with Clamped/Not-A-Knot endpoint conditions
@@ -67,13 +67,13 @@ public class CubicSplineInterpolator extends PiecewisePolynomialInterpolator {
     }
     DoubleArrayMath.sortPairs(xValuesSrt, yValuesSrt);
 
-    final DoubleMatrix2D coefMatrix = _solver.solve(xValuesSrt, yValuesSrt);
-    final int nCoefs = coefMatrix.getNumberOfColumns();
+    final DoubleMatrix coefMatrix = _solver.solve(xValuesSrt, yValuesSrt);
+    final int nCoefs = coefMatrix.columnCount();
 
     for (int i = 0; i < _solver.getKnotsMat1D(xValuesSrt).size() - 1; ++i) {
       for (int j = 0; j < nCoefs; ++j) {
-        ArgChecker.isFalse(Double.isNaN(coefMatrix.getData()[i][j]), "Too large input");
-        ArgChecker.isFalse(Double.isInfinite(coefMatrix.getData()[i][j]), "Too large input");
+        ArgChecker.isFalse(Double.isNaN(coefMatrix.get(i, j)), "Too large input");
+        ArgChecker.isFalse(Double.isInfinite(coefMatrix.get(i, j)), "Too large input");
       }
     }
 
@@ -151,15 +151,15 @@ public class CubicSplineInterpolator extends PiecewisePolynomialInterpolator {
       }
     }
 
-    DoubleMatrix2D[] coefMatrix = _solver.solveMultiDim(xValuesSrt, new DoubleMatrix2D(yValuesMatrixSrt));
+    DoubleMatrix[] coefMatrix = _solver.solveMultiDim(xValuesSrt, DoubleMatrix.copyOf(yValuesMatrixSrt));
 
-    final int nIntervals = coefMatrix[0].getNumberOfRows();
-    final int nCoefs = coefMatrix[0].getNumberOfColumns();
+    final int nIntervals = coefMatrix[0].rowCount();
+    final int nCoefs = coefMatrix[0].columnCount();
     double[][] resMatrix = new double[dim * nIntervals][nCoefs];
 
     for (int i = 0; i < nIntervals; ++i) {
       for (int j = 0; j < dim; ++j) {
-        resMatrix[dim * i + j] = coefMatrix[j].getRowVector(i).getData();
+        resMatrix[dim * i + j] = coefMatrix[j].row(i).toArray();
       }
     }
 
@@ -170,7 +170,7 @@ public class CubicSplineInterpolator extends PiecewisePolynomialInterpolator {
       }
     }
 
-    return new PiecewisePolynomialResult(_solver.getKnotsMat1D(xValuesSrt), new DoubleMatrix2D(resMatrix), nCoefs, dim);
+    return new PiecewisePolynomialResult(_solver.getKnotsMat1D(xValuesSrt), DoubleMatrix.copyOf(resMatrix), nCoefs, dim);
   }
 
   @Override
@@ -209,23 +209,23 @@ public class CubicSplineInterpolator extends PiecewisePolynomialInterpolator {
       yValuesSrt = Arrays.copyOf(yValues, nDataPts);
     }
 
-    final DoubleMatrix2D[] resMatrix = _solver.solveWithSensitivity(xValues, yValuesSrt);
+    final DoubleMatrix[] resMatrix = _solver.solveWithSensitivity(xValues, yValuesSrt);
     final int len = resMatrix.length;
     for (int k = 0; k < len; k++) {
-      DoubleMatrix2D m = resMatrix[k];
-      final int rows = m.getNumberOfRows();
-      final int cols = m.getNumberOfColumns();
+      DoubleMatrix m = resMatrix[k];
+      final int rows = m.rowCount();
+      final int cols = m.columnCount();
       for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
-          ArgChecker.isTrue(Doubles.isFinite(m.getEntry(i, j)), "Matrix contains a NaN or infinite");
+          ArgChecker.isTrue(Doubles.isFinite(m.get(i, j)), "Matrix contains a NaN or infinite");
         }
       }
     }
 
-    final DoubleMatrix2D coefMatrix = resMatrix[0];
-    final DoubleMatrix2D[] coefSenseMatrix = new DoubleMatrix2D[len - 1];
+    final DoubleMatrix coefMatrix = resMatrix[0];
+    final DoubleMatrix[] coefSenseMatrix = new DoubleMatrix[len - 1];
     System.arraycopy(resMatrix, 1, coefSenseMatrix, 0, len - 1);
-    final int nCoefs = coefMatrix.getNumberOfColumns();
+    final int nCoefs = coefMatrix.columnCount();
 
     return new PiecewisePolynomialResultsWithSensitivity(_solver.getKnotsMat1D(xValues), coefMatrix, nCoefs, 1, coefSenseMatrix);
   }
