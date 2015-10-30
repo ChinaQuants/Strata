@@ -24,6 +24,7 @@ import com.opengamma.strata.market.sensitivity.IssuerCurveZeroRateSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.sensitivity.RepoCurveZeroRateSensitivity;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
+import com.opengamma.strata.market.value.CompoundedRateType;
 import com.opengamma.strata.market.value.IssuerCurveDiscountFactors;
 import com.opengamma.strata.market.value.RepoCurveDiscountFactors;
 import com.opengamma.strata.math.impl.function.Function1D;
@@ -126,8 +127,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param product  the product to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the present value of the fixed coupon bond product
    */
@@ -135,10 +135,10 @@ public class DiscountingFixedCouponBondProductPricer {
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
-    return presentValueWithZSpread(product, provider, zSpread, periodic, periodsPerYear, provider.getValuationDate());
+    return presentValueWithZSpread(product, provider, zSpread, compoundedRateType, periodsPerYear, provider.getValuationDate());
   }
 
   // calculate the present value
@@ -146,7 +146,7 @@ public class DiscountingFixedCouponBondProductPricer {
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       LocalDate referenceDate) {
 
@@ -154,10 +154,10 @@ public class DiscountingFixedCouponBondProductPricer {
     IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
         product.getLegalEntityId(), product.getCurrency());
     CurrencyAmount pvNominal = nominalPricer.presentValue(
-        expanded.getNominalPayment(), discountFactors.getDiscountFactors(), zSpread, periodic, periodsPerYear);
+        expanded.getNominalPayment(), discountFactors.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
     boolean isExCoupon = product.getExCouponPeriod().getDays() != 0;
     CurrencyAmount pvCoupon = presentValueCouponFromZSpread(
-        expanded, discountFactors, zSpread, periodic, periodsPerYear, referenceDate, isExCoupon);
+        expanded, discountFactors, zSpread, compoundedRateType, periodsPerYear, referenceDate, isExCoupon);
     return pvNominal.plus(pvCoupon);
   }
 
@@ -213,8 +213,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param security  the security to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the dirty price of the fixed coupon bond security
    */
@@ -222,12 +221,12 @@ public class DiscountingFixedCouponBondProductPricer {
       Security<FixedCouponBond> security,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
     FixedCouponBond product = security.getProduct();
     LocalDate settlementDate = product.getSettlementDateOffset().adjust(provider.getValuationDate());
-    return dirtyPriceFromCurvesWithZSpread(security, provider, zSpread, periodic, periodsPerYear, settlementDate);
+    return dirtyPriceFromCurvesWithZSpread(security, provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
   }
 
   /**
@@ -241,8 +240,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param security  the security to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @param settlementDate  the settlement date
    * @return the dirty price of the fixed coupon bond security
@@ -251,12 +249,12 @@ public class DiscountingFixedCouponBondProductPricer {
       Security<FixedCouponBond> security,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       LocalDate settlementDate) {
 
     FixedCouponBond product = security.getProduct();
-    CurrencyAmount pv = presentValueWithZSpread(product, provider, zSpread, periodic, periodsPerYear, settlementDate);
+    CurrencyAmount pv = presentValueWithZSpread(product, provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
     StandardId securityId = security.getStandardId();
     StandardId legalEntityId = product.getLegalEntityId();
     double df = provider.repoCurveDiscountFactors(
@@ -305,8 +303,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param security  the security to price
    * @param provider  the rates provider
    * @param dirtyPrice  the dirtyPrice
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the z-spread of the fixed coupon bond security
    */
@@ -314,13 +311,13 @@ public class DiscountingFixedCouponBondProductPricer {
       Security<FixedCouponBond> security,
       LegalEntityDiscountingProvider provider,
       double dirtyPrice,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
     final Function1D<Double, Double> residual = new Function1D<Double, Double>() {
       @Override
       public Double evaluate(final Double z) {
-        return dirtyPriceFromCurvesWithZSpread(security, provider, z, periodic, periodsPerYear) - dirtyPrice;
+        return dirtyPriceFromCurvesWithZSpread(security, provider, z, compoundedRateType, periodsPerYear) - dirtyPrice;
       }
     };
     double[] range = ROOT_BRACKETER.getBracketedPoints(residual, -0.01, 0.01); // Starting range is [-1%, 1%]
@@ -341,6 +338,7 @@ public class DiscountingFixedCouponBondProductPricer {
   public PointSensitivityBuilder presentValueSensitivity(
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider) {
+
     return presentValueSensitivity(product, provider, provider.getValuationDate());
   }
 
@@ -371,8 +369,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param product  the product to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the present value curve sensitivity of the product
    */
@@ -380,11 +377,11 @@ public class DiscountingFixedCouponBondProductPricer {
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
     return presentValueSensitivityWithZSpread(
-        product, provider, zSpread, periodic, periodsPerYear, provider.getValuationDate());
+        product, provider, zSpread, compoundedRateType, periodsPerYear, provider.getValuationDate());
   }
 
   // calculate the present value sensitivity
@@ -392,7 +389,7 @@ public class DiscountingFixedCouponBondProductPricer {
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       LocalDate referenceDate) {
 
@@ -400,10 +397,10 @@ public class DiscountingFixedCouponBondProductPricer {
     IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
         product.getLegalEntityId(), product.getCurrency());
     PointSensitivityBuilder pvNominal = presentValueSensitivityNominalFromZSpread(
-        expanded, discountFactors, zSpread, periodic, periodsPerYear);
+        expanded, discountFactors, zSpread, compoundedRateType, periodsPerYear);
     boolean isExCoupon = product.getExCouponPeriod().getDays() != 0;
     PointSensitivityBuilder pvCoupon = presentValueSensitivityCouponFromZSpread(
-        expanded, discountFactors, zSpread, periodic, periodsPerYear, referenceDate, isExCoupon);
+        expanded, discountFactors, zSpread, compoundedRateType, periodsPerYear, referenceDate, isExCoupon);
     return pvNominal.combinedWith(pvCoupon);
   }
 
@@ -424,15 +421,25 @@ public class DiscountingFixedCouponBondProductPricer {
 
     FixedCouponBond product = security.getProduct();
     LocalDate settlementDate = product.getSettlementDateOffset().adjust(provider.getValuationDate());
+    return dirtyPriceSensitivity(security, provider, settlementDate);
+  }
+
+  // calculate the dirty price sensitivity
+  PointSensitivityBuilder dirtyPriceSensitivity(
+      Security<FixedCouponBond> security,
+      LegalEntityDiscountingProvider provider,
+      LocalDate referenceDate) {
+
+    FixedCouponBond product = security.getProduct();
     StandardId securityId = security.getStandardId();
     StandardId legalEntityId = product.getLegalEntityId();
     RepoCurveDiscountFactors discountFactors =
         provider.repoCurveDiscountFactors(securityId, legalEntityId, product.getCurrency());
-    double df = discountFactors.discountFactor(settlementDate);
+    double df = discountFactors.discountFactor(referenceDate);
     CurrencyAmount pv = presentValue(product, provider);
     double notional = product.getNotional();
     PointSensitivityBuilder pvSensi = presentValueSensitivity(product, provider).multipliedBy(1d / df / notional);
-    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(settlementDate)
+    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(referenceDate)
         .multipliedBy(-pv.getAmount() / df / df / notional);
     return pvSensi.combinedWith(dfSensi);
   }
@@ -449,8 +456,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @param security  the security to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the dirty price curve sensitivity of the security
    */
@@ -458,21 +464,34 @@ public class DiscountingFixedCouponBondProductPricer {
       Security<FixedCouponBond> security,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
     FixedCouponBond product = security.getProduct();
     LocalDate settlementDate = product.getSettlementDateOffset().adjust(provider.getValuationDate());
+    return dirtyPriceSensitivityWithZspread(security, provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
+  }
+
+  // calculate the dirty price sensitivity
+  PointSensitivityBuilder dirtyPriceSensitivityWithZspread(
+      Security<FixedCouponBond> security,
+      LegalEntityDiscountingProvider provider,
+      double zSpread,
+      CompoundedRateType compoundedRateType,
+      int periodsPerYear,
+      LocalDate referenceDate) {
+
+    FixedCouponBond product = security.getProduct();
     StandardId securityId = security.getStandardId();
     StandardId legalEntityId = product.getLegalEntityId();
     RepoCurveDiscountFactors discountFactors =
         provider.repoCurveDiscountFactors(securityId, legalEntityId, product.getCurrency());
-    double df = discountFactors.discountFactor(settlementDate);
-    CurrencyAmount pv = presentValueWithZSpread(product, provider, zSpread, periodic, periodsPerYear);
+    double df = discountFactors.discountFactor(referenceDate);
+    CurrencyAmount pv = presentValueWithZSpread(product, provider, zSpread, compoundedRateType, periodsPerYear);
     double notional = product.getNotional();
     PointSensitivityBuilder pvSensi = presentValueSensitivityWithZSpread(
-        product, provider, zSpread, periodic, periodsPerYear).multipliedBy(1d / df / notional);
-    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(settlementDate)
+        product, provider, zSpread, compoundedRateType, periodsPerYear).multipliedBy(1d / df / notional);
+    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(referenceDate)
         .multipliedBy(-pv.getAmount() / df / df / notional);
     return pvSensi.combinedWith(dfSensi);
   }
@@ -552,8 +571,12 @@ public class DiscountingFixedCouponBondProductPricer {
     throw new UnsupportedOperationException("The convention " + yieldConvention.name() + " is not supported.");
   }
 
-  private double dirtyPriceFromYieldStandard(FixedCouponBond product, ExpandedFixedCouponBond expanded,
-      LocalDate settlementDate, double yield) {
+  private double dirtyPriceFromYieldStandard(
+      FixedCouponBond product,
+      ExpandedFixedCouponBond expanded,
+      LocalDate settlementDate,
+      double yield) {
+
     int nbCoupon = expanded.getPeriodicPayments().size();
     double factorOnPeriod = 1 + yield / ((double) product.getPeriodicSchedule().getFrequency().eventsPerYear());
     double fixedRate = product.getFixedRate();
@@ -757,8 +780,12 @@ public class DiscountingFixedCouponBondProductPricer {
   }
 
   // assumes notional and coupon rate are constant across the payments. 
-  private double convexityFromYieldStandard(FixedCouponBond product, ExpandedFixedCouponBond expanded,
-      LocalDate settlementDate, double yield) {
+  private double convexityFromYieldStandard(
+      FixedCouponBond product,
+      ExpandedFixedCouponBond expanded,
+      LocalDate settlementDate,
+      double yield) {
+
     int nbCoupon = expanded.getPeriodicPayments().size();
     double couponPerYear = product.getPeriodicSchedule().getFrequency().eventsPerYear();
     double factorToNextCoupon = factorToNextCoupon(product, expanded, settlementDate);
@@ -829,6 +856,7 @@ public class DiscountingFixedCouponBondProductPricer {
       IssuerCurveDiscountFactors discountFactors,
       LocalDate referenceDate,
       boolean exCoupon) {
+
     double total = 0d;
     for (FixedCouponBondPaymentPeriod period : product.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate)) ||
@@ -843,15 +871,16 @@ public class DiscountingFixedCouponBondProductPricer {
       ExpandedFixedCouponBond product,
       IssuerCurveDiscountFactors discountFactors,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       LocalDate referenceDate,
       boolean exCoupon) {
+
     double total = 0d;
     for (FixedCouponBondPaymentPeriod period : product.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate)) ||
           (!exCoupon && period.getPaymentDate().isAfter(referenceDate))) {
-        total += periodPricer.presentValueWithSpread(period, discountFactors, zSpread, periodic, periodsPerYear);
+        total += periodPricer.presentValueWithSpread(period, discountFactors, zSpread, compoundedRateType, periodsPerYear);
       }
     }
     return CurrencyAmount.of(product.getCurrency(), total);
@@ -863,6 +892,7 @@ public class DiscountingFixedCouponBondProductPricer {
       IssuerCurveDiscountFactors discountFactors,
       LocalDate referenceDate,
       boolean exCoupon) {
+
     PointSensitivityBuilder builder = PointSensitivityBuilder.none();
     for (FixedCouponBondPaymentPeriod period : product.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate)) ||
@@ -877,16 +907,17 @@ public class DiscountingFixedCouponBondProductPricer {
       ExpandedFixedCouponBond product,
       IssuerCurveDiscountFactors discountFactors,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       LocalDate referenceDate,
       boolean exCoupon) {
+
     PointSensitivityBuilder builder = PointSensitivityBuilder.none();
     for (FixedCouponBondPaymentPeriod period : product.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate)) ||
           (!exCoupon && period.getPaymentDate().isAfter(referenceDate))) {
-        builder = builder.combinedWith(
-            periodPricer.presentValueSensitivityWithSpread(period, discountFactors, zSpread, periodic, periodsPerYear));
+        builder = builder.combinedWith(periodPricer.presentValueSensitivityWithSpread(
+            period, discountFactors, zSpread, compoundedRateType, periodsPerYear));
       }
     }
     return builder;
@@ -895,6 +926,7 @@ public class DiscountingFixedCouponBondProductPricer {
   private PointSensitivityBuilder presentValueSensitivityNominal(
       ExpandedFixedCouponBond product,
       IssuerCurveDiscountFactors discountFactors) {
+
     Payment nominal = product.getNominalPayment();
     PointSensitivityBuilder pt = nominalPricer.presentValueSensitivity(nominal, discountFactors.getDiscountFactors());
     if (pt instanceof ZeroRateSensitivity) {
@@ -907,11 +939,12 @@ public class DiscountingFixedCouponBondProductPricer {
       ExpandedFixedCouponBond product,
       IssuerCurveDiscountFactors discountFactors,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
+
     Payment nominal = product.getNominalPayment();
     PointSensitivityBuilder pt = nominalPricer.presentValueSensitivity(
-        nominal, discountFactors.getDiscountFactors(), zSpread, periodic, periodsPerYear);
+        nominal, discountFactors.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
     if (pt instanceof ZeroRateSensitivity) {
       return IssuerCurveZeroRateSensitivity.of((ZeroRateSensitivity) pt, discountFactors.getLegalEntityGroup());
     }
@@ -926,6 +959,7 @@ public class DiscountingFixedCouponBondProductPricer {
       LocalDate referenceDate1,
       LocalDate referenceDate2,
       boolean exCoupon) {
+
     double pvDiff = 0d;
     for (FixedCouponBondPaymentPeriod period : product.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate1) && !period.getDetachmentDate().isAfter(referenceDate2)) ||
@@ -943,17 +977,18 @@ public class DiscountingFixedCouponBondProductPricer {
       LocalDate referenceDate1,
       LocalDate referenceDate2,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear,
       boolean exCoupon) {
+
     double pvDiff = 0d;
     for (FixedCouponBondPaymentPeriod period : expanded.getPeriodicPayments()) {
       if ((exCoupon && period.getDetachmentDate().isAfter(referenceDate1) && !period.getDetachmentDate().isAfter(referenceDate2)) ||
           (!exCoupon && period.getPaymentDate().isAfter(referenceDate1) && !period.getPaymentDate().isAfter(referenceDate2))) {
-        pvDiff += periodPricer.presentValueWithSpread(
-            period, discountFactors, zSpread, periodic, periodsPerYear);
+        pvDiff += periodPricer.presentValueWithSpread(period, discountFactors, zSpread, compoundedRateType, periodsPerYear);
       }
     }
     return pvDiff;
   }
+
 }
