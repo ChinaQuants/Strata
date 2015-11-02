@@ -63,6 +63,7 @@
     <module>source</module>
     <module>finance</module>
     <module>function</module>
+    <module>loader</module>
     <module>market</module>
     <module>math</module>
     <module>pricer</module>
@@ -208,6 +209,11 @@
       <dependency>
         <groupId>com.opengamma.strata</groupId>
         <artifactId>strata-market</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.opengamma.strata</groupId>
+        <artifactId>strata-loader</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
