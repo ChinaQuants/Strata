@@ -35,9 +35,10 @@ import com.opengamma.strata.engine.marketdata.MarketEnvironmentBuilder;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitIndexCreditCurveDataParser;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitSingleNameCreditCurveDataParser;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitYieldCurveDataParser;
-import com.opengamma.strata.examples.marketdata.curve.RatesCurvesCsvLoader;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.loader.csv.FixingSeriesCsvLoader;
+import com.opengamma.strata.loader.csv.QuotesCsvLoader;
+import com.opengamma.strata.loader.csv.RatesCurvesCsvLoader;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.IsdaYieldCurveParRates;
@@ -175,7 +176,7 @@ public abstract class MarketDataBuilder {
    * @return the snapshot
    */
   public MarketEnvironment buildSnapshot(LocalDate marketDataDate) {
-    MarketEnvironmentBuilder builder = MarketEnvironment.builder(marketDataDate);
+    MarketEnvironmentBuilder builder = MarketEnvironment.builder().valuationDate(marketDataDate);
     loadFixingSeries(builder);
     loadRatesCurves(builder, marketDataDate);
     loadQuotes(builder, marketDataDate);
@@ -217,7 +218,7 @@ public abstract class MarketDataBuilder {
       throw new IllegalArgumentException(Messages.format(
           "Unable to load rates curves: curve settings file not found at {}/{}", CURVES_DIR, CURVES_SETTINGS_FILE));
     }
-    return RatesCurvesCsvLoader.loadAllCurves(curveGroupsResource, curveSettingsResource, getRatesCurvesResources());
+    return RatesCurvesCsvLoader.loadAllDates(curveGroupsResource, curveSettingsResource, getRatesCurvesResources());
   }
 
   //-------------------------------------------------------------------------
@@ -228,8 +229,8 @@ public abstract class MarketDataBuilder {
     }
     try {
       Collection<ResourceLocator> fixingSeriesResources = getAllResources(HISTORICAL_FIXINGS_DIR);
-      Map<ObservableId, LocalDateDoubleTimeSeries> fixingSeries = FixingSeriesCsvLoader.loadFixingSeries(fixingSeriesResources);
-      builder.addAllTimeSeries(fixingSeries);
+      Map<ObservableId, LocalDateDoubleTimeSeries> fixingSeries = FixingSeriesCsvLoader.load(fixingSeriesResources);
+      builder.addTimeSeries(fixingSeries);
     } catch (Exception e) {
       log.error("Error loading fixing series", e);
     }
@@ -256,8 +257,8 @@ public abstract class MarketDataBuilder {
     try {
       Collection<ResourceLocator> curvesResources = getRatesCurvesResources();
       Map<RateCurveId, Curve> ratesCurves =
-          RatesCurvesCsvLoader.loadCurves(curveGroupsResource, curveSettingsResource, curvesResources, marketDataDate);
-      builder.addAllValues(ratesCurves);
+          RatesCurvesCsvLoader.load(marketDataDate, curveGroupsResource, curveSettingsResource, curvesResources);
+      builder.addValues(ratesCurves);
     } catch (Exception e) {
       log.error("Error loading rates curves", e);
     }
@@ -277,8 +278,8 @@ public abstract class MarketDataBuilder {
     }
 
     try {
-      Map<QuoteId, Double> quotes = QuotesCsvLoader.loadQuotes(quotesResource, marketDataDate);
-      builder.addAllValues(quotes);
+      Map<QuoteId, Double> quotes = QuotesCsvLoader.load(marketDataDate, quotesResource);
+      builder.addValues(quotes);
 
     } catch (Exception ex) {
       log.error("Error loading quotes", ex);

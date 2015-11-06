@@ -8,7 +8,9 @@ package com.opengamma.strata.market.curve.definition;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_1M;
+import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_1W;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
+import static com.opengamma.strata.basics.index.OvernightIndices.GBP_SONIA;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
@@ -28,9 +30,10 @@ import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
+import com.opengamma.strata.market.interpolator.CurveExtrapolators;
+import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.key.QuoteKey;
 import com.opengamma.strata.market.value.ValueType;
-import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 
 /**
  * Test {@link CurveGroupDefinition}.
@@ -48,9 +51,9 @@ public class CurveGroupDefinitionTest {
       .yValueType(ValueType.ZERO_RATE)
       .dayCount(ACT_365F)
       .nodes(ImmutableList.of(NODE1, NODE2))
-      .interpolator(Interpolator1DFactory.LINEAR_INSTANCE)
-      .extrapolatorLeft(Interpolator1DFactory.FLAT_EXTRAPOLATOR_INSTANCE)
-      .extrapolatorRight(Interpolator1DFactory.FLAT_EXTRAPOLATOR_INSTANCE)
+      .interpolator(CurveInterpolators.LINEAR)
+      .extrapolatorLeft(CurveExtrapolators.FLAT)
+      .extrapolatorRight(CurveExtrapolators.FLAT)
       .build();
   private static final InterpolatedNodalCurveDefinition CURVE_CONFIG2 = CURVE_DEFN.toBuilder()
       .name(CurveName.of("Test2"))
@@ -58,6 +61,8 @@ public class CurveGroupDefinitionTest {
   private static final CurveGroupEntry ENTRY1 = CurveGroupEntry.builder()
       .curveDefinition(CURVE_DEFN)
       .discountCurrencies(GBP)
+      .iborIndices(GBP_LIBOR_1W)
+      .overnightIndices(GBP_SONIA)
       .build();
   private static final CurveGroupEntry ENTRY2 = CurveGroupEntry.builder()
       .curveDefinition(CURVE_CONFIG2)
@@ -73,6 +78,8 @@ public class CurveGroupDefinitionTest {
     CurveGroupDefinition test = CurveGroupDefinition.builder()
         .name(CurveGroupName.of("Test"))
         .addDiscountCurve(CURVE_DEFN, GBP)
+        .addForwardCurve(CURVE_DEFN, GBP_SONIA)
+        .addForwardCurve(CURVE_DEFN, GBP_LIBOR_1W)
         .addForwardCurve(CURVE_CONFIG2, GBP_LIBOR_1M, GBP_LIBOR_3M)
         .build();
     assertEquals(test.getName(), CurveGroupName.of("Test"));

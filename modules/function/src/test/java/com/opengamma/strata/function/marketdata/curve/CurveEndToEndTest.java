@@ -13,7 +13,6 @@ import static com.opengamma.strata.engine.calculation.function.FunctionUtils.toF
 import static com.opengamma.strata.function.marketdata.curve.CurveTestUtils.fixedIborSwapNode;
 import static com.opengamma.strata.function.marketdata.curve.CurveTestUtils.fraNode;
 import static com.opengamma.strata.function.marketdata.curve.CurveTestUtils.id;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 
 import java.time.LocalDate;
@@ -75,8 +74,6 @@ import com.opengamma.strata.finance.rate.fra.Fra;
 import com.opengamma.strata.finance.rate.fra.FraTrade;
 import com.opengamma.strata.finance.rate.swap.SwapTrade;
 import com.opengamma.strata.function.calculation.rate.swap.SwapPvFunction;
-import com.opengamma.strata.function.interpolator.CurveExtrapolators;
-import com.opengamma.strata.function.interpolator.CurveInterpolators;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.market.curve.CurveGroupName;
@@ -86,6 +83,8 @@ import com.opengamma.strata.market.curve.definition.CurveNode;
 import com.opengamma.strata.market.curve.definition.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.curve.definition.FraCurveNode;
 import com.opengamma.strata.market.curve.definition.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.interpolator.CurveExtrapolators;
+import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.key.DiscountFactorsKey;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.market.key.MarketDataKeys;
@@ -214,7 +213,7 @@ public class CurveEndToEndTest {
 
     // Calculate the results and check the PVs for the node instruments are zero ----------------------
 
-    MarketEnvironment marketData = MarketEnvironment.empty(valuationDate);
+    MarketEnvironment marketData = MarketEnvironment.builder().valuationDate(date(2011, 3, 8)).build();
     List<Column> columns = ImmutableList.of(Column.of(Measure.PRESENT_VALUE));
     Results results = engine.calculate(trades, columns, calculationRules, marketData);
     results.getItems().stream().forEach(this::checkPvIsZero);
@@ -261,9 +260,9 @@ public class CurveEndToEndTest {
    */
   private static final class MapObservableMarketDataFunction implements ObservableMarketDataFunction {
 
-    private final Map<ObservableId, Double> marketData;
+    private final Map<? extends ObservableId, Double> marketData;
 
-    private MapObservableMarketDataFunction(Map<ObservableId, Double> marketData) {
+    private MapObservableMarketDataFunction(Map<? extends ObservableId, Double> marketData) {
       this.marketData = marketData;
     }
 

@@ -30,6 +30,8 @@ import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.tuple.DoublesPair;
 import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapConvention;
 import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapConventions;
+import com.opengamma.strata.market.interpolator.CurveExtrapolators;
+import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.sensitivity.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.SwaptionSensitivity;
 import com.opengamma.strata.market.surface.DefaultSurfaceMetadata;
@@ -37,12 +39,11 @@ import com.opengamma.strata.market.surface.InterpolatedNodalSurface;
 import com.opengamma.strata.market.surface.SurfaceMetadata;
 import com.opengamma.strata.market.surface.SurfaceName;
 import com.opengamma.strata.market.surface.SurfaceParameterMetadata;
-import com.opengamma.strata.market.surface.SwaptionVolatilitySurfaceExpiryTenorNodeMetadata;
+import com.opengamma.strata.market.surface.SwaptionSurfaceExpiryTenorNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
-import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolatorFactory;
+import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolator;
 import com.opengamma.strata.math.impl.interpolation.GridInterpolator2D;
 import com.opengamma.strata.math.impl.interpolation.Interpolator1D;
-import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 
 /**
  * Test {@link NormalVolatilityExpiryTenorSwaptionProvider}.
@@ -51,8 +52,7 @@ import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 public class NormalVolatilityExpiryTenorSwaptionProviderTest {
 
   private static final Interpolator1D LINEAR_FLAT =
-      CombinedInterpolatorExtrapolatorFactory.getInterpolator(Interpolator1DFactory.LINEAR,
-          Interpolator1DFactory.FLAT_EXTRAPOLATOR, Interpolator1DFactory.FLAT_EXTRAPOLATOR);
+      CombinedInterpolatorExtrapolator.of(CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT);
   private static final GridInterpolator2D INTERPOLATOR_2D = new GridInterpolator2D(LINEAR_FLAT, LINEAR_FLAT);
   private static final DoubleArray TIME =
       DoubleArray.of(0.25, 0.5, 1.0, 0.25, 0.5, 1.0, 0.25, 0.5, 1.0, 0.25, 0.5, 1.0);
@@ -63,12 +63,12 @@ public class NormalVolatilityExpiryTenorSwaptionProviderTest {
   private static final SurfaceMetadata METADATA_WITH_PARAM;
   private static final SurfaceMetadata METADATA;
   static {
-    List<SwaptionVolatilitySurfaceExpiryTenorNodeMetadata> list =
-        new ArrayList<SwaptionVolatilitySurfaceExpiryTenorNodeMetadata>();
+    List<SwaptionSurfaceExpiryTenorNodeMetadata> list =
+        new ArrayList<SwaptionSurfaceExpiryTenorNodeMetadata>();
     int nData = TIME.size();
     for (int i = 0; i < nData; ++i) {
-      SwaptionVolatilitySurfaceExpiryTenorNodeMetadata parameterMetadata =
-          SwaptionVolatilitySurfaceExpiryTenorNodeMetadata.of(TIME.get(i), TENOR.get(i));
+      SwaptionSurfaceExpiryTenorNodeMetadata parameterMetadata =
+          SwaptionSurfaceExpiryTenorNodeMetadata.of(TIME.get(i), TENOR.get(i));
       list.add(parameterMetadata);
     }
     METADATA_WITH_PARAM = DefaultSurfaceMetadata.builder()
@@ -178,8 +178,8 @@ public class NormalVolatilityExpiryTenorSwaptionProviderTest {
       DoubleArray computed = sensi.getSensitivity();
       assertEquals(computed.size(), nData);
       for (int j = 0; j < list.size(); ++j) {
-        SwaptionVolatilitySurfaceExpiryTenorNodeMetadata metadata =
-            (SwaptionVolatilitySurfaceExpiryTenorNodeMetadata) list.get(i);
+        SwaptionSurfaceExpiryTenorNodeMetadata metadata =
+            (SwaptionSurfaceExpiryTenorNodeMetadata) list.get(i);
         double expected = map.get(DoublesPair.of(metadata.getYearFraction(), metadata.getTenor()));
         assertEquals(computed.get(i), expected, eps);
         assertTrue(sensiFromNoMetadata.getMetadata().getParameterMetadata().get().contains(metadata));
