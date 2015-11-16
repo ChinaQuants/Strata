@@ -26,9 +26,9 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.basics.market.MarketDataFeed;
 import com.opengamma.strata.basics.market.MarketDataId;
 import com.opengamma.strata.basics.market.SimpleMarketDataKey;
-import com.opengamma.strata.finance.credit.IndexReferenceInformation;
 import com.opengamma.strata.market.id.IsdaIndexRecoveryRateId;
 import com.opengamma.strata.market.value.CdsRecoveryRate;
+import com.opengamma.strata.product.credit.IndexReferenceInformation;
 
 /**
  * Market data key identifying the recovery rate to be used in the ISDA credit model's pricing
@@ -123,7 +123,7 @@ public final class IsdaIndexRecoveryRateKey
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IsdaIndexRecoveryRateKey other = (IsdaIndexRecoveryRateKey) obj;
-      return JodaBeanUtils.equal(getReferenceInformation(), other.getReferenceInformation());
+      return JodaBeanUtils.equal(referenceInformation, other.referenceInformation);
     }
     return false;
   }
@@ -131,7 +131,7 @@ public final class IsdaIndexRecoveryRateKey
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getReferenceInformation());
+    hash = hash * 31 + JodaBeanUtils.hashCode(referenceInformation);
     return hash;
   }
 
@@ -139,7 +139,7 @@ public final class IsdaIndexRecoveryRateKey
   public String toString() {
     StringBuilder buf = new StringBuilder(64);
     buf.append("IsdaIndexRecoveryRateKey{");
-    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(getReferenceInformation()));
+    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(referenceInformation));
     buf.append('}');
     return buf.toString();
   }

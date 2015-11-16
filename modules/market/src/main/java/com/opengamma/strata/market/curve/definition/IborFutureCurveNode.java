@@ -27,11 +27,11 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.rate.future.IborFutureTrade;
-import com.opengamma.strata.finance.rate.future.type.IborFutureTemplate;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.YearMonthCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.product.rate.future.IborFutureTrade;
+import com.opengamma.strata.product.rate.future.type.IborFutureTemplate;
 
 /**
  * A curve node whose instrument is an Ibor Future.
@@ -216,9 +216,9 @@ public class IborFutureCurveNode
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IborFutureCurveNode other = (IborFutureCurveNode) obj;
-      return JodaBeanUtils.equal(getTemplate(), other.getTemplate()) &&
-          JodaBeanUtils.equal(getRateKey(), other.getRateKey()) &&
-          JodaBeanUtils.equal(getSpread(), other.getSpread());
+      return JodaBeanUtils.equal(template, other.template) &&
+          JodaBeanUtils.equal(rateKey, other.rateKey) &&
+          JodaBeanUtils.equal(spread, other.spread);
     }
     return false;
   }
@@ -226,9 +226,9 @@ public class IborFutureCurveNode
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTemplate());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getRateKey());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSpread());
+    hash = hash * 31 + JodaBeanUtils.hashCode(template);
+    hash = hash * 31 + JodaBeanUtils.hashCode(rateKey);
+    hash = hash * 31 + JodaBeanUtils.hashCode(spread);
     return hash;
   }
 
@@ -246,9 +246,9 @@ public class IborFutureCurveNode
   }
 
   protected void toString(StringBuilder buf) {
-    buf.append("template").append('=').append(JodaBeanUtils.toString(getTemplate())).append(',').append(' ');
-    buf.append("rateKey").append('=').append(JodaBeanUtils.toString(getRateKey())).append(',').append(' ');
-    buf.append("spread").append('=').append(JodaBeanUtils.toString(getSpread())).append(',').append(' ');
+    buf.append("template").append('=').append(JodaBeanUtils.toString(template)).append(',').append(' ');
+    buf.append("rateKey").append('=').append(JodaBeanUtils.toString(rateKey)).append(',').append(' ');
+    buf.append("spread").append('=').append(JodaBeanUtils.toString(spread)).append(',').append(' ');
   }
 
   //-----------------------------------------------------------------------

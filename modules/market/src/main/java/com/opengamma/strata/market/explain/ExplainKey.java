@@ -16,8 +16,8 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.collect.type.TypedString;
-import com.opengamma.strata.finance.rate.IborInterpolatedRateObservation;
-import com.opengamma.strata.finance.rate.swap.CompoundingMethod;
+import com.opengamma.strata.product.rate.IborInterpolatedRateObservation;
+import com.opengamma.strata.product.rate.swap.CompoundingMethod;
 
 /**
  * A key for the map of explanatory values.
@@ -76,9 +76,9 @@ public final class ExplainKey<T>
    */
   public static final ExplainKey<CurrencyAmount> PRESENT_VALUE = of("PresentValue");
   /**
-   * The future value.
+   * The forecast value.
    */
-  public static final ExplainKey<CurrencyAmount> FUTURE_VALUE = of("FutureValue");
+  public static final ExplainKey<CurrencyAmount> FORECAST_VALUE = of("ForecastValue");
 
   /**
    * The currency of the payment.

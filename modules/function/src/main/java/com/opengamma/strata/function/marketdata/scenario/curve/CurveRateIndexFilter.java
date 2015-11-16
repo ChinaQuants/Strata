@@ -23,8 +23,8 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.index.RateIndex;
-import com.opengamma.strata.engine.marketdata.scenario.MarketDataBox;
-import com.opengamma.strata.engine.marketdata.scenario.MarketDataFilter;
+import com.opengamma.strata.calc.marketdata.scenario.MarketDataBox;
+import com.opengamma.strata.calc.marketdata.scenario.MarketDataFilter;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.id.RateIndexCurveId;
 
@@ -118,7 +118,7 @@ public final class CurveRateIndexFilter
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       CurveRateIndexFilter other = (CurveRateIndexFilter) obj;
-      return JodaBeanUtils.equal(getIndex(), other.getIndex());
+      return JodaBeanUtils.equal(index, other.index);
     }
     return false;
   }
@@ -126,7 +126,7 @@ public final class CurveRateIndexFilter
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getIndex());
+    hash = hash * 31 + JodaBeanUtils.hashCode(index);
     return hash;
   }
 
@@ -134,7 +134,7 @@ public final class CurveRateIndexFilter
   public String toString() {
     StringBuilder buf = new StringBuilder(64);
     buf.append("CurveRateIndexFilter{");
-    buf.append("index").append('=').append(JodaBeanUtils.toString(getIndex()));
+    buf.append("index").append('=').append(JodaBeanUtils.toString(index));
     buf.append('}');
     return buf.toString();
   }

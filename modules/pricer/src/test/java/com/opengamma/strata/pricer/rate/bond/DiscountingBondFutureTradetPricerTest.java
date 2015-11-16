@@ -15,8 +15,6 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.finance.rate.bond.BondFuture;
-import com.opengamma.strata.finance.rate.bond.BondFutureTrade;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivity;
@@ -24,6 +22,8 @@ import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.datasets.LegalEntityDiscountingProviderDataSets;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
+import com.opengamma.strata.product.rate.bond.BondFuture;
+import com.opengamma.strata.product.rate.bond.BondFutureTrade;
 
 /**
  * Test {@link DiscountingBondFutureTradePricer}.
@@ -32,15 +32,15 @@ import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityC
 public class DiscountingBondFutureTradetPricerTest {
 
   // product and trade
-  private static final BondFuture FUTURE_PRODUCT = BondDataSets.FUTURE_PRODUCT;
-  private static final BondFutureTrade FUTURE_TRADE = BondDataSets.FUTURE_TRADE;
-  private static final double REFERENCE_PRICE = BondDataSets.REFERENCE_PRICE;
-  private static final double NOTIONAL = BondDataSets.NOTIONAL;
-  private static final long QUANTITY = BondDataSets.QUANTITY;
+  private static final BondFuture FUTURE_PRODUCT = BondDataSets.FUTURE_PRODUCT_USD;
+  private static final BondFutureTrade FUTURE_TRADE = BondDataSets.FUTURE_TRADE_USD;
+  private static final double REFERENCE_PRICE = BondDataSets.REFERENCE_PRICE_USD;
+  private static final double NOTIONAL = BondDataSets.NOTIONAL_USD;
+  private static final long QUANTITY = BondDataSets.QUANTITY_USD;
   // curves
   private static final LegalEntityDiscountingProvider PROVIDER = LegalEntityDiscountingProviderDataSets.ISSUER_REPO_ZERO;
-  private static final CurveMetadata METADATA_ISSUER = LegalEntityDiscountingProviderDataSets.META_ZERO_ISSUER;
-  private static final CurveMetadata METADATA_REPO = LegalEntityDiscountingProviderDataSets.META_ZERO_REPO;
+  private static final CurveMetadata METADATA_ISSUER = LegalEntityDiscountingProviderDataSets.META_ZERO_ISSUER_USD;
+  private static final CurveMetadata METADATA_REPO = LegalEntityDiscountingProviderDataSets.META_ZERO_REPO_USD;
   // parameters
   private static final double Z_SPREAD = 0.0075;
   private static final int PERIOD_PER_YEAR = 4;

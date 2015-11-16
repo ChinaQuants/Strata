@@ -36,10 +36,10 @@ import com.opengamma.strata.pricer.impl.volatility.smile.function.VolatilityFunc
  * The volatility surface description under SABR model.  
  * <p>
  * This is used in interest rate modeling. 
- * Each SABR parameter is {@link NodalSurface} spanned by expiration and tenor. 
+ * Each SABR parameter is {@link NodalSurface} spanned by expiry and tenor.
  * <p>
  * The implementation allows for shifted SABR model. 
- * The shift parameter is also {@link NodalSurface} spanned by expiration and tenor.
+ * The shift parameter is also {@link NodalSurface} spanned by expiry and tenor.
  */
 @BeanDefinition(builderScope = "private")
 public final class SabrInterestRateParameters
@@ -48,28 +48,28 @@ public final class SabrInterestRateParameters
   /**
    * The alpha (volatility level) surface. 
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    */
   @PropertyDefinition(validate = "notNull")
   private final NodalSurface alphaSurface;
   /**
    * The beta (elasticity) surface. 
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    */
   @PropertyDefinition(validate = "notNull")
   private final NodalSurface betaSurface;
   /**
    * The rho (correlation) surface. 
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    */
   @PropertyDefinition(validate = "notNull")
   private final NodalSurface rhoSurface;
   /**
    * The nu (volatility of volatility) surface. 
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    */
   @PropertyDefinition(validate = "notNull")
   private final NodalSurface nuSurface;
@@ -83,7 +83,7 @@ public final class SabrInterestRateParameters
   /**
    * The shift parameter of shifted SABR model.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * The shift is set to be 0 unless specified.
    */
   @PropertyDefinition(validate = "notNull")
@@ -284,7 +284,7 @@ public final class SabrInterestRateParameters
   /**
    * Gets the alpha (volatility level) surface.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * @return the value of the property, not null
    */
   public NodalSurface getAlphaSurface() {
@@ -295,7 +295,7 @@ public final class SabrInterestRateParameters
   /**
    * Gets the beta (elasticity) surface.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * @return the value of the property, not null
    */
   public NodalSurface getBetaSurface() {
@@ -306,7 +306,7 @@ public final class SabrInterestRateParameters
   /**
    * Gets the rho (correlation) surface.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * @return the value of the property, not null
    */
   public NodalSurface getRhoSurface() {
@@ -317,7 +317,7 @@ public final class SabrInterestRateParameters
   /**
    * Gets the nu (volatility of volatility) surface.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * @return the value of the property, not null
    */
   public NodalSurface getNuSurface() {
@@ -339,7 +339,7 @@ public final class SabrInterestRateParameters
   /**
    * Gets the shift parameter of shifted SABR model.
    * <p>
-   * The first dimension is the expiration and the second the tenor.
+   * The first dimension is the expiry and the second the tenor.
    * The shift is set to be 0 unless specified.
    * @return the value of the property, not null
    */
@@ -355,12 +355,12 @@ public final class SabrInterestRateParameters
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       SabrInterestRateParameters other = (SabrInterestRateParameters) obj;
-      return JodaBeanUtils.equal(getAlphaSurface(), other.getAlphaSurface()) &&
-          JodaBeanUtils.equal(getBetaSurface(), other.getBetaSurface()) &&
-          JodaBeanUtils.equal(getRhoSurface(), other.getRhoSurface()) &&
-          JodaBeanUtils.equal(getNuSurface(), other.getNuSurface()) &&
-          JodaBeanUtils.equal(getSabrFunctionProvider(), other.getSabrFunctionProvider()) &&
-          JodaBeanUtils.equal(getShiftSurface(), other.getShiftSurface());
+      return JodaBeanUtils.equal(alphaSurface, other.alphaSurface) &&
+          JodaBeanUtils.equal(betaSurface, other.betaSurface) &&
+          JodaBeanUtils.equal(rhoSurface, other.rhoSurface) &&
+          JodaBeanUtils.equal(nuSurface, other.nuSurface) &&
+          JodaBeanUtils.equal(sabrFunctionProvider, other.sabrFunctionProvider) &&
+          JodaBeanUtils.equal(shiftSurface, other.shiftSurface);
     }
     return false;
   }
@@ -368,12 +368,12 @@ public final class SabrInterestRateParameters
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getAlphaSurface());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getBetaSurface());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getRhoSurface());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getNuSurface());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSabrFunctionProvider());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getShiftSurface());
+    hash = hash * 31 + JodaBeanUtils.hashCode(alphaSurface);
+    hash = hash * 31 + JodaBeanUtils.hashCode(betaSurface);
+    hash = hash * 31 + JodaBeanUtils.hashCode(rhoSurface);
+    hash = hash * 31 + JodaBeanUtils.hashCode(nuSurface);
+    hash = hash * 31 + JodaBeanUtils.hashCode(sabrFunctionProvider);
+    hash = hash * 31 + JodaBeanUtils.hashCode(shiftSurface);
     return hash;
   }
 
@@ -381,12 +381,12 @@ public final class SabrInterestRateParameters
   public String toString() {
     StringBuilder buf = new StringBuilder(224);
     buf.append("SabrInterestRateParameters{");
-    buf.append("alphaSurface").append('=').append(getAlphaSurface()).append(',').append(' ');
-    buf.append("betaSurface").append('=').append(getBetaSurface()).append(',').append(' ');
-    buf.append("rhoSurface").append('=').append(getRhoSurface()).append(',').append(' ');
-    buf.append("nuSurface").append('=').append(getNuSurface()).append(',').append(' ');
-    buf.append("sabrFunctionProvider").append('=').append(getSabrFunctionProvider()).append(',').append(' ');
-    buf.append("shiftSurface").append('=').append(JodaBeanUtils.toString(getShiftSurface()));
+    buf.append("alphaSurface").append('=').append(alphaSurface).append(',').append(' ');
+    buf.append("betaSurface").append('=').append(betaSurface).append(',').append(' ');
+    buf.append("rhoSurface").append('=').append(rhoSurface).append(',').append(' ');
+    buf.append("nuSurface").append('=').append(nuSurface).append(',').append(' ');
+    buf.append("sabrFunctionProvider").append('=').append(sabrFunctionProvider).append(',').append(' ');
+    buf.append("shiftSurface").append('=').append(JodaBeanUtils.toString(shiftSurface));
     buf.append('}');
     return buf.toString();
   }

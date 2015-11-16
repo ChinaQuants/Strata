@@ -27,7 +27,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.collect.tuple.Pair;
 
 /**
- * Surface node metadata for a surface node for swaptions with a specific time to expiration and underlying swap tenor.
+ * Surface node metadata for a surface node for swaptions with a specific time to expiry and underlying swap tenor.
  * <p>
  * This typically represents a node of swaption volatility surface parameterized by expiry and tenor. 
  * Alternative applications include a representation of a node on model parameter surface, e.g., SABR model parameters.
@@ -39,7 +39,7 @@ public final class SwaptionSurfaceExpiryTenorNodeMetadata
   /**
   * The year fraction of the surface node.
   * <p>
-  * This is the time to expiration that the node on the surface is defined as.
+  * This is the time to expiry that the node on the surface is defined as.
   * There is not necessarily a direct relationship with a date from an underlying instrument.
   */
   @PropertyDefinition
@@ -149,7 +149,7 @@ public final class SwaptionSurfaceExpiryTenorNodeMetadata
   /**
    * Gets the year fraction of the surface node.
    * <p>
-   * This is the time to expiration that the node on the surface is defined as.
+   * This is the time to expiry that the node on the surface is defined as.
    * There is not necessarily a direct relationship with a date from an underlying instrument.
    * @return the value of the property
    */
@@ -186,9 +186,9 @@ public final class SwaptionSurfaceExpiryTenorNodeMetadata
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       SwaptionSurfaceExpiryTenorNodeMetadata other = (SwaptionSurfaceExpiryTenorNodeMetadata) obj;
-      return JodaBeanUtils.equal(getYearFraction(), other.getYearFraction()) &&
-          JodaBeanUtils.equal(getTenor(), other.getTenor()) &&
-          JodaBeanUtils.equal(getLabel(), other.getLabel());
+      return JodaBeanUtils.equal(yearFraction, other.yearFraction) &&
+          JodaBeanUtils.equal(tenor, other.tenor) &&
+          JodaBeanUtils.equal(label, other.label);
     }
     return false;
   }
@@ -196,9 +196,9 @@ public final class SwaptionSurfaceExpiryTenorNodeMetadata
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getYearFraction());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTenor());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getLabel());
+    hash = hash * 31 + JodaBeanUtils.hashCode(yearFraction);
+    hash = hash * 31 + JodaBeanUtils.hashCode(tenor);
+    hash = hash * 31 + JodaBeanUtils.hashCode(label);
     return hash;
   }
 
@@ -206,9 +206,9 @@ public final class SwaptionSurfaceExpiryTenorNodeMetadata
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("SwaptionSurfaceExpiryTenorNodeMetadata{");
-    buf.append("yearFraction").append('=').append(getYearFraction()).append(',').append(' ');
-    buf.append("tenor").append('=').append(getTenor()).append(',').append(' ');
-    buf.append("label").append('=').append(JodaBeanUtils.toString(getLabel()));
+    buf.append("yearFraction").append('=').append(yearFraction).append(',').append(' ');
+    buf.append("tenor").append('=').append(tenor).append(',').append(' ');
+    buf.append("label").append('=').append(JodaBeanUtils.toString(label));
     buf.append('}');
     return buf.toString();
   }

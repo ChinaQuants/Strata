@@ -28,11 +28,11 @@ import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.fx.FxSwapTrade;
-import com.opengamma.strata.finance.fx.type.FxSwapTemplate;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.product.fx.FxSwapTrade;
+import com.opengamma.strata.product.fx.type.FxSwapTemplate;
 
 /**
  * A curve node whose instrument is an FX Swap.
@@ -199,9 +199,9 @@ public final class FxSwapCurveNode
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       FxSwapCurveNode other = (FxSwapCurveNode) obj;
-      return JodaBeanUtils.equal(getTemplate(), other.getTemplate()) &&
-          JodaBeanUtils.equal(getFxNearKey(), other.getFxNearKey()) &&
-          JodaBeanUtils.equal(getFxPtsKey(), other.getFxPtsKey());
+      return JodaBeanUtils.equal(template, other.template) &&
+          JodaBeanUtils.equal(fxNearKey, other.fxNearKey) &&
+          JodaBeanUtils.equal(fxPtsKey, other.fxPtsKey);
     }
     return false;
   }
@@ -209,9 +209,9 @@ public final class FxSwapCurveNode
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTemplate());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getFxNearKey());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getFxPtsKey());
+    hash = hash * 31 + JodaBeanUtils.hashCode(template);
+    hash = hash * 31 + JodaBeanUtils.hashCode(fxNearKey);
+    hash = hash * 31 + JodaBeanUtils.hashCode(fxPtsKey);
     return hash;
   }
 
@@ -219,9 +219,9 @@ public final class FxSwapCurveNode
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("FxSwapCurveNode{");
-    buf.append("template").append('=').append(getTemplate()).append(',').append(' ');
-    buf.append("fxNearKey").append('=').append(getFxNearKey()).append(',').append(' ');
-    buf.append("fxPtsKey").append('=').append(JodaBeanUtils.toString(getFxPtsKey()));
+    buf.append("template").append('=').append(template).append(',').append(' ');
+    buf.append("fxNearKey").append('=').append(fxNearKey).append(',').append(' ');
+    buf.append("fxPtsKey").append('=').append(JodaBeanUtils.toString(fxPtsKey));
     buf.append('}');
     return buf.toString();
   }

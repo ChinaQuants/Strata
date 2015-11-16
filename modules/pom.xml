@@ -59,9 +59,9 @@
   <modules>
     <module>basics</module>
     <module>collect</module>
-    <module>engine</module>
+    <module>calc</module>
     <module>source</module>
-    <module>finance</module>
+    <module>product</module>
     <module>function</module>
     <module>loader</module>
     <module>market</module>
@@ -198,12 +198,12 @@
       </dependency>
       <dependency>
         <groupId>com.opengamma.strata</groupId>
-        <artifactId>strata-finance</artifactId>
+        <artifactId>strata-product</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.opengamma.strata</groupId>
-        <artifactId>strata-engine</artifactId>
+        <artifactId>strata-calc</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -280,14 +280,14 @@
       </dependency>
       <dependency>
         <groupId>com.opengamma.strata</groupId>
-        <artifactId>strata-finance</artifactId>
+        <artifactId>strata-product</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>com.opengamma.strata</groupId>
-        <artifactId>strata-engine</artifactId>
+        <artifactId>strata-calc</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
@@ -478,7 +478,7 @@
     <findbugs.version>1.3.9</findbugs.version>
     <guava.version>18.0</guava.version>
     <joda-convert.version>1.7</joda-convert.version>
-    <joda-beans.version>1.6</joda-beans.version>
+    <joda-beans.version>1.7</joda-beans.version>
     <jool.version>0.9.6</jool.version>
     <slf4j.version>1.7.12</slf4j.version>
     <testng.version>6.9.4</testng.version>

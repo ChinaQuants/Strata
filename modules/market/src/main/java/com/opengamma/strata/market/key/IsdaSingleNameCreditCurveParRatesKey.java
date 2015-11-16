@@ -26,9 +26,9 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.basics.market.MarketDataFeed;
 import com.opengamma.strata.basics.market.MarketDataId;
 import com.opengamma.strata.basics.market.SimpleMarketDataKey;
-import com.opengamma.strata.finance.credit.SingleNameReferenceInformation;
 import com.opengamma.strata.market.curve.IsdaCreditCurveParRates;
 import com.opengamma.strata.market.id.IsdaSingleNameCreditCurveParRatesId;
+import com.opengamma.strata.product.credit.SingleNameReferenceInformation;
 
 /**
  * Market data key identifying a set of par rates to be used in the ISDA credit model's credit
@@ -123,7 +123,7 @@ public final class IsdaSingleNameCreditCurveParRatesKey
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IsdaSingleNameCreditCurveParRatesKey other = (IsdaSingleNameCreditCurveParRatesKey) obj;
-      return JodaBeanUtils.equal(getReferenceInformation(), other.getReferenceInformation());
+      return JodaBeanUtils.equal(referenceInformation, other.referenceInformation);
     }
     return false;
   }
@@ -131,7 +131,7 @@ public final class IsdaSingleNameCreditCurveParRatesKey
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getReferenceInformation());
+    hash = hash * 31 + JodaBeanUtils.hashCode(referenceInformation);
     return hash;
   }
 
@@ -139,7 +139,7 @@ public final class IsdaSingleNameCreditCurveParRatesKey
   public String toString() {
     StringBuilder buf = new StringBuilder(64);
     buf.append("IsdaSingleNameCreditCurveParRatesKey{");
-    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(getReferenceInformation()));
+    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(referenceInformation));
     buf.append('}');
     return buf.toString();
   }

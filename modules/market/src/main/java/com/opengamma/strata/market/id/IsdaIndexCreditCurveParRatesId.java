@@ -24,8 +24,8 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.market.MarketDataId;
-import com.opengamma.strata.finance.credit.IndexReferenceInformation;
 import com.opengamma.strata.market.curve.IsdaCreditCurveParRates;
+import com.opengamma.strata.product.credit.IndexReferenceInformation;
 
 /**
  * Market data ID for a set of par rates to be used in the ISDA credit model's credit curve
@@ -115,7 +115,7 @@ public final class IsdaIndexCreditCurveParRatesId
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IsdaIndexCreditCurveParRatesId other = (IsdaIndexCreditCurveParRatesId) obj;
-      return JodaBeanUtils.equal(getReferenceInformation(), other.getReferenceInformation());
+      return JodaBeanUtils.equal(referenceInformation, other.referenceInformation);
     }
     return false;
   }
@@ -123,7 +123,7 @@ public final class IsdaIndexCreditCurveParRatesId
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getReferenceInformation());
+    hash = hash * 31 + JodaBeanUtils.hashCode(referenceInformation);
     return hash;
   }
 
@@ -131,7 +131,7 @@ public final class IsdaIndexCreditCurveParRatesId
   public String toString() {
     StringBuilder buf = new StringBuilder(64);
     buf.append("IsdaIndexCreditCurveParRatesId{");
-    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(getReferenceInformation()));
+    buf.append("referenceInformation").append('=').append(JodaBeanUtils.toString(referenceInformation));
     buf.append('}');
     return buf.toString();
   }

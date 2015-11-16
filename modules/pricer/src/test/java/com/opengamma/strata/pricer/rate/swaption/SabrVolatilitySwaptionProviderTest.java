@@ -24,13 +24,13 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.tuple.DoublesPair;
-import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapConvention;
-import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapConventions;
 import com.opengamma.strata.market.sensitivity.SurfaceCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.SwaptionSabrSensitivity;
 import com.opengamma.strata.market.surface.SwaptionSurfaceExpiryTenorNodeMetadata;
 import com.opengamma.strata.pricer.impl.option.SabrInterestRateParameters;
+import com.opengamma.strata.product.rate.swap.type.FixedIborSwapConvention;
+import com.opengamma.strata.product.rate.swap.type.FixedIborSwapConventions;
 
 /**
  * Test {@link SabrVolatilitySwaptionProvider}.
@@ -98,8 +98,8 @@ public class SabrVolatilitySwaptionProviderTest {
     SabrVolatilitySwaptionProvider prov = SabrVolatilitySwaptionProvider.of(PARAM, CONV, ACT_ACT_ISDA, DATE);
     for (int i = 0; i < NB_TEST; i++) {
       for (int j=0;j<NB_STRIKE;++j) {
-        double expirationTime = prov.relativeTime(TEST_OPTION_EXPIRY[i]);
-        double volExpected = PARAM.getVolatility(expirationTime, TEST_TENOR[i], TEST_STRIKE[j], TEST_FORWARD);
+        double expiryTime = prov.relativeTime(TEST_OPTION_EXPIRY[i]);
+        double volExpected = PARAM.getVolatility(expiryTime, TEST_TENOR[i], TEST_STRIKE[j], TEST_FORWARD);
         double volComputed = prov.getVolatility(TEST_OPTION_EXPIRY[i], TEST_TENOR[i], TEST_STRIKE[j], TEST_FORWARD);
         assertEquals(volComputed, volExpected, TOLERANCE_VOL);
       }
@@ -111,18 +111,18 @@ public class SabrVolatilitySwaptionProviderTest {
     SabrVolatilitySwaptionProvider prov = SabrVolatilitySwaptionProvider.of(PARAM, CONV, ACT_ACT_ISDA, DATE);
     for (int i = 0; i < NB_TEST; i++) {
       for (int j = 0; j < NB_STRIKE; ++j) {
-        double expirationTime = prov.relativeTime(TEST_OPTION_EXPIRY[i]);
+        double expiryTime = prov.relativeTime(TEST_OPTION_EXPIRY[i]);
         SwaptionSabrSensitivity point = SwaptionSabrSensitivity.of(CONV, TEST_OPTION_EXPIRY[i], TEST_TENOR[i],
             TEST_STRIKE[j], TEST_FORWARD, USD, alphaSensi, betaSensi, rhoSensi, nuSensi);
         SurfaceCurrencyParameterSensitivities sensiComputed = prov.surfaceCurrencyParameterSensitivity(point);
         Map<DoublesPair, Double> alphaMap = prov.getParameters().getAlphaSurface()
-            .zValueParameterSensitivity(expirationTime, TEST_TENOR[i]);
+            .zValueParameterSensitivity(expiryTime, TEST_TENOR[i]);
         Map<DoublesPair, Double> betaMap = prov.getParameters().getBetaSurface()
-            .zValueParameterSensitivity(expirationTime, TEST_TENOR[i]);
+            .zValueParameterSensitivity(expiryTime, TEST_TENOR[i]);
         Map<DoublesPair, Double> rhoMap = prov.getParameters().getRhoSurface()
-            .zValueParameterSensitivity(expirationTime, TEST_TENOR[i]);
+            .zValueParameterSensitivity(expiryTime, TEST_TENOR[i]);
         Map<DoublesPair, Double> nuMap = prov.getParameters().getNuSurface()
-            .zValueParameterSensitivity(expirationTime, TEST_TENOR[i]);
+            .zValueParameterSensitivity(expiryTime, TEST_TENOR[i]);
         SurfaceCurrencyParameterSensitivity alphaSensiObj = sensiComputed.getSensitivity(
             SwaptionSabrRateVolatilityDataSet.META_ALPHA.getSurfaceName(), USD);
         SurfaceCurrencyParameterSensitivity betaSensiObj = sensiComputed.getSensitivity(

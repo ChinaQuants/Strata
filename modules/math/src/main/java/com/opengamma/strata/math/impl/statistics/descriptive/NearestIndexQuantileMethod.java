@@ -22,8 +22,17 @@ public final class NearestIndexQuantileMethod
 
   @Override
   int index(double quantileSize) {
-    int index1 = (int) Math.round(quantileSize);
-    return (index1 > 0) ? index1 : 1;
+    return (int) Math.round(quantileSize);
+  }
+
+  @Override
+  int sampleCorrection(int sampleSize) {
+    return sampleSize;
+  }
+
+  @Override
+  protected double indexShift() {
+    return 0.5;
   }
 
 }

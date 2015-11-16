@@ -27,11 +27,11 @@ import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.rate.swap.SwapTrade;
-import com.opengamma.strata.finance.rate.swap.type.IborIborSwapTemplate;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.rate.swap.type.IborIborSwapTemplate;
 
 /**
  * A curve node whose instrument is a Ibor-Ibor interest rate swap.
@@ -204,9 +204,9 @@ public final class IborIborSwapCurveNode
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IborIborSwapCurveNode other = (IborIborSwapCurveNode) obj;
-      return JodaBeanUtils.equal(getTemplate(), other.getTemplate()) &&
-          JodaBeanUtils.equal(getRateKey(), other.getRateKey()) &&
-          JodaBeanUtils.equal(getSpread(), other.getSpread());
+      return JodaBeanUtils.equal(template, other.template) &&
+          JodaBeanUtils.equal(rateKey, other.rateKey) &&
+          JodaBeanUtils.equal(spread, other.spread);
     }
     return false;
   }
@@ -214,9 +214,9 @@ public final class IborIborSwapCurveNode
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTemplate());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getRateKey());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSpread());
+    hash = hash * 31 + JodaBeanUtils.hashCode(template);
+    hash = hash * 31 + JodaBeanUtils.hashCode(rateKey);
+    hash = hash * 31 + JodaBeanUtils.hashCode(spread);
     return hash;
   }
 
@@ -224,9 +224,9 @@ public final class IborIborSwapCurveNode
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("IborIborSwapCurveNode{");
-    buf.append("template").append('=').append(getTemplate()).append(',').append(' ');
-    buf.append("rateKey").append('=').append(getRateKey()).append(',').append(' ');
-    buf.append("spread").append('=').append(JodaBeanUtils.toString(getSpread()));
+    buf.append("template").append('=').append(template).append(',').append(' ');
+    buf.append("rateKey").append('=').append(rateKey).append(',').append(' ');
+    buf.append("spread").append('=').append(JodaBeanUtils.toString(spread));
     buf.append('}');
     return buf.toString();
   }

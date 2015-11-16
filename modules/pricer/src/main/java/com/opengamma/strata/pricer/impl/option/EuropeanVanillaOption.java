@@ -47,12 +47,12 @@ public final class EuropeanVanillaOption
    * Obtains an instance.
    * 
    * @param strike  the strike
-   * @param timeToExpiration  the time to expiration, year fraction
+   * @param timeToExpiry  the time to expiry, year fraction
    * @param putCall  whether the option is put or call.
    * @return the option definition
    */
-  public static EuropeanVanillaOption of(double strike, double timeToExpiration, PutCall putCall) {
-    return new EuropeanVanillaOption(strike, timeToExpiration, putCall);
+  public static EuropeanVanillaOption of(double strike, double timeToExpiry, PutCall putCall) {
+    return new EuropeanVanillaOption(strike, timeToExpiry, putCall);
   }
 
   //-------------------------------------------------------------------------
@@ -78,6 +78,10 @@ public final class EuropeanVanillaOption
    */
   public static MetaBean meta() {
     return META_BEAN;
+  }
+
+  static {
+    JodaBeanUtils.registerMetaBean(META_BEAN);
   }
 
   /**
@@ -146,9 +150,9 @@ public final class EuropeanVanillaOption
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       EuropeanVanillaOption other = (EuropeanVanillaOption) obj;
-      return JodaBeanUtils.equal(getStrike(), other.getStrike()) &&
-          JodaBeanUtils.equal(getTimeToExpiry(), other.getTimeToExpiry()) &&
-          JodaBeanUtils.equal(getPutCall(), other.getPutCall());
+      return JodaBeanUtils.equal(strike, other.strike) &&
+          JodaBeanUtils.equal(timeToExpiry, other.timeToExpiry) &&
+          JodaBeanUtils.equal(putCall, other.putCall);
     }
     return false;
   }
@@ -156,9 +160,9 @@ public final class EuropeanVanillaOption
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getStrike());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTimeToExpiry());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getPutCall());
+    hash = hash * 31 + JodaBeanUtils.hashCode(strike);
+    hash = hash * 31 + JodaBeanUtils.hashCode(timeToExpiry);
+    hash = hash * 31 + JodaBeanUtils.hashCode(putCall);
     return hash;
   }
 
@@ -166,9 +170,9 @@ public final class EuropeanVanillaOption
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("EuropeanVanillaOption{");
-    buf.append("strike").append('=').append(getStrike()).append(',').append(' ');
-    buf.append("timeToExpiry").append('=').append(getTimeToExpiry()).append(',').append(' ');
-    buf.append("putCall").append('=').append(JodaBeanUtils.toString(getPutCall()));
+    buf.append("strike").append('=').append(strike).append(',').append(' ');
+    buf.append("timeToExpiry").append('=').append(timeToExpiry).append(',').append(' ');
+    buf.append("putCall").append('=').append(JodaBeanUtils.toString(putCall));
     buf.append('}');
     return buf.toString();
   }

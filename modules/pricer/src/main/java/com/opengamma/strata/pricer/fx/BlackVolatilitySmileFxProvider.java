@@ -43,7 +43,7 @@ import com.opengamma.strata.market.value.ValueType;
  * Data provider of volatility for FX options in the lognormal or Black-Scholes model. 
  * <p>
  * The volatility is represented by a term structure of interpolated smile, 
- * {@link SmileDeltaTermStructureParametersStrikeInterpolation}, which represents expiration dependent smile formed of
+ * {@link SmileDeltaTermStructureParametersStrikeInterpolation}, which represents expiry dependent smile formed of
  * ATM, risk reversal and strangle as used in FX market.
  */
 @BeanDefinition
@@ -54,7 +54,7 @@ final class BlackVolatilitySmileFxProvider
   /**
    * The volatility model. 
    * <p>
-   * This represents expiration dependent smile which consists of ATM, risk reversal
+   * This represents expiry dependent smile which consists of ATM, risk reversal
    * and strangle as used in FX market.
    */
   @PropertyDefinition(validate = "notNull")
@@ -120,7 +120,7 @@ final class BlackVolatilitySmileFxProvider
     double forward = currencyPair.isInverse(point.getCurrencyPair()) ? 1d / point.getForward() : point.getForward();
     double pointValue = point.getSensitivity();
     DoubleMatrix bucketedSensi = smile.getVolatilityAndSensitivities(expiryTime, strike, forward).getSensitivities();
-    double[] times = smile.getTimeToExpiration();
+    double[] times = smile.getTimeToExpiry();
     int nTimes = times.length;
     List<Double> sensiList = new ArrayList<Double>();
     List<SurfaceParameterMetadata> paramList = new ArrayList<SurfaceParameterMetadata>();
@@ -208,7 +208,7 @@ final class BlackVolatilitySmileFxProvider
   /**
    * Gets the volatility model.
    * <p>
-   * This represents expiration dependent smile which consists of ATM, risk reversal
+   * This represents expiry dependent smile which consists of ATM, risk reversal
    * and strangle as used in FX market.
    * @return the value of the property, not null
    */
@@ -262,10 +262,10 @@ final class BlackVolatilitySmileFxProvider
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       BlackVolatilitySmileFxProvider other = (BlackVolatilitySmileFxProvider) obj;
-      return JodaBeanUtils.equal(getSmile(), other.getSmile()) &&
-          JodaBeanUtils.equal(getCurrencyPair(), other.getCurrencyPair()) &&
-          JodaBeanUtils.equal(getDayCount(), other.getDayCount()) &&
-          JodaBeanUtils.equal(getValuationDateTime(), other.getValuationDateTime());
+      return JodaBeanUtils.equal(smile, other.smile) &&
+          JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
+          JodaBeanUtils.equal(dayCount, other.dayCount) &&
+          JodaBeanUtils.equal(valuationDateTime, other.valuationDateTime);
     }
     return false;
   }
@@ -273,10 +273,10 @@ final class BlackVolatilitySmileFxProvider
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSmile());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurrencyPair());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getDayCount());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getValuationDateTime());
+    hash = hash * 31 + JodaBeanUtils.hashCode(smile);
+    hash = hash * 31 + JodaBeanUtils.hashCode(currencyPair);
+    hash = hash * 31 + JodaBeanUtils.hashCode(dayCount);
+    hash = hash * 31 + JodaBeanUtils.hashCode(valuationDateTime);
     return hash;
   }
 
@@ -284,10 +284,10 @@ final class BlackVolatilitySmileFxProvider
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("BlackVolatilitySmileFxProvider{");
-    buf.append("smile").append('=').append(getSmile()).append(',').append(' ');
-    buf.append("currencyPair").append('=').append(getCurrencyPair()).append(',').append(' ');
-    buf.append("dayCount").append('=').append(getDayCount()).append(',').append(' ');
-    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(getValuationDateTime()));
+    buf.append("smile").append('=').append(smile).append(',').append(' ');
+    buf.append("currencyPair").append('=').append(currencyPair).append(',').append(' ');
+    buf.append("dayCount").append('=').append(dayCount).append(',').append(' ');
+    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(valuationDateTime));
     buf.append('}');
     return buf.toString();
   }
@@ -531,7 +531,7 @@ final class BlackVolatilitySmileFxProvider
     /**
      * Sets the volatility model.
      * <p>
-     * This represents expiration dependent smile which consists of ATM, risk reversal
+     * This represents expiry dependent smile which consists of ATM, risk reversal
      * and strangle as used in FX market.
      * @param smile  the new value, not null
      * @return this, for chaining, not null
