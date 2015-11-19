@@ -14,14 +14,15 @@ import static org.assertj.core.api.Assertions.offset;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.ShiftType;
 import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveMetadata;
+import com.opengamma.strata.market.curve.CurveUnitParameterSensitivity;
 import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.curve.NodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivity;
 
 @Test
 public class ParallelShiftedCurveTest {

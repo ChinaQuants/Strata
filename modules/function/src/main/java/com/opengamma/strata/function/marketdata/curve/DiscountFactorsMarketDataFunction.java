@@ -8,11 +8,12 @@ package com.opengamma.strata.function.marketdata.curve;
 import java.time.LocalDate;
 
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.calc.marketdata.MarketDataLookup;
+import com.opengamma.strata.calc.marketdata.CalculationEnvironment;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
 import com.opengamma.strata.calc.marketdata.function.MarketDataFunction;
 import com.opengamma.strata.calc.marketdata.scenario.MarketDataBox;
+import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroup;
 import com.opengamma.strata.market.curve.CurveMetadata;
@@ -20,7 +21,6 @@ import com.opengamma.strata.market.id.DiscountCurveId;
 import com.opengamma.strata.market.id.DiscountFactorsId;
 import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.SimpleDiscountFactors;
-import com.opengamma.strata.market.value.ValueType;
 import com.opengamma.strata.market.value.ZeroRateDiscountFactors;
 
 /**
@@ -47,7 +47,7 @@ public class DiscountFactorsMarketDataFunction
   @Override
   public MarketDataBox<DiscountFactors> build(
       DiscountFactorsId id,
-      MarketDataLookup marketData,
+      CalculationEnvironment marketData,
       MarketDataConfig config) {
 
     // find curve
@@ -68,17 +68,7 @@ public class DiscountFactorsMarketDataFunction
       LocalDate valuationDate, 
       Curve curve) {
     
-    ValueType yValueType = curve.getMetadata().getYValueType();
-    if (ValueType.ZERO_RATE.equals(yValueType)) {
-      return ZeroRateDiscountFactors.of(currency, valuationDate, curve);
-
-    } else if (ValueType.DISCOUNT_FACTOR.equals(yValueType)) {
-      return SimpleDiscountFactors.of(currency, valuationDate, curve);
-
-    } else {
-      throw new IllegalArgumentException(
-          "Invalid curve, must have ValueType of 'ZeroRate' or 'DiscountFactor', but was " + yValueType);
-    }
+    return DiscountFactors.of(currency, valuationDate, curve);
   }
 
 }

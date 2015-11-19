@@ -7,9 +7,8 @@ package com.opengamma.strata.market.curve;
 
 import java.time.Period;
 
-import com.opengamma.strata.basics.market.Perturbation;
 import com.opengamma.strata.collect.Messages;
-import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivity;
+import com.opengamma.strata.market.Perturbation;
 
 /**
  * A curve that maps a {@code double} x-value to a {@code double} y-value.

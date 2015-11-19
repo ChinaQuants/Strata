@@ -12,18 +12,17 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.Trade;
-import com.opengamma.strata.basics.currency.FxMatrix;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ObservableValues;
+import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.CurveGroupEntry;
 import com.opengamma.strata.market.curve.CurveName;
+import com.opengamma.strata.market.curve.CurveNode;
+import com.opengamma.strata.market.curve.CurveParameterSize;
 import com.opengamma.strata.market.curve.JacobianCalibrationMatrix;
-import com.opengamma.strata.market.curve.definition.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.definition.CurveGroupEntry;
-import com.opengamma.strata.market.curve.definition.CurveNode;
-import com.opengamma.strata.market.curve.definition.CurveParameterSize;
 import com.opengamma.strata.math.impl.function.Function1D;
 import com.opengamma.strata.math.impl.linearalgebra.DecompositionFactory;
 import com.opengamma.strata.math.impl.matrix.CommonsMatrixAlgebra;
@@ -117,19 +116,17 @@ public final class CurveCalibrator {
    * @param valuationDate  the validation date
    * @param marketData  the market data required to build a trade for the instrument
    * @param timeSeries  the time-series
-   * @param fxMatrix  the FX matrix
    * @return the rates provider resulting from the calibration
    */
   public ImmutableRatesProvider calibrate(
       CurveGroupDefinition curveGroupDefn,
       LocalDate valuationDate,
-      ObservableValues marketData,
-      Map<Index, LocalDateDoubleTimeSeries> timeSeries,
-      FxMatrix fxMatrix) {
+      MarketData marketData,
+      Map<Index, LocalDateDoubleTimeSeries> timeSeries) {
 
     ImmutableRatesProvider knownData = ImmutableRatesProvider.builder()
         .valuationDate(valuationDate)
-        .fxMatrix(fxMatrix)
+        .fxRateProvider(new MarketDataFxRateProvider(marketData))
         .timeSeries(timeSeries)
         .build();
     return calibrate(ImmutableList.of(curveGroupDefn), knownData, marketData);
@@ -152,7 +149,7 @@ public final class CurveCalibrator {
   public ImmutableRatesProvider calibrate(
       List<CurveGroupDefinition> allGroupsDefn,
       ImmutableRatesProvider knownData,
-      ObservableValues marketData) {
+      MarketData marketData) {
 
     // perform calibration one group at a time, building up the result by mutating these variables
     ImmutableRatesProvider providerCombined = knownData;

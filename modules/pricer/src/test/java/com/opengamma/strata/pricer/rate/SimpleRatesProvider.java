@@ -30,7 +30,7 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.OvernightIndex;
 import com.opengamma.strata.basics.index.PriceIndex;
 import com.opengamma.strata.basics.market.MarketDataKey;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.FxForwardRates;
@@ -88,6 +88,12 @@ public class SimpleRatesProvider
     this.discountFactors = discountFactors;
   }
 
+  public SimpleRatesProvider(LocalDate valuationDate, DiscountFactors discountFactors, IborIndexRates iborRates) {
+    this.valuationDate = valuationDate;
+    this.discountFactors = discountFactors;
+    this.iborRates = iborRates;
+  }
+
   //-------------------------------------------------------------------------
   @Override
   public <T> T data(MarketDataKey<T> key) {
@@ -96,7 +102,10 @@ public class SimpleRatesProvider
 
   @Override
   public double fxRate(Currency baseCurrency, Currency counterCurrency) {
-    throw new UnsupportedOperationException();
+    if (baseCurrency.equals(counterCurrency)) {
+      return 1d;
+    }
+    throw new UnsupportedOperationException("FxRate not found: " + baseCurrency + "/" + counterCurrency);
   }
 
   @Override

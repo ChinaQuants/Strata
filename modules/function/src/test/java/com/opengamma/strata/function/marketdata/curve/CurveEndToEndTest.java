@@ -36,10 +36,10 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.Index;
+import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.basics.market.MarketDataKey;
 import com.opengamma.strata.basics.market.ObservableId;
 import com.opengamma.strata.basics.market.ObservableKey;
-import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.Column;
@@ -69,28 +69,28 @@ import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
 import com.opengamma.strata.collect.id.LinkResolver;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.function.calculation.rate.swap.SwapPvFunction;
+import com.opengamma.strata.function.calculation.swap.SwapPvFunction;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
+import com.opengamma.strata.market.ValueType;
+import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.definition.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.definition.CurveNode;
-import com.opengamma.strata.market.curve.definition.FixedIborSwapCurveNode;
-import com.opengamma.strata.market.curve.definition.FraCurveNode;
-import com.opengamma.strata.market.curve.definition.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.CurveNode;
+import com.opengamma.strata.market.curve.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
+import com.opengamma.strata.market.curve.node.FraCurveNode;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.key.DiscountFactorsKey;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.market.key.MarketDataKeys;
-import com.opengamma.strata.market.value.ValueType;
 import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
-import com.opengamma.strata.pricer.rate.fra.DiscountingFraProductPricer;
-import com.opengamma.strata.product.rate.fra.ExpandedFra;
-import com.opengamma.strata.product.rate.fra.Fra;
-import com.opengamma.strata.product.rate.fra.FraTrade;
-import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.pricer.fra.DiscountingFraProductPricer;
+import com.opengamma.strata.product.fra.ExpandedFra;
+import com.opengamma.strata.product.fra.Fra;
+import com.opengamma.strata.product.fra.FraTrade;
+import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
  * Test curves.
@@ -138,12 +138,12 @@ public class CurveEndToEndTest {
     LocalDate valuationDate = date(2011, 3, 8);
 
     // Build the trades from the node instruments
-    ObservableValues quotesMap = ObservableValues.ofIdMap(parRateData);
-    Trade fra3x6Trade = fra3x6Node.trade(valuationDate, quotesMap);
-    Trade fra6x9Trade = fra6x9Node.trade(valuationDate, quotesMap);
-    Trade swap1yTrade = swap1yNode.trade(valuationDate, quotesMap);
-    Trade swap2yTrade = swap2yNode.trade(valuationDate, quotesMap);
-    Trade swap3yTrade = swap3yNode.trade(valuationDate, quotesMap);
+    MarketData quotes = MarketData.builder().addObservableValuesById(parRateData).build();
+    Trade fra3x6Trade = fra3x6Node.trade(valuationDate, quotes);
+    Trade fra6x9Trade = fra6x9Node.trade(valuationDate, quotes);
+    Trade swap1yTrade = swap1yNode.trade(valuationDate, quotes);
+    Trade swap2yTrade = swap2yNode.trade(valuationDate, quotes);
+    Trade swap3yTrade = swap3yNode.trade(valuationDate, quotes);
 
     List<Trade> trades = ImmutableList.of(fra3x6Trade, fra6x9Trade, swap1yTrade, swap2yTrade, swap3yTrade);
 
@@ -186,7 +186,7 @@ public class CurveEndToEndTest {
 
     // Market data functions --------------------------------------------------
 
-    ParRatesMarketDataFunction parRatesFunction = new ParRatesMarketDataFunction();
+    CurveInputsMarketDataFunction parRatesFunction = new CurveInputsMarketDataFunction();
     CurveGroupMarketDataFunction curveGroupFunction = new CurveGroupMarketDataFunction(
         RootFinderConfig.defaults(), CalibrationMeasures.DEFAULT);
     DiscountCurveMarketDataFunction discountCurveFunction = new DiscountCurveMarketDataFunction();

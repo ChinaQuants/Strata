@@ -23,11 +23,11 @@ import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.examples.data.ExampleData;
 import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
-import com.opengamma.strata.examples.marketdata.MarketDataBuilder;
+import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.fra.Fra;
-import com.opengamma.strata.product.rate.fra.FraTrade;
+import com.opengamma.strata.product.fra.Fra;
+import com.opengamma.strata.product.fra.FraTrade;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
@@ -57,7 +57,7 @@ public class FraPricingExample {
         Column.of(Measure.BUCKETED_PV01));
 
     // use the built-in example market data
-    MarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
 
     // the complete set of rules for calculating measures
     CalculationRules rules = CalculationRules.builder()

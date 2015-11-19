@@ -35,21 +35,21 @@ import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.examples.data.ExampleData;
 import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
-import com.opengamma.strata.examples.marketdata.MarketDataBuilder;
+import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.swap.CompoundingMethod;
-import com.opengamma.strata.product.rate.swap.FixedRateCalculation;
-import com.opengamma.strata.product.rate.swap.IborRateCalculation;
-import com.opengamma.strata.product.rate.swap.NotionalSchedule;
-import com.opengamma.strata.product.rate.swap.OvernightAccrualMethod;
-import com.opengamma.strata.product.rate.swap.OvernightRateCalculation;
-import com.opengamma.strata.product.rate.swap.PaymentSchedule;
-import com.opengamma.strata.product.rate.swap.RateCalculationSwapLeg;
-import com.opengamma.strata.product.rate.swap.StubCalculation;
-import com.opengamma.strata.product.rate.swap.Swap;
-import com.opengamma.strata.product.rate.swap.SwapLeg;
-import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.swap.CompoundingMethod;
+import com.opengamma.strata.product.swap.FixedRateCalculation;
+import com.opengamma.strata.product.swap.IborRateCalculation;
+import com.opengamma.strata.product.swap.NotionalSchedule;
+import com.opengamma.strata.product.swap.OvernightAccrualMethod;
+import com.opengamma.strata.product.swap.OvernightRateCalculation;
+import com.opengamma.strata.product.swap.PaymentSchedule;
+import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
+import com.opengamma.strata.product.swap.StubCalculation;
+import com.opengamma.strata.product.swap.Swap;
+import com.opengamma.strata.product.swap.SwapLeg;
+import com.opengamma.strata.product.swap.SwapTrade;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
@@ -82,7 +82,7 @@ public class SwapPricingExample {
         Column.of(Measure.BUCKETED_GAMMA_PV01));
 
     // use the built-in example market data
-    MarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
 
     // the complete set of rules for calculating measures
     CalculationRules rules = CalculationRules.builder()
@@ -811,7 +811,7 @@ public class SwapPricingExample {
         .build();
 
     return SwapTrade.builder()
-        .product(Swap.of(payLeg, receiveLeg))
+        .product(Swap.of(receiveLeg, payLeg))
         .tradeInfo(TradeInfo.builder()
             .id(StandardId.of("example", "14"))
             .attributes(ImmutableMap.of("description", "GBP Libor 3m vs USD Libor 3m"))

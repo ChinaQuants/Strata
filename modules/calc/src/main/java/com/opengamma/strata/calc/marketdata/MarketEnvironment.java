@@ -42,24 +42,24 @@ import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
  * <p>
  * It is anticipated that {@link MarketEnvironment} will be exposed directly to users.
  * <p>
- * The market data used in calculations is provided by {@link CalculationEnvironment}. This
+ * The market data used in calculations is provided by {@link CalculationMarketDataMap}. This
  * contains the same data as {@link MarketEnvironment} plus
  * additional derived values used by the calculations and scenario framework.
  * <p>
- * {@link CalculationEnvironment} can be built from a {@link MarketEnvironment} using a {@link MarketDataFactory}.
+ * {@link CalculationMarketDataMap} can be built from a {@link MarketEnvironment} using a {@link MarketDataFactory}.
  *
  * @see MarketDataFactory
- * @see CalculationEnvironment
+ * @see CalculationMarketDataMap
  */
 @BeanDefinition(builderScope = "private", constructorScope = "package")
-public final class MarketEnvironment implements ImmutableBean, MarketDataLookup {
+public final class MarketEnvironment implements ImmutableBean, CalculationEnvironment {
 
   /** The valuation date associated with the data. */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final MarketDataBox<LocalDate> valuationDate;
 
   /** The number of scenarios. */
-  @PropertyDefinition(validate = "ArgChecker.notNegative")
+  @PropertyDefinition(validate = "ArgChecker.notNegative", overrideGet = true)
   private final int scenarioCount;
 
   // TODO Should there be separate maps for observable and non-observable data?
@@ -216,6 +216,7 @@ public final class MarketEnvironment implements ImmutableBean, MarketDataLookup 
    * Gets the number of scenarios.
    * @return the value of the property
    */
+  @Override
   public int getScenarioCount() {
     return scenarioCount;
   }

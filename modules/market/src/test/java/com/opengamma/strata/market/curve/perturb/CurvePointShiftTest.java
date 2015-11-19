@@ -21,14 +21,15 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.ShiftType;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
-import com.opengamma.strata.market.curve.SimpleCurveNodeMetadata;
 import com.opengamma.strata.market.curve.TestingCurve;
+import com.opengamma.strata.market.curve.meta.SimpleCurveNodeMetadata;
 import com.opengamma.strata.math.impl.interpolation.LogLinearInterpolator1D;
 
 /**

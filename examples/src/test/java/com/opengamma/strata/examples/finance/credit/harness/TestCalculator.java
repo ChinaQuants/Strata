@@ -24,9 +24,9 @@ import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
-import com.opengamma.strata.examples.marketdata.MarketDataBuilder;
+import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 
 public class TestCalculator implements Calculator {
 
@@ -64,7 +64,7 @@ public class TestCalculator implements Calculator {
   public Results calculateResults(LocalDate valuationDate, TradeSource tradeSource, List<Measure> measures) {
 
     // use the built-in example market data
-    MarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
 
     // the complete set of rules for calculating measures
     CalculationRules rules = CalculationRules.builder()

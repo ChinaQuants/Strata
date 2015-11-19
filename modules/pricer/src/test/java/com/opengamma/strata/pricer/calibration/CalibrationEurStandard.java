@@ -10,9 +10,9 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_3M;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 import static com.opengamma.strata.basics.index.OvernightIndices.EUR_EONIA;
-import static com.opengamma.strata.product.rate.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_3M;
-import static com.opengamma.strata.product.rate.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
-import static com.opengamma.strata.product.rate.swap.type.FixedOvernightSwapConventions.EUR_FIXED_1Y_EONIA_OIS;
+import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_3M;
+import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
+import static com.opengamma.strata.product.swap.type.FixedOvernightSwapConventions.EUR_FIXED_1Y_EONIA_OIS;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -22,34 +22,33 @@ import java.util.Map;
 import java.util.Set;
 
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.currency.FxMatrix;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.interpolator.CurveExtrapolator;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
+import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.basics.market.ObservableKey;
-import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.market.ValueType;
+import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.definition.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.definition.CurveNode;
-import com.opengamma.strata.market.curve.definition.FixedIborSwapCurveNode;
-import com.opengamma.strata.market.curve.definition.FixedOvernightSwapCurveNode;
-import com.opengamma.strata.market.curve.definition.FraCurveNode;
-import com.opengamma.strata.market.curve.definition.IborFixingDepositCurveNode;
-import com.opengamma.strata.market.curve.definition.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.CurveNode;
+import com.opengamma.strata.market.curve.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
+import com.opengamma.strata.market.curve.node.FixedOvernightSwapCurveNode;
+import com.opengamma.strata.market.curve.node.FraCurveNode;
+import com.opengamma.strata.market.curve.node.IborFixingDepositCurveNode;
 import com.opengamma.strata.market.key.QuoteKey;
-import com.opengamma.strata.market.value.ValueType;
 import com.opengamma.strata.math.impl.interpolation.FlatExtrapolator1D;
 import com.opengamma.strata.math.impl.interpolation.LinearInterpolator1D;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.product.rate.deposit.type.IborFixingDepositTemplate;
-import com.opengamma.strata.product.rate.fra.type.FraTemplate;
-import com.opengamma.strata.product.rate.swap.type.FixedIborSwapTemplate;
-import com.opengamma.strata.product.rate.swap.type.FixedOvernightSwapTemplate;
+import com.opengamma.strata.product.deposit.type.IborFixingDepositTemplate;
+import com.opengamma.strata.product.fra.type.FraTemplate;
+import com.opengamma.strata.product.swap.type.FixedIborSwapTemplate;
+import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
 
 public class CalibrationEurStandard {
 
@@ -115,13 +114,13 @@ public class CalibrationEurStandard {
     double[] fwd6MarketQuotes = fwdMarketQuotes(fwd6FixingQuote, fwd6FraQuotes, fwd6IrsQuotes);
     String[] fwd6IdValues = fwdIdValue(6, fwd6FixingQuote, fwd6FraQuotes, fwd6IrsQuotes, fwd6FraTenors, fwd6IrsTenors);
     /* All quotes for the curve calibration */
-    ObservableValues allQuotes =
+    MarketData allQuotes =
         allQuotes(dscOisQuotes, dscIdValues, fwd3MarketQuotes, fwd3IdValues, fwd6MarketQuotes, fwd6IdValues);
     /* All nodes by groups. */
     CurveGroupDefinition config = config(dscOisTenors, dscIdValues, fwd3FraTenors, fwd3IrsTenors, fwd3IdValues,
         fwd6FraTenors, fwd6IrsTenors, fwd6IdValues);
     /* Results */
-    return CALIBRATOR.calibrate(config, valuationDate, allQuotes, TS, FxMatrix.empty());
+    return CALIBRATOR.calibrate(config, valuationDate, allQuotes, TS);
   }
 
   public static String[] dscIdValues(Period[] dscOisTenors) {
@@ -240,7 +239,7 @@ public class CalibrationEurStandard {
         .addForwardCurve(FWD6_CURVE_DEFN, EUR_EURIBOR_6M).build();
   }
 
-  public static ObservableValues allQuotes(
+  public static MarketData allQuotes(
       double[] dscOisQuotes,
       String[] dscIdValues,
       double[] fwd3MarketQuotes,
@@ -258,7 +257,7 @@ public class CalibrationEurStandard {
     for (int i = 0; i < fwd6MarketQuotes.length; i++) {
       allQuotes.put(QuoteKey.of(StandardId.of(SCHEME, fwd6IdValue[i])), fwd6MarketQuotes[i]);
     }
-    return ObservableValues.of(allQuotes);
+    return MarketData.of(allQuotes);
   }
 
 }

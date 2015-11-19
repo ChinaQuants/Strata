@@ -33,17 +33,17 @@ import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.examples.data.ExampleData;
 import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
-import com.opengamma.strata.examples.marketdata.MarketDataBuilder;
+import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.swap.FixedRateCalculation;
-import com.opengamma.strata.product.rate.swap.IborRateCalculation;
-import com.opengamma.strata.product.rate.swap.NotionalSchedule;
-import com.opengamma.strata.product.rate.swap.PaymentSchedule;
-import com.opengamma.strata.product.rate.swap.RateCalculationSwapLeg;
-import com.opengamma.strata.product.rate.swap.Swap;
-import com.opengamma.strata.product.rate.swap.SwapLeg;
-import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.swap.FixedRateCalculation;
+import com.opengamma.strata.product.swap.IborRateCalculation;
+import com.opengamma.strata.product.swap.NotionalSchedule;
+import com.opengamma.strata.product.swap.PaymentSchedule;
+import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
+import com.opengamma.strata.product.swap.Swap;
+import com.opengamma.strata.product.swap.SwapLeg;
+import com.opengamma.strata.product.swap.SwapTrade;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
@@ -67,7 +67,7 @@ public class SwapReportRegressionTest {
         Column.of(Measure.PV01),
         Column.of(Measure.ACCRUED_INTEREST));
 
-    MarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
 
     CalculationRules rules = CalculationRules.builder()
         .pricingRules(StandardComponents.pricingRules())

@@ -39,28 +39,28 @@ import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.examples.engine.ExampleEngine;
-import com.opengamma.strata.examples.marketdata.MarketDataBuilder;
+import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.function.marketdata.curve.CurvePointShifts;
 import com.opengamma.strata.function.marketdata.curve.CurvePointShiftsBuilder;
 import com.opengamma.strata.function.marketdata.scenario.curve.AnyDiscountCurveFilter;
 import com.opengamma.strata.function.marketdata.scenario.curve.CurveRateIndexFilter;
+import com.opengamma.strata.market.ShiftType;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveParameterMetadata;
 import com.opengamma.strata.market.curve.NodalCurve;
-import com.opengamma.strata.market.curve.perturb.ShiftType;
 import com.opengamma.strata.market.id.DiscountCurveId;
 import com.opengamma.strata.market.id.RateCurveId;
 import com.opengamma.strata.market.id.RateIndexCurveId;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.swap.IborRateCalculation;
-import com.opengamma.strata.product.rate.swap.NotionalSchedule;
-import com.opengamma.strata.product.rate.swap.PaymentSchedule;
-import com.opengamma.strata.product.rate.swap.RateCalculationSwapLeg;
-import com.opengamma.strata.product.rate.swap.Swap;
-import com.opengamma.strata.product.rate.swap.SwapLeg;
-import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.swap.IborRateCalculation;
+import com.opengamma.strata.product.swap.NotionalSchedule;
+import com.opengamma.strata.product.swap.PaymentSchedule;
+import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
+import com.opengamma.strata.product.swap.Swap;
+import com.opengamma.strata.product.swap.SwapLeg;
+import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
  * Example to illustrate using the engine to run a set of historical scenarios on a single swap
@@ -92,7 +92,7 @@ public class HistoricalScenarioExample {
         Column.of(Measure.PRESENT_VALUE));
 
     // use the built-in example historical scenario market data
-    MarketDataBuilder marketDataBuilder = MarketDataBuilder.ofResource(MARKET_DATA_RESOURCE_ROOT);
+    ExampleMarketDataBuilder marketDataBuilder = ExampleMarketDataBuilder.ofResource(MARKET_DATA_RESOURCE_ROOT);
 
     // the complete set of rules for calculating measures
     CalculationRules rules = CalculationRules.builder()
