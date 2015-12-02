@@ -62,7 +62,7 @@ import com.opengamma.strata.market.id.QuoteId;
  * One curve is used for Discounting and Fed Fund forward.
  * The other curve is used for Libor 3M forward. 
  * <p>
- * Curve configuration and market data loaded from XML files.
+ * Curve configuration and market data loaded from csv files.
  * Tests that the trades used for calibration have a PV of 0.
  */
 public class CalibrationCheckExample {
@@ -203,7 +203,7 @@ public class CalibrationCheckExample {
       for (CurveNode node : nodes) {
         if (!(node instanceof IborFixingDepositCurveNode)) {
           // IborFixingDeposit is not a real trade, so there is no appropriate comparison
-          trades.add(node.trade(VALUATION_DATE, MarketData.builder().addObservableValuesById(quotes).build()));
+          trades.add(node.trade(VALUATION_DATE, MarketData.builder().addValuesById(quotes).build()));
         }
       }
     }

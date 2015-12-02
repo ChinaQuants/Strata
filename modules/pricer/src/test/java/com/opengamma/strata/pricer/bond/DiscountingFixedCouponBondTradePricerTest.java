@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
@@ -29,7 +30,6 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendar;
 import com.opengamma.strata.basics.date.HolidayCalendars;
-import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -41,6 +41,7 @@ import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
+import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
@@ -1011,6 +1012,58 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .build();
     PointSensitivities computedTradeOnCoupon = TRADE_PRICER.presentValueSensitivity(tradeOnCoupon, PROVIDER).build();
     assertTrue(computedTradeOnCoupon.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_currencyExposure() {
+    MultiCurrencyAmount ceComputed = TRADE_PRICER.currencyExposure(TRADE, PROVIDER);
+    CurrencyAmount pv = TRADE_PRICER.presentValue(TRADE, PROVIDER);
+    assertEquals(ceComputed, MultiCurrencyAmount.of(pv));
+  }
+
+  public void test_currencyExposureWithZSpread() {
+    MultiCurrencyAmount ceComputed = TRADE_PRICER.currencyExposureWithZSpread(
+        TRADE, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
+    CurrencyAmount pv = TRADE_PRICER.presentValueWithZSpread(TRADE, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
+    assertEquals(ceComputed, MultiCurrencyAmount.of(pv));
+  }
+
+  public void test_currentCash_zero() {
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE, VALUATION);
+    assertEquals(ccComputed, CurrencyAmount.zero(EUR));
+  }
+
+  public void test_currentCash_valuationAtSettlement() {
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE, SETTLEMENT);
+    assertEquals(ccComputed, UPFRONT_PAYMENT.getValue());
+  }
+
+  public void test_currentCash_valuationAtPayment() {
+    LocalDate paymentDate = LocalDate.of(2016, 10, 12);
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE, paymentDate);
+    assertEquals(ccComputed, CurrencyAmount.zero(EUR));
+  }
+
+  public void test_currentCash_valuationAtPayment_noExcoupon() {
+    LocalDate startDate = LocalDate.of(2016, 4, 12);
+    LocalDate paymentDate = LocalDate.of(2016, 10, 12);
+    double yc = DAY_COUNT.relativeYearFraction(startDate, paymentDate);
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE_NO_EXCOUPON, paymentDate);
+    assertEquals(ccComputed, CurrencyAmount.of(EUR, FIXED_RATE * NOTIONAL * yc * QUANTITY));
+  }
+
+  public void test_currentCash_valuationAtMaturity() {
+    LocalDate paymentDate = LocalDate.of(2025, 4, 14);
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE, paymentDate);
+    assertEquals(ccComputed, CurrencyAmount.of(EUR, NOTIONAL * QUANTITY));
+  }
+
+  public void test_currentCash_valuationAtMaturity_noExcoupon() {
+    LocalDate startDate = LocalDate.of(2024, 10, 14);
+    LocalDate paymentDate = LocalDate.of(2025, 4, 14);
+    double yc = DAY_COUNT.relativeYearFraction(startDate, paymentDate);
+    CurrencyAmount ccComputed = TRADE_PRICER.currentCash(TRADE_NO_EXCOUPON, paymentDate);
+    assertEquals(ccComputed, CurrencyAmount.of(EUR, NOTIONAL * (1d + yc * FIXED_RATE) * QUANTITY));
   }
 
   //-------------------------------------------------------------------------

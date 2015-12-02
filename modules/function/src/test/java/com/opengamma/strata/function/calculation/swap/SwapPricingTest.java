@@ -31,7 +31,6 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.ImmutableIborIndex;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ObservableId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -45,7 +44,6 @@ import com.opengamma.strata.calc.config.pricing.DefaultFunctionGroup;
 import com.opengamma.strata.calc.config.pricing.DefaultPricingRules;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.config.pricing.PricingRule;
-import com.opengamma.strata.calc.marketdata.CalculationMarketDataMap;
 import com.opengamma.strata.calc.marketdata.DefaultMarketDataFactory;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
@@ -58,8 +56,6 @@ import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.DefaultCalculationRunner;
 import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.function.calculation.swap.SwapPvFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountFactorsMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.IborIndexRatesMarketDataFunction;
@@ -155,7 +151,7 @@ public class SwapPricingTest {
     MarketDataRules marketDataRules = MarketDataRules.of(MarketDataRule.of(marketDataMappings, SwapTrade.class));
 
     DefaultMarketDataFactory marketDataFactory = new DefaultMarketDataFactory(
-        new EmptyTimeSeriesProvider(),
+        TimeSeriesProvider.empty(),
         ObservableMarketDataFunction.none(),
         FeedIdMapping.identity(),
         new DiscountCurveMarketDataFunction(),
@@ -173,7 +169,7 @@ public class SwapPricingTest {
         calculationRunner.createCalculationConfig(trades, columns, pricingRules, marketDataRules, reportingCurrency);
     CalculationTasks calculationTasks = calculationRunner.createCalculationTasks(calculationConfig);
 
-    CalculationMarketDataMap marketData = marketDataFactory.buildCalculationMarketData(
+    MarketEnvironment marketData = marketDataFactory.buildMarketData(
         calculationTasks.getRequirements(),
         suppliedData,
         MarketDataConfig.empty());
@@ -241,13 +237,5 @@ public class SwapPricingTest {
                         .build())
                 .build())
         .build();
-  }
-
-  private static class EmptyTimeSeriesProvider implements TimeSeriesProvider {
-
-    @Override
-    public Result<LocalDateDoubleTimeSeries> timeSeries(ObservableId id) {
-      return Result.success(LocalDateDoubleTimeSeries.empty());
-    }
   }
 }

@@ -39,6 +39,7 @@ import com.opengamma.strata.market.curve.node.FraCurveNode;
 import com.opengamma.strata.market.curve.node.FxSwapCurveNode;
 import com.opengamma.strata.market.curve.node.IborFixingDepositCurveNode;
 import com.opengamma.strata.market.curve.node.IborIborSwapCurveNode;
+import com.opengamma.strata.market.curve.node.TermDepositCurveNode;
 import com.opengamma.strata.market.curve.node.XCcyIborIborSwapCurveNode;
 import com.opengamma.strata.market.id.DiscountCurveId;
 import com.opengamma.strata.market.id.RateCurveId;
@@ -46,6 +47,8 @@ import com.opengamma.strata.market.id.RateIndexCurveId;
 import com.opengamma.strata.market.key.QuoteKey;
 import com.opengamma.strata.product.deposit.type.IborFixingDepositConvention;
 import com.opengamma.strata.product.deposit.type.IborFixingDepositTemplate;
+import com.opengamma.strata.product.deposit.type.TermDepositConvention;
+import com.opengamma.strata.product.deposit.type.TermDepositTemplate;
 import com.opengamma.strata.product.fra.type.FraConvention;
 import com.opengamma.strata.product.fra.type.FraTemplate;
 import com.opengamma.strata.product.fx.type.FxSwapConvention;
@@ -267,6 +270,9 @@ public final class RatesCalibrationCsvLoader {
       QuoteKey quoteKey,
       double spread) {
 
+    if ("DEP".equalsIgnoreCase(typeStr) || "TermDeposit".equalsIgnoreCase(typeStr)) {
+      return curveTermDepositCurveNode(conventionStr, timeStr, label, quoteKey, spread);
+    }
     if ("FIX".equalsIgnoreCase(typeStr) || "IborFixingDeposit".equalsIgnoreCase(typeStr)) {
       return curveIborFixingDepositCurveNode(conventionStr, timeStr, label, quoteKey, spread);
     }
@@ -291,6 +297,23 @@ public final class RatesCalibrationCsvLoader {
     throw new IllegalArgumentException(Messages.format("Invalid curve node type: {}", typeStr));
   }
 
+  private static CurveNode curveTermDepositCurveNode(
+      String conventionStr,
+      String timeStr,
+      String label,
+      QuoteKey quoteKey,
+      double spread) {
+
+    Matcher matcher = SIMPLE_TIME_REGEX.matcher(timeStr.toUpperCase(Locale.ENGLISH));
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException(Messages.format("Invalid time format for Term Deposit: {}", timeStr));
+    }
+    Period periodToEnd = Period.parse("P" + matcher.group(1));
+    TermDepositConvention convention = TermDepositConvention.of(conventionStr);
+    TermDepositTemplate template = TermDepositTemplate.of(periodToEnd, convention);
+    return TermDepositCurveNode.of(template, quoteKey, spread, label);
+  }
+
   private static CurveNode curveIborFixingDepositCurveNode(
       String conventionStr,
       String timeStr,
@@ -301,7 +324,7 @@ public final class RatesCalibrationCsvLoader {
     IborFixingDepositConvention convention = IborFixingDepositConvention.of(conventionStr);
     IborFixingDepositTemplate template = IborFixingDepositTemplate.of(
         convention.getIndex().getTenor().getPeriod(), convention);
-    return IborFixingDepositCurveNode.of(template, quoteKey, spread);
+    return IborFixingDepositCurveNode.of(template, quoteKey, spread, label);
   }
 
   private static CurveNode curveFraCurveNode(
@@ -320,7 +343,7 @@ public final class RatesCalibrationCsvLoader {
 
     FraConvention convention = FraConvention.of(conventionStr);
     FraTemplate template = FraTemplate.of(periodToStart, periodToEnd, convention);
-    return FraCurveNode.of(template, quoteKey, spread);
+    return FraCurveNode.of(template, quoteKey, spread, label);
   }
 
   //-------------------------------------------------------------------------
@@ -338,7 +361,7 @@ public final class RatesCalibrationCsvLoader {
     Period periodToEnd = Period.parse("P" + matcher.group(1));
     FixedOvernightSwapConvention convention = FixedOvernightSwapConvention.of(conventionStr);
     FixedOvernightSwapTemplate template = FixedOvernightSwapTemplate.of(Tenor.of(periodToEnd), convention);
-    return FixedOvernightSwapCurveNode.of(template, quoteKey, spread);
+    return FixedOvernightSwapCurveNode.of(template, quoteKey, spread, label);
   }
 
   private static CurveNode curveFixedIborCurveNode(
@@ -355,7 +378,7 @@ public final class RatesCalibrationCsvLoader {
     Period periodToEnd = Period.parse("P" + matcher.group(1));
     FixedIborSwapConvention convention = FixedIborSwapConvention.of(conventionStr);
     FixedIborSwapTemplate template = FixedIborSwapTemplate.of(Tenor.of(periodToEnd), convention);
-    return FixedIborSwapCurveNode.of(template, quoteKey, spread);
+    return FixedIborSwapCurveNode.of(template, quoteKey, spread, label);
   }
 
   private static CurveNode curveIborIborCurveNode(
@@ -372,7 +395,7 @@ public final class RatesCalibrationCsvLoader {
     Period periodToEnd = Period.parse("P" + matcher.group(1));
     IborIborSwapConvention convention = IborIborSwapConvention.of(conventionStr);
     IborIborSwapTemplate template = IborIborSwapTemplate.of(Tenor.of(periodToEnd), convention);
-    return IborIborSwapCurveNode.of(template, quoteKey, spread);
+    return IborIborSwapCurveNode.of(template, quoteKey, spread, label);
   }
 
   private static CurveNode curveXCcyIborIborCurveNode(
@@ -384,12 +407,12 @@ public final class RatesCalibrationCsvLoader {
 
     Matcher matcher = SIMPLE_TIME_REGEX.matcher(timeStr.toUpperCase(Locale.ENGLISH));
     if (!matcher.matches()) {
-      throw new IllegalArgumentException(Messages.format("Invalid time format for XCS: {}", timeStr));
+      throw new IllegalArgumentException(Messages.format("Invalid time format for Cross Currency Swap: {}", timeStr));
     }
     Period periodToEnd = Period.parse("P" + matcher.group(1));
     XCcyIborIborSwapConvention convention = XCcyIborIborSwapConvention.of(conventionStr);
     XCcyIborIborSwapTemplate template = XCcyIborIborSwapTemplate.of(Tenor.of(periodToEnd), convention);
-    return XCcyIborIborSwapCurveNode.of(template, quoteKey, spread);
+    return XCcyIborIborSwapCurveNode.of(template, quoteKey, spread, label);
   }
 
   //-------------------------------------------------------------------------
@@ -410,7 +433,7 @@ public final class RatesCalibrationCsvLoader {
     Period periodToEnd = Period.parse("P" + matcher.group(1));
     FxSwapConvention convention = FxSwapConvention.of(conventionStr);
     FxSwapTemplate template = FxSwapTemplate.of(periodToEnd, convention);
-    return FxSwapCurveNode.of(template, quoteKey);
+    return FxSwapCurveNode.of(template, quoteKey, label);
   }
 
   //-------------------------------------------------------------------------

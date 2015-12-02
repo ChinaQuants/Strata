@@ -33,7 +33,6 @@ import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveParameterMetadata;
 import com.opengamma.strata.market.curve.meta.TenorCurveNodeMetadata;
-import com.opengamma.strata.market.curve.node.TermDepositCurveNode;
 import com.opengamma.strata.market.key.QuoteKey;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.deposit.TermDeposit;
@@ -55,13 +54,17 @@ public class TermDepositCurveNodeTest {
   private static final TermDepositTemplate TEMPLATE = TermDepositTemplate.of(DEPOSIT_PERIOD, CONVENTION);
   private static final QuoteKey QUOTE_KEY = QuoteKey.of(StandardId.of("OG-Ticker", "Deposit1"));
   private static final double SPREAD = 0.0015;
+  private static final String LABEL = "Label";
+  private static final String LABEL_AUTO = "3M";
 
   public void test_builder() {
     TermDepositCurveNode test = TermDepositCurveNode.builder()
+        .label(LABEL)
         .template(TEMPLATE)
         .rateKey(QUOTE_KEY)
         .additionalSpread(SPREAD)
         .build();
+    assertEquals(test.getLabel(), LABEL);
     assertEquals(test.getRateKey(), QUOTE_KEY);
     assertEquals(test.getAdditionalSpread(), SPREAD);
     assertEquals(test.getTemplate(), TEMPLATE);
@@ -69,6 +72,7 @@ public class TermDepositCurveNodeTest {
 
   public void test_of_noSpread() {
     TermDepositCurveNode test = TermDepositCurveNode.of(TEMPLATE, QUOTE_KEY);
+    assertEquals(test.getLabel(), LABEL_AUTO);
     assertEquals(test.getRateKey(), QUOTE_KEY);
     assertEquals(test.getAdditionalSpread(), 0.0d);
     assertEquals(test.getTemplate(), TEMPLATE);
@@ -76,10 +80,18 @@ public class TermDepositCurveNodeTest {
 
   public void test_of_withSpread() {
     TermDepositCurveNode test = TermDepositCurveNode.of(TEMPLATE, QUOTE_KEY, SPREAD);
+    assertEquals(test.getLabel(), LABEL_AUTO);
     assertEquals(test.getRateKey(), QUOTE_KEY);
     assertEquals(test.getAdditionalSpread(), SPREAD);
     assertEquals(test.getTemplate(), TEMPLATE);
+  }
 
+  public void test_of_withSpreadAndLabel() {
+    TermDepositCurveNode test = TermDepositCurveNode.of(TEMPLATE, QUOTE_KEY, SPREAD, LABEL);
+    assertEquals(test.getLabel(), LABEL);
+    assertEquals(test.getRateKey(), QUOTE_KEY);
+    assertEquals(test.getAdditionalSpread(), SPREAD);
+    assertEquals(test.getTemplate(), TEMPLATE);
   }
 
   public void test_requirements() {

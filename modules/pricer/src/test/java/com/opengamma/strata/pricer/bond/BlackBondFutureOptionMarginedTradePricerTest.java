@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.market.ValueType;
@@ -64,7 +65,7 @@ public class BlackBondFutureOptionMarginedTradePricerTest {
       LegalEntityDiscountingProviderDataSets.ISSUER_REPO_ZERO_EUR;
   // vol surface
   private static final Interpolator1D LINEAR_FLAT = CombinedInterpolatorExtrapolator.of(
-      CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT);
+      CurveInterpolators.LINEAR.getName(), CurveExtrapolators.FLAT.getName(), CurveExtrapolators.FLAT.getName());
   private static final GridInterpolator2D INTERPOLATOR_2D = new GridInterpolator2D(LINEAR_FLAT, LINEAR_FLAT);
   private static final DoubleArray TIME = DoubleArray.of(0.20, 0.20, 0.20, 0.20, 0.20, 0.45, 0.45, 0.45, 0.45, 0.45);
   private static final DoubleArray MONEYNESS =
@@ -213,6 +214,14 @@ public class BlackBondFutureOptionMarginedTradePricerTest {
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(RATE_PROVIDER,
         (p) -> OPTION_TRADE_PRICER.presentValue(OPTION_TRADE, (p), VOL_PROVIDER, REFERENCE_PRICE));
     assertTrue(computed.equalWithTolerance(expected.combinedWith(sensiVol), 30d * EPS * NOTIONAL * QUANTITY));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_currencyExposure() {
+    MultiCurrencyAmount ceComputed = OPTION_TRADE_PRICER.currencyExposure(
+        OPTION_TRADE, RATE_PROVIDER, VOL_PROVIDER, REFERENCE_PRICE);
+    CurrencyAmount pv = OPTION_TRADE_PRICER.presentValue(OPTION_TRADE, RATE_PROVIDER, VOL_PROVIDER, REFERENCE_PRICE);
+    assertEquals(ceComputed, MultiCurrencyAmount.of(pv));
   }
 
   //-------------------------------------------------------------------------
