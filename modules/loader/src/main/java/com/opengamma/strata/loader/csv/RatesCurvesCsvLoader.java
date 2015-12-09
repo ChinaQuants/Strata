@@ -235,8 +235,13 @@ public final class RatesCurvesCsvLoader {
     return builder.build();
   }
 
-  // loads the curve groups CSV file
-  static Map<CurveName, Set<RateCurveId>> loadCurveGroups(ResourceLocator groupsResource) {
+  /**
+   * Loads the curve groups CSV file.
+   *
+   * @param groupsResource  the curve groups CSV resource
+   * @return the set of IDs specifying how each curve is used, keyed by the name of the curve
+   */
+  public static Map<CurveName, Set<RateCurveId>> loadCurveGroups(ResourceLocator groupsResource) {
     Map<CurveName, Set<RateCurveId>> curveGroups = new HashMap<>();
     CsvFile csv = CsvFile.of(groupsResource.getCharSource(), true);
     for (int i = 0; i < csv.rowCount(); i++) {
@@ -247,7 +252,7 @@ public final class RatesCurvesCsvLoader {
 
       RateCurveId curveId = createRateCurveId(CurveGroupName.of(curveGroupStr), curveTypeStr, referenceStr);
       CurveName curveName = CurveName.of(curveNameStr);
-      Set<RateCurveId> curveUses = curveGroups.computeIfAbsent(curveName, k -> new HashSet<RateCurveId>());
+      Set<RateCurveId> curveUses = curveGroups.computeIfAbsent(curveName, k -> new HashSet<>());
       curveUses.add(curveId);
     }
     return curveGroups;
@@ -256,11 +261,11 @@ public final class RatesCurvesCsvLoader {
   // parses the identifier
   private static RateCurveId createRateCurveId(CurveGroupName curveGroup, String curveTypeStr, String referenceStr) {
     // discount and forward curves are supported
-    if (FORWARD.equals(curveTypeStr.toLowerCase())) {
+    if (FORWARD.equals(curveTypeStr.toLowerCase(Locale.ENGLISH))) {
       RateIndex index = (RateIndex) LoaderUtils.findIndex(referenceStr);
       return RateIndexCurveId.of(index, curveGroup);
 
-    } else if (DISCOUNT.equals(curveTypeStr.toLowerCase())) {
+    } else if (DISCOUNT.equals(curveTypeStr.toLowerCase(Locale.ENGLISH))) {
       Currency ccy = Currency.of(referenceStr);
       return DiscountCurveId.of(ccy, curveGroup);
 

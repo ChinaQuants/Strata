@@ -39,7 +39,7 @@ import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
 
 /**
- * Provides access to discount factors for a currency based on a zero rate curve.
+ * Provides access to discount factors for a currency based on a zero rate continuously compounded curve.
  * <p>
  * This provides discount factors for a single currency.
  * <p>
