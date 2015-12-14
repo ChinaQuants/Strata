@@ -29,8 +29,9 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
+import com.opengamma.strata.basics.market.ImmutableMarketData;
+import com.opengamma.strata.basics.market.ImmutableMarketDataBuilder;
 import com.opengamma.strata.basics.market.MarketData;
-import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.ValueType;
@@ -66,7 +67,7 @@ import com.opengamma.strata.product.swap.type.FixedIborSwapTemplate;
 @Test
 public class CalibrationDiscountingSimple1Test {
 
-  private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 7, 21);
+  private static final LocalDate VAL_DATE = LocalDate.of(2015, 7, 21);
 
   private static final CurveInterpolator INTERPOLATOR_LINEAR = CurveInterpolators.LINEAR;
   private static final CurveExtrapolator EXTRAPOLATOR_FLAT = CurveExtrapolators.FLAT;
@@ -126,11 +127,11 @@ public class CalibrationDiscountingSimple1Test {
   /** All quotes for the curve calibration */
   private static final MarketData ALL_QUOTES;
   static {
-    Map<ObservableKey, Double> map = new HashMap<>();
+    ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
     for (int i = 0; i < FWD3_NB_NODES; i++) {
-      map.put(QuoteKey.of(StandardId.of(SCHEME, FWD3_ID_VALUE[i])), FWD3_MARKET_QUOTES[i]);
+      builder.addValue(QuoteKey.of(StandardId.of(SCHEME, FWD3_ID_VALUE[i])), FWD3_MARKET_QUOTES[i]);
     }
-    ALL_QUOTES = MarketData.of(map);
+    ALL_QUOTES = builder.build();
   }
 
   /** All nodes by groups. */
@@ -184,12 +185,12 @@ public class CalibrationDiscountingSimple1Test {
   //-------------------------------------------------------------------------
   public void calibration_present_value() {
     ImmutableRatesProvider result2 =
-        CALIBRATOR.calibrate(CURVE_GROUP_DEFN, VALUATION_DATE, ALL_QUOTES, TS);
+        CALIBRATOR.calibrate(CURVE_GROUP_DEFN, VAL_DATE, ALL_QUOTES, TS);
     // Test PV
     CurveNode[] fwd3Nodes = CURVES_NODES.get(0).get(0);
     List<Trade> fwd3Trades = new ArrayList<>();
     for (int i = 0; i < fwd3Nodes.length; i++) {
-      fwd3Trades.add(fwd3Nodes[i].trade(VALUATION_DATE, ALL_QUOTES));
+      fwd3Trades.add(fwd3Nodes[i].trade(VAL_DATE, ALL_QUOTES));
     }
     // Fixing 
     CurrencyAmount pvFixing2 =
@@ -221,7 +222,7 @@ public class CalibrationDiscountingSimple1Test {
       startTime = System.currentTimeMillis();
       for (int looprep = 0; looprep < nbTests; looprep++) {
         ImmutableRatesProvider result =
-            CALIBRATOR.calibrate(CURVE_GROUP_DEFN, VALUATION_DATE, ALL_QUOTES, TS);
+            CALIBRATOR.calibrate(CURVE_GROUP_DEFN, VAL_DATE, ALL_QUOTES, TS);
         count += result.getDiscountCurves().size() + result.getIndexCurves().size();
       }
       endTime = System.currentTimeMillis();

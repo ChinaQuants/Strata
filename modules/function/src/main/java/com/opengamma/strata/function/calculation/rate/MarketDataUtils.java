@@ -10,10 +10,9 @@ import static com.opengamma.strata.collect.Guavate.toImmutableMap;
 import java.util.Set;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.calc.marketdata.SingleCalculationMarketData;
+import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.market.curve.NodalCurve;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
@@ -43,7 +42,7 @@ public final class MarketDataUtils {
    * @return the rates provider
    */
   public static RatesProvider toSingleCurveRatesProvider(
-      SingleCalculationMarketData marketData,
+      MarketData marketData,
       Currency currency,
       Set<? extends Index> indices,
       NodalCurve curveOverride) {
@@ -51,9 +50,8 @@ public final class MarketDataUtils {
     // TODO - we should be able to replace curves more easily than having to pick out all the
     // market data into a new rates provider.
 
-    return ImmutableRatesProvider.builder()
-        .valuationDate(marketData.getValuationDate())
-        .discountCurves(ImmutableMap.of(currency, curveOverride))
+    return ImmutableRatesProvider.builder(marketData.getValuationDate())
+        .discountCurve(currency, curveOverride)
         .indexCurves(indices.stream()
             .collect(toImmutableMap(Function.identity(), k -> curveOverride)))
         .timeSeries(indices.stream()

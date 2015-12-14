@@ -30,17 +30,18 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
+import com.opengamma.strata.basics.market.ImmutableMarketData;
+import com.opengamma.strata.basics.market.ImmutableMarketDataBuilder;
 import com.opengamma.strata.basics.market.MarketData;
-import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.CurveGroupEntry;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.CurveNode;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.NodalCurveDefinition;
 import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.curve.node.FixedOvernightSwapCurveNode;
 import com.opengamma.strata.market.interpolator.CurveExtrapolator;
@@ -60,7 +61,7 @@ import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
 @Test
 public class CalibrationDiscountingSimpleEurStdTenorsTest {
 
-  private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 7, 24);
+  private static final LocalDate VAL_DATE = LocalDate.of(2015, 7, 24);
 
   private static final CurveInterpolator INTERPOLATOR_LINEAR = CurveInterpolators.LINEAR;
   private static final CurveExtrapolator EXTRAPOLATOR_FLAT = CurveExtrapolators.FLAT;
@@ -150,17 +151,17 @@ public class CalibrationDiscountingSimpleEurStdTenorsTest {
   /** All quotes for the curve calibration */
   private static final MarketData ALL_QUOTES;
   static {
-    Map<ObservableKey, Double> map = new HashMap<>();
+    ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
     for (int i = 0; i < DSC_NB_NODES; i++) {
-      map.put(QuoteKey.of(StandardId.of(SCHEME, DSC_ID_VALUE[i])), DSC_MARKET_QUOTES[i]);
+      builder.addValue(QuoteKey.of(StandardId.of(SCHEME, DSC_ID_VALUE[i])), DSC_MARKET_QUOTES[i]);
     }
     for (int i = 0; i < FWD3_NB_NODES; i++) {
-      map.put(QuoteKey.of(StandardId.of(SCHEME, FWD3_ID_VALUE[i])), FWD3_MARKET_QUOTES[i]);
+      builder.addValue(QuoteKey.of(StandardId.of(SCHEME, FWD3_ID_VALUE[i])), FWD3_MARKET_QUOTES[i]);
     }
     for (int i = 0; i < FWD6_NB_NODES; i++) {
-      map.put(QuoteKey.of(StandardId.of(SCHEME, FWD6_ID_VALUE[i])), FWD6_MARKET_QUOTES[i]);
+      builder.addValue(QuoteKey.of(StandardId.of(SCHEME, FWD6_ID_VALUE[i])), FWD6_MARKET_QUOTES[i]);
     }
-    ALL_QUOTES = MarketData.of(map);
+    ALL_QUOTES = builder.build();
   }
 
   private static final DiscountingSwapProductPricer SWAP_PRICER =
@@ -215,14 +216,14 @@ public class CalibrationDiscountingSimpleEurStdTenorsTest {
   //-------------------------------------------------------------------------
   public void calibration_present_value() {
     ImmutableRatesProvider result =
-        CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ALL_QUOTES, TS);
+        CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VAL_DATE, ALL_QUOTES, TS);
 
-    ImmutableList<CurveGroupEntry> entries = CURVE_GROUP_CONFIG.getEntries();
+    ImmutableList<NodalCurveDefinition> definitions = CURVE_GROUP_CONFIG.getCurveDefinitions();
     // Test PV Dsc
-    ImmutableList<CurveNode> dscNodes = entries.get(0).getCurveDefinition().getNodes();
+    ImmutableList<CurveNode> dscNodes = definitions.get(0).getNodes();
     List<Trade> dscTrades = new ArrayList<>();
     for (int i = 0; i < dscNodes.size(); i++) {
-      dscTrades.add(dscNodes.get(i).trade(VALUATION_DATE, ALL_QUOTES));
+      dscTrades.add(dscNodes.get(i).trade(VAL_DATE, ALL_QUOTES));
     }
     // OIS
     for (int i = 0; i < DSC_NB_OIS_NODES; i++) {
@@ -231,10 +232,10 @@ public class CalibrationDiscountingSimpleEurStdTenorsTest {
       assertEquals(pvIrs.getAmount(EUR).getAmount(), 0.0, TOLERANCE_PV);
     }
     // Test PV Fwd3
-    ImmutableList<CurveNode> fwd3Nodes = entries.get(1).getCurveDefinition().getNodes();
+    ImmutableList<CurveNode> fwd3Nodes = definitions.get(1).getNodes();
     List<Trade> fwd3Trades = new ArrayList<>();
     for (int i = 0; i < fwd3Nodes.size(); i++) {
-      fwd3Trades.add(fwd3Nodes.get(i).trade(VALUATION_DATE, ALL_QUOTES));
+      fwd3Trades.add(fwd3Nodes.get(i).trade(VAL_DATE, ALL_QUOTES));
     }
     // IRS
     for (int i = 0; i < FWD3_NB_IRS_NODES; i++) {
@@ -243,10 +244,10 @@ public class CalibrationDiscountingSimpleEurStdTenorsTest {
       assertEquals(pvIrs.getAmount(EUR).getAmount(), 0.0, TOLERANCE_PV);
     }
     // Test PV Fwd6
-    ImmutableList<CurveNode> fwd6Nodes = entries.get(2).getCurveDefinition().getNodes();
+    ImmutableList<CurveNode> fwd6Nodes = definitions.get(2).getNodes();
     List<Trade> fwd6Trades = new ArrayList<>();
     for (int i = 0; i < fwd6Nodes.size(); i++) {
-      fwd6Trades.add(fwd6Nodes.get(i).trade(VALUATION_DATE, ALL_QUOTES));
+      fwd6Trades.add(fwd6Nodes.get(i).trade(VAL_DATE, ALL_QUOTES));
     }
     // IRS
     for (int i = 0; i < FWD6_NB_IRS_NODES; i++) {

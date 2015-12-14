@@ -47,7 +47,7 @@ public final class DiscountCurveId
   /**
    * The name of the curve group containing the curve.
    */
-  @PropertyDefinition(validate = "notNull")
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final CurveGroupName curveGroupName;
   /**
    * The market data feed which provides quotes used to build the curve.
@@ -147,6 +147,7 @@ public final class DiscountCurveId
    * Gets the name of the curve group containing the curve.
    * @return the value of the property, not null
    */
+  @Override
   public CurveGroupName getCurveGroupName() {
     return curveGroupName;
   }

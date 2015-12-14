@@ -22,7 +22,6 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
@@ -58,7 +57,7 @@ import com.opengamma.strata.product.swap.SwapLeg;
 public class DiscountingDeliverableSwapFutureProductPricerTest {
   // curves
   private static final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
-  private static final LocalDate VALUATION = LocalDate.of(2012, 9, 20);
+  private static final LocalDate VAL_DATE = LocalDate.of(2012, 9, 20);
   private static final DoubleArray USD_DSC_TIME = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   private static final DoubleArray USD_DSC_RATE = DoubleArray.of(0.0100, 0.0120, 0.0120, 0.0140, 0.0140, 0.0140);
   private static final CurveName USD_DSC_NAME = CurveName.of("USD Dsc");
@@ -71,10 +70,9 @@ public class DiscountingDeliverableSwapFutureProductPricerTest {
   private static final CurveMetadata USD_FWD3_METADATA = Curves.zeroRates(USD_FWD3_NAME, ACT_ACT_ISDA);
   private static final InterpolatedNodalCurve USD_FWD3 =
       InterpolatedNodalCurve.of(USD_FWD3_METADATA, USD_FWD3_TIME, USD_FWD3_RATE, INTERPOLATOR);
-  private static final ImmutableRatesProvider PROVIDER = ImmutableRatesProvider.builder()
-      .valuationDate(VALUATION)
-      .discountCurves(ImmutableMap.of(USD, USD_DSC))
-      .indexCurves(ImmutableMap.of(USD_LIBOR_3M, USD_FWD3))
+  private static final ImmutableRatesProvider PROVIDER = ImmutableRatesProvider.builder(VAL_DATE)
+      .discountCurve(USD, USD_DSC)
+      .iborIndexCurve(USD_LIBOR_3M, USD_FWD3)
       .build();
   // underlying swap
   private static final NotionalSchedule UNIT_NOTIONAL = NotionalSchedule.of(USD, 1d);
@@ -145,7 +143,7 @@ public class DiscountingDeliverableSwapFutureProductPricerTest {
   public void test_price() {
     double computed = PRICER.price(FUTURE, PROVIDER);
     double pvSwap = PRICER.getSwapPricer().presentValue(SWAP, PROVIDER).getAmount(USD).getAmount();
-    double yc = ACT_ACT_ISDA.relativeYearFraction(VALUATION, DELIVERY);
+    double yc = ACT_ACT_ISDA.relativeYearFraction(VAL_DATE, DELIVERY);
     double df = Math.exp(-USD_DSC.yValue(yc) * yc);
     double expected = 1d + pvSwap / df;
     assertEquals(computed, expected, TOL);

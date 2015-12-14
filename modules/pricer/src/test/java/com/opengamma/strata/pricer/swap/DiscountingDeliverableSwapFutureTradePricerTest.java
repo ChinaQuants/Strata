@@ -22,7 +22,6 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -65,7 +64,7 @@ import com.opengamma.strata.product.swap.SwapLeg;
 public class DiscountingDeliverableSwapFutureTradePricerTest {
   // curves
   private static final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
-  private static final LocalDate VALUATION = LocalDate.of(2013, 3, 28);
+  private static final LocalDate VAL_DATE = LocalDate.of(2013, 3, 28);
   private static final DoubleArray USD_DSC_TIME = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   private static final DoubleArray USD_DSC_RATE = DoubleArray.of(0.0100, 0.0120, 0.0120, 0.0140, 0.0140, 0.0140);
   private static final CurveName USD_DSC_NAME = CurveName.of("USD Dsc");
@@ -78,10 +77,9 @@ public class DiscountingDeliverableSwapFutureTradePricerTest {
   private static final CurveMetadata USD_FWD3_METADATA = Curves.zeroRates(USD_FWD3_NAME, ACT_ACT_ISDA);
   private static final InterpolatedNodalCurve USD_FWD3 =
       InterpolatedNodalCurve.of(USD_FWD3_METADATA, USD_FWD3_TIME, USD_FWD3_RATE, INTERPOLATOR);
-  private static final ImmutableRatesProvider PROVIDER = ImmutableRatesProvider.builder()
-      .valuationDate(VALUATION)
-      .discountCurves(ImmutableMap.of(USD, USD_DSC))
-      .indexCurves(ImmutableMap.of(USD_LIBOR_3M, USD_FWD3))
+  private static final ImmutableRatesProvider PROVIDER = ImmutableRatesProvider.builder(VAL_DATE)
+      .discountCurve(USD, USD_DSC)
+      .iborIndexCurve(USD_LIBOR_3M, USD_FWD3)
       .build();
   // underlying swap
   private static final NotionalSchedule UNIT_NOTIONAL = NotionalSchedule.of(USD, 1d);
@@ -146,7 +144,7 @@ public class DiscountingDeliverableSwapFutureTradePricerTest {
       .standardId(DSF_ID)
       .build();
   private static final SecurityLink<DeliverableSwapFuture> DSF_SECURITY_LINK = SecurityLink.resolved(DSF_SECURITY);
-  private static final TradeInfo TRADE_INFO = TradeInfo.builder().tradeDate(VALUATION).build();
+  private static final TradeInfo TRADE_INFO = TradeInfo.builder().tradeDate(VAL_DATE).build();
   private static final double TRADE_PRICE = 0.98 + 31.0 / 32.0 / 100.0; // price quoted in 32nd of 1%
   private static final long QUANTITY = 1234L;
   private static final DeliverableSwapFutureTrade FUTURE_TRADE = DeliverableSwapFutureTrade.builder()

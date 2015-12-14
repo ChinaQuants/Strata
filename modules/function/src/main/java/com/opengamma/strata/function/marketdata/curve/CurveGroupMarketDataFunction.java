@@ -14,6 +14,7 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.market.ImmutableMarketData;
 import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.basics.market.MarketDataBox;
 import com.opengamma.strata.basics.market.MarketDataFeed;
@@ -25,7 +26,6 @@ import com.opengamma.strata.calc.marketdata.function.MarketDataFunction;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.market.curve.CurveGroup;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.CurveGroupEntry;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveInputs;
 import com.opengamma.strata.market.curve.NodalCurveDefinition;
@@ -78,9 +78,9 @@ public class CurveGroupMarketDataFunction implements MarketDataFunction<CurveGro
 
     // request input data for any curves that need market data
     // no input data is requested if the curve definition contains all the market data needed to build the curve
-    List<CurveInputsId> curveInputsIds = groupDefn.getEntries().stream()
-        .filter(entry -> requiresMarketData(entry.getCurveDefinition()))
-        .map(entry -> entry.getCurveDefinition().getName())
+    List<CurveInputsId> curveInputsIds = groupDefn.getCurveDefinitions().stream()
+        .filter(defn -> requiresMarketData(defn))
+        .map(defn -> defn.getName())
         .map(curveName -> CurveInputsId.of(groupDefn.getName(), curveName, id.getMarketDataFeed()))
         .collect(toImmutableList());
 
@@ -120,8 +120,7 @@ public class CurveGroupMarketDataFunction implements MarketDataFunction<CurveGro
     // find and combine all the input data
     CurveGroupName groupName = groupDefn.getName();
 
-    List<MarketDataBox<CurveInputs>> inputBoxes = groupDefn.getEntries().stream()
-        .map(CurveGroupEntry::getCurveDefinition)
+    List<MarketDataBox<CurveInputs>> inputBoxes = groupDefn.getCurveDefinitions().stream()
         .map(curveDefn -> curveInputs(curveDefn, marketData, groupName, feed))
         .collect(toImmutableList());
     // If any of the inputs have values for multiple scenarios then we need to build a curve group for each scenario.
@@ -143,8 +142,8 @@ public class CurveGroupMarketDataFunction implements MarketDataFunction<CurveGro
 
     for (int i = 0; i < scenarioCount; i++) {
       List<CurveInputs> curveInputsList = inputsForScenario(inputBoxes, i);
-      MarketData inputs = inputsByKey(curveInputsList);
       LocalDate valuationDate = valuationDateBox.getValue(scenarioCount);
+      MarketData inputs = inputsByKey(valuationDate, curveInputsList);
       builder.add(buildGroup(groupDefn, valuationDate, inputs));
     }
     ImmutableList<CurveGroup> curveGroups = builder.build();
@@ -159,22 +158,24 @@ public class CurveGroupMarketDataFunction implements MarketDataFunction<CurveGro
 
   private MarketDataBox<CurveGroup> buildSingleCurveGroup(
       CurveGroupDefinition groupDefn,
-      MarketDataBox<LocalDate> valuationDate,
+      MarketDataBox<LocalDate> valuationDateBox,
       List<MarketDataBox<CurveInputs>> inputBoxes) {
 
     List<CurveInputs> inputs = inputBoxes.stream().map(MarketDataBox::getSingleValue).collect(toImmutableList());
-    MarketData inputValues = inputsByKey(inputs);
-    CurveGroup curveGroup = buildGroup(groupDefn, valuationDate.getSingleValue(), inputValues);
+    LocalDate valuationDate = valuationDateBox.getValue(0);
+    MarketData inputValues = inputsByKey(valuationDate, inputs);
+    CurveGroup curveGroup = buildGroup(groupDefn, valuationDateBox.getSingleValue(), inputValues);
     return MarketDataBox.ofSingleValue(curveGroup);
   }
 
   /**
    * Extracts the underlying quotes from the {@link CurveInputs} instances and returns them in a map.
    *
+   * @param valuationDate  the valuation date
    * @param inputs  input data for the curve
    * @return the underlying quotes from the input data
    */
-  private static MarketData inputsByKey(List<CurveInputs> inputs) {
+  private static MarketData inputsByKey(LocalDate valuationDate, List<CurveInputs> inputs) {
     Map<MarketDataKey<?>, Object> marketDataMap = new HashMap<>();
 
     for (CurveInputs input : inputs) {
@@ -196,7 +197,7 @@ public class CurveGroupMarketDataFunction implements MarketDataFunction<CurveGro
         }
       }
     }
-    return MarketData.of(marketDataMap);
+    return ImmutableMarketData.of(valuationDate, marketDataMap);
   }
 
   private CurveGroup buildGroup(
