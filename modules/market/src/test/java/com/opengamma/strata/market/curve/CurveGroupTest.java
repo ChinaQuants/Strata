@@ -13,10 +13,10 @@ import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_1M;
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_2M;
 import static com.opengamma.strata.basics.index.OvernightIndices.EUR_EONIA;
-import static com.opengamma.strata.collect.CollectProjectAssertions.assertThat;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
@@ -82,6 +82,16 @@ public class CurveGroupTest {
     assertThat(group.findForwardCurve(USD_LIBOR_1M)).hasValue(IBOR_CURVE);
     assertThat(group.findForwardCurve(USD_LIBOR_2M)).hasValue(IBOR_CURVE);
     assertThat(group.findForwardCurve(EUR_EONIA)).hasValue(OVERNIGHT_CURVE);
+  }
+
+  public void test_ofCurves_duplicateCurveName() {
+    CurveGroupDefinition definition = CurveGroupDefinition.builder()
+        .name(CurveGroupName.of("group"))
+        .addForwardCurve(IBOR_NAME, USD_LIBOR_1M, USD_LIBOR_2M)
+        .build();
+    CurveGroup group = CurveGroup.ofCurves(definition, IBOR_CURVE, IBOR_CURVE);
+    assertThat(group.findForwardCurve(USD_LIBOR_1M)).hasValue(IBOR_CURVE);
+    assertThat(group.findForwardCurve(USD_LIBOR_2M)).hasValue(IBOR_CURVE);
   }
 
   //-------------------------------------------------------------------------
