@@ -6,12 +6,9 @@
 package com.opengamma.strata.function;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.calc.CalculationEngine;
-import com.opengamma.strata.calc.DefaultCalculationEngine;
+import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.config.pricing.PricingRules;
 import com.opengamma.strata.calc.marketdata.DefaultMarketDataFactory;
 import com.opengamma.strata.calc.marketdata.MarketDataFactory;
@@ -19,16 +16,11 @@ import com.opengamma.strata.calc.marketdata.function.MarketDataFunction;
 import com.opengamma.strata.calc.marketdata.function.ObservableMarketDataFunction;
 import com.opengamma.strata.calc.marketdata.function.TimeSeriesProvider;
 import com.opengamma.strata.calc.marketdata.mapping.FeedIdMapping;
-import com.opengamma.strata.calc.runner.CalculationRunner;
-import com.opengamma.strata.calc.runner.DefaultCalculationRunner;
-import com.opengamma.strata.collect.id.LinkResolver;
 import com.opengamma.strata.function.marketdata.curve.CurveGroupMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.CurveInputsMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountCurveMarketDataFunction;
-import com.opengamma.strata.function.marketdata.curve.DiscountFactorsMarketDataFunction;
-import com.opengamma.strata.function.marketdata.curve.IborIndexRatesMarketDataFunction;
-import com.opengamma.strata.function.marketdata.curve.OvernightIndexRatesMarketDataFunction;
-import com.opengamma.strata.function.marketdata.curve.RateIndexCurveMarketDataFunction;
+import com.opengamma.strata.function.marketdata.curve.IborIndexCurveMarketDataFunction;
+import com.opengamma.strata.function.marketdata.curve.OvernightIndexCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.RootFinderConfig;
 import com.opengamma.strata.function.marketdata.fx.FxRateMarketDataFunction;
 import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
@@ -55,6 +47,7 @@ import com.opengamma.strata.product.swap.SwapTrade;
  * For example it can create calibrated curves given market quotes.
  * However it cannot request market data from an external provider, such as Bloomberg,
  * or look up data from a data store, for example a time series database.
+ * Instances of {@link CalculationRunner} are created directly using the static methods on the interface.
  */
 public class StandardComponents {
 
@@ -66,34 +59,6 @@ public class StandardComponents {
 
   //-------------------------------------------------------------------------
   /**
-   * Returns a calculation engine capable of calculating the standard set of measures for
-   * the standard asset classes, using market data provided by the caller.
-   * <p>
-   * The engine can create market data values derived from other values.
-   * For example it can create calibrated curves given market quotes.
-   * However it cannot request market data from an external provider, such as Bloomberg,
-   * or look up data from a data store, for example a time series database.
-   *
-   * @return a calculation engine capable of performing calculations for the built-in
-   *  market data types and measures using market data provided by the caller
-   */
-  public static CalculationEngine calculationEngine() {
-    return new DefaultCalculationEngine(calculationRunner(), marketDataFactory(), LinkResolver.none());
-  }
-
-  /**
-   * Returns a calculation runner which uses a fixed thread pool.
-   * <p>
-   * The thread count is the same as the number of cores.
-   *
-   * @return a calculation runner which uses a fixed thread pool
-   */
-  public static CalculationRunner calculationRunner() {
-    ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-    return new DefaultCalculationRunner(executor);
-  }
-
-  /**
    * Returns a market data factory containing the standard set of market data functions.
    * <p>
    * This factory can create market data values from other market data. For example it
@@ -104,9 +69,24 @@ public class StandardComponents {
    * @return a market data factory containing the standard set of market data functions
    */
   public static MarketDataFactory marketDataFactory() {
+    return marketDataFactory(ObservableMarketDataFunction.none());
+  }
+
+  /**
+   * Returns a market data factory containing the standard set of market data functions.
+   * <p>
+   * This factory can create market data values from other market data. For example it
+   * can create calibrated curves given a set of market quotes for the points on the curve.
+   * <p>
+   * The set of functions are the ones provided by {@link #marketDataFunctions()}.
+   *
+   * @param observableMarketData  the function providing observable data
+   * @return a market data factory containing the standard set of market data functions
+   */
+  public static MarketDataFactory marketDataFactory(ObservableMarketDataFunction observableMarketData) {
     return new DefaultMarketDataFactory(
         TimeSeriesProvider.none(),
-        ObservableMarketDataFunction.none(),
+        observableMarketData,
         FeedIdMapping.identity(),
         marketDataFunctions());
   }
@@ -127,10 +107,8 @@ public class StandardComponents {
   public static List<MarketDataFunction<?, ?>> marketDataFunctions() {
     return ImmutableList.of(
         new DiscountCurveMarketDataFunction(),
-        new RateIndexCurveMarketDataFunction(),
-        new DiscountFactorsMarketDataFunction(),
-        new IborIndexRatesMarketDataFunction(),
-        new OvernightIndexRatesMarketDataFunction(),
+        new IborIndexCurveMarketDataFunction(),
+        new OvernightIndexCurveMarketDataFunction(),
         new CurveGroupMarketDataFunction(RootFinderConfig.defaults(), CalibrationMeasures.DEFAULT),
         new CurveInputsMarketDataFunction(),
         new FxRateMarketDataFunction());

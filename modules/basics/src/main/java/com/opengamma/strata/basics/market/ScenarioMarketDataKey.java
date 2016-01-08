@@ -17,19 +17,18 @@ package com.opengamma.strata.basics.market;
  * 
  * @param <T>  the type of data referred to by the key
  * @param <U>  the type of the multi-scenario data
-
  */
 public interface ScenarioMarketDataKey<T, U extends ScenarioMarketDataValue<T>> {
 
   /**
-   * Returns the market data key identifying the market data value.
+   * Gets the market data key identifying the market data value.
    *
    * @return the market data key identifying the market data value
    */
   public abstract MarketDataKey<T> getMarketDataKey();
 
   /**
-   * Returns the type of the object containing the market data for all scenarios.
+   * Gets the type of the object containing the market data for all scenarios.
    *
    * @return the type of the object containing the market data for all scenarios
    */
@@ -54,7 +53,9 @@ public interface ScenarioMarketDataKey<T, U extends ScenarioMarketDataValue<T>> 
    *
    * @param marketDataBox  a market data box containing single market data values of the same type as the
    *   scenario value identified by this key
+   * @param scenarioCount  the number of scenarios for which data is required in the returned value
    * @return an object containing market data for multiple scenarios built from the data in the market data box
    */
-  public abstract U createScenarioValue(MarketDataBox<T> marketDataBox);
+  public abstract U createScenarioValue(MarketDataBox<T> marketDataBox, int scenarioCount);
+
 }

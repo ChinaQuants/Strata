@@ -6,13 +6,12 @@
 package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
+import static com.opengamma.strata.function.StandardComponents.marketDataFactory;
 import static java.util.stream.Collectors.toMap;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.Trade;
@@ -23,26 +22,18 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.market.FxRateId;
 import com.opengamma.strata.basics.market.ImmutableMarketData;
 import com.opengamma.strata.basics.market.MarketData;
-import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
+import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.DefaultCalculationEngine;
 import com.opengamma.strata.calc.config.MarketDataRule;
 import com.opengamma.strata.calc.config.MarketDataRules;
 import com.opengamma.strata.calc.config.Measure;
-import com.opengamma.strata.calc.marketdata.DefaultMarketDataFactory;
-import com.opengamma.strata.calc.marketdata.MarketDataFactory;
+import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
-import com.opengamma.strata.calc.marketdata.function.ObservableMarketDataFunction;
-import com.opengamma.strata.calc.marketdata.function.TimeSeriesProvider;
-import com.opengamma.strata.calc.marketdata.mapping.FeedIdMapping;
-import com.opengamma.strata.calc.marketdata.mapping.MarketDataMappings;
-import com.opengamma.strata.calc.runner.CalculationRunner;
-import com.opengamma.strata.calc.runner.DefaultCalculationRunner;
+import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.id.LinkResolver;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.collect.tuple.Pair;
@@ -78,10 +69,6 @@ public class CalibrationXCcyCheckExample {
    * The tolerance to use.
    */
   private static final double TOLERANCE_PV = 1.0E-8;
-  /**
-   * The number of threads to use.
-   */
-  private static final int NB_THREADS = 1;
   /**
    * The curve group name.
    */
@@ -125,7 +112,7 @@ public class CalibrationXCcyCheckExample {
   public static void main(String[] args) {
 
     System.out.println("Starting curve calibration: configuration and data loaded from files");
-    Pair<List<Trade>, Results> results = getResults();
+    Pair<List<Trade>, Results> results = calculate();
     System.out.println("Computed PV for all instruments used in the calibration set");
 
     // check that all trades have a PV of near 0
@@ -166,7 +153,7 @@ public class CalibrationXCcyCheckExample {
     for (int i = 0; i < nbRep; i++) {
       long startTime = System.currentTimeMillis();
       for (int looprep = 0; looprep < nbTests; looprep++) {
-        Results r = getResults().getSecond();
+        Results r = calculate().getSecond();
         count += r.getColumnCount() + r.getRowCount();
       }
       long endTime = System.currentTimeMillis();
@@ -180,14 +167,22 @@ public class CalibrationXCcyCheckExample {
   }
 
   //-------------------------------------------------------------------------
-  // Compute the PV results for the instruments used in calibration from the config
-  private static Pair<List<Trade>, Results> getResults() {
+  // setup calculation runner component, which needs life-cycle management
+  // a typical application might use dependency injection to obtain the instance
+  private static Pair<List<Trade>, Results> calculate() {
+    try (CalculationRunner runner = CalculationRunner.ofMultiThreaded()) {
+      return calculate(runner);
+    }
+  }
+
+  // calculates the PV results for the instruments used in calibration from the config
+  private static Pair<List<Trade>, Results> calculate(CalculationRunner runner) {
     // load quotes and FX rates
     Map<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE, QUOTES_RESOURCE);
     Map<FxRateId, FxRate> fxRates = FxRatesCsvLoader.load(VAL_DATE, FX_RATES_RESOURCE);
 
     // create the market data used for calculations
-    MarketEnvironment marketEnvironment = MarketEnvironment.builder()
+    MarketEnvironment marketSnapshot = MarketEnvironment.builder()
         .valuationDate(VAL_DATE)
         .addValues(quotes)
         .addValues(fxRates)
@@ -215,51 +210,31 @@ public class CalibrationXCcyCheckExample {
         .collect(toImmutableList());
 
     // the columns, specifying the measures to be calculated
-    List<Column> columns = ImmutableList.of(Column.of(Measure.PRESENT_VALUE));
-    // mappings that specify the name of the curve group used when building curves
-    MarketDataMappings marketDataMappings = MarketDataMappingsBuilder.create().curveGroup(CURVE_GROUP_NAME).build();
-    // rules specifying that marketDataMappings should be used for all trades
-    MarketDataRules marketDataRules = MarketDataRules.of(MarketDataRule.anyTarget(marketDataMappings));
+    List<Column> columns = ImmutableList.of(
+        Column.of(Measure.PRESENT_VALUE));
 
     // the configuration that defines how to create the curves when a curve group is requested
-    MarketDataConfig marketDataConfig = MarketDataConfig.builder().add(CURVE_GROUP_NAME, curveGroupDefinition).build();
+    MarketDataConfig marketDataConfig = MarketDataConfig.builder()
+        .add(CURVE_GROUP_NAME, curveGroupDefinition)
+        .build();
+
+    // the configuration defining the curve group to use when finding a curve
+    MarketDataRules marketDataRules = MarketDataRules.of(
+        MarketDataRule.anyTarget(MarketDataMappingsBuilder.create()
+            .curveGroup(CURVE_GROUP_NAME)
+            .build()));
 
     // the complete set of rules for calculating measures
     CalculationRules rules = CalculationRules.builder()
         .pricingRules(StandardComponents.pricingRules())
-        .marketDataConfig(marketDataConfig)
         .marketDataRules(marketDataRules)
         .build();
 
-    // create the engine and calculate the results
-    CalculationEngine engine = createEngine();
-    return Pair.of(trades, engine.calculate(trades, columns, rules, marketEnvironment));
+    // calibrate the curves and calculate the results
+    MarketDataRequirements reqs = CalculationTasks.of(trades, columns, rules).getRequirements();
+    MarketEnvironment enhancedMarketData = marketDataFactory().buildMarketData(reqs, marketSnapshot, marketDataConfig);
+    Results results = runner.calculateSingleScenario(trades, columns, rules, enhancedMarketData);
+    return Pair.of(trades, results);
   }
 
-  //-------------------------------------------------------------------------
-  // Create the calculation engine
-  private static CalculationEngine createEngine() {
-    // create the market data factory that builds market data
-    MarketDataFactory marketDataFactory = new DefaultMarketDataFactory(
-        TimeSeriesProvider.empty(),
-        ObservableMarketDataFunction.none(),
-        FeedIdMapping.identity(),
-        StandardComponents.marketDataFunctions());
-
-    // create the calculation runner that calculates the results
-    ExecutorService executor = createExecutor();
-    CalculationRunner calcRunner = new DefaultCalculationRunner(executor);
-
-    // combine the runner and market data factory
-    return new DefaultCalculationEngine(calcRunner, marketDataFactory, LinkResolver.none());
-  }
-
-  // create an executor with daemon threads
-  private static ExecutorService createExecutor() {
-    return Executors.newFixedThreadPool(NB_THREADS, r -> {
-      Thread t = Executors.defaultThreadFactory().newThread(r);
-      t.setDaemon(true);
-      return t;
-    });
-  }
 }

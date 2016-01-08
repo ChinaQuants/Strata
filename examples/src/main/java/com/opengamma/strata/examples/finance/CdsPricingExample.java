@@ -12,14 +12,13 @@ import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
+import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.examples.data.ExampleData;
-import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitRedCode;
@@ -46,6 +45,15 @@ public class CdsPricingExample {
    * @param args  ignored
    */
   public static void main(String[] args) {
+    // setup calculation runner component, which needs life-cycle management
+    // a typical application might use dependency injection to obtain the instance
+    try (CalculationRunner runner = CalculationRunner.ofMultiThreaded()) {
+      calculate(runner);
+    }
+  }
+
+  // obtains the data and calculates the grid of results
+  private static void calculate(CalculationRunner runner) {
     // the trades that will have measures calculated
     List<Trade> trades = createCdsTrades();
 
@@ -75,11 +83,10 @@ public class CdsPricingExample {
 
     // build a market data snapshot for the valuation date
     LocalDate valuationDate = LocalDate.of(2014, 10, 16);
-    MarketEnvironment snapshot = marketDataBuilder.buildSnapshot(valuationDate);
+    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
 
-    // create the engine and calculate the results
-    CalculationEngine engine = ExampleEngine.create();
-    Results results = engine.calculate(trades, columns, rules, snapshot);
+    // calculate the results
+    Results results = runner.calculateSingleScenario(trades, columns, rules, marketSnapshot);
 
     // use the report runner to transform the engine results into a trade report
     ReportCalculationResults calculationResults = ReportCalculationResults.of(

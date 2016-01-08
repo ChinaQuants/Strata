@@ -6,6 +6,7 @@
 package com.opengamma.strata.examples.report;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
+import static com.opengamma.strata.function.StandardComponents.marketDataFactory;
 
 import java.io.File;
 import java.time.LocalDate;
@@ -16,14 +17,17 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.base.Strings;
 import com.opengamma.strata.basics.Trade;
-import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
+import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.config.pricing.PricingRules;
+import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
+import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
+import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.Results;
+import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
-import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
@@ -42,7 +46,12 @@ import com.opengamma.strata.report.trade.TradeReportTemplate;
 /**
  * Tool for running a report from the command line.
  */
-public class ReportRunnerTool {
+public class ReportRunnerTool implements AutoCloseable {
+
+  /**
+   * The calculation runner.
+   */
+  private final CalculationRunner runner;
 
   @Parameter(
       names = {"-t", "--template"},
@@ -100,33 +109,40 @@ public class ReportRunnerTool {
    * @param args  the command-line arguments
    */
   public static void main(String[] args) {
-    ReportRunnerTool reportRunner = new ReportRunnerTool();
-    JCommander commander = new JCommander(reportRunner);
-    commander.setProgramName(ReportRunnerTool.class.getSimpleName());
-    try {
-      commander.parse(args);
-    } catch (ParameterException e) {
-      System.err.println("Error: " + e.getMessage());
-      System.err.println();
-      commander.usage();
-      return;
-    }
-    if (reportRunner.help) {
-      commander.usage();
-    } else if (reportRunner.version) {
-      String versionName = ReportRunnerTool.class.getPackage().getImplementationVersion();
-      if (versionName == null) {
-        versionName = "unknown";
-      }
-      System.out.println("Strata Report Runner Tool, version " + versionName);
-    } else {
+    try (ReportRunnerTool reportRunner = new ReportRunnerTool(CalculationRunner.ofMultiThreaded())) {
+      JCommander commander = new JCommander(reportRunner);
+      commander.setProgramName(ReportRunnerTool.class.getSimpleName());
       try {
-        reportRunner.run();
-      } catch (Exception e) {
-        System.err.println(Messages.format("Error: {}\n", e.getMessage()));
+        commander.parse(args);
+      } catch (ParameterException e) {
+        System.err.println("Error: " + e.getMessage());
+        System.err.println();
         commander.usage();
+        return;
+      }
+      if (reportRunner.help) {
+        commander.usage();
+      } else if (reportRunner.version) {
+        String versionName = ReportRunnerTool.class.getPackage().getImplementationVersion();
+        if (versionName == null) {
+          versionName = "unknown";
+        }
+        System.out.println("Strata Report Runner Tool, version " + versionName);
+      } else {
+        try {
+          reportRunner.run();
+        } catch (Exception e) {
+          System.err.println(Messages.format("Error: {}\n", e.getMessage()));
+          commander.usage();
+        }
       }
     }
+  }
+
+  //-------------------------------------------------------------------------
+  // creates an instance
+  private ReportRunnerTool(CalculationRunner runner) {
+    this.runner = ArgChecker.notNull(runner, "runner");
   }
 
   //-------------------------------------------------------------------------
@@ -160,10 +176,8 @@ public class ReportRunnerTool {
         .marketDataRules(marketDataBuilder.rules())
         .build();
 
-    MarketEnvironment snapshot = marketDataBuilder.buildSnapshot(valuationDate);
+    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
 
-    CalculationEngine calculationEngine = ExampleEngine.create();
-    
     List<Trade> trades;
 
     if (Strings.nullToEmpty(idSearch).trim().isEmpty()) {
@@ -183,8 +197,13 @@ public class ReportRunnerTool {
     if (trades.isEmpty()) {
       throw new IllegalArgumentException("No trades found. Please check the input portfolio or trade ID filter.");
     }
-    
-    Results results = calculationEngine.calculate(trades, columns, rules, snapshot);
+
+    // calculate the results
+    CalculationTasks tasks = CalculationTasks.of(trades, columns, rules);
+    MarketDataRequirements reqs = tasks.getRequirements();
+    MarketEnvironment enhancedMarketData = marketDataFactory().buildMarketData(reqs, marketSnapshot, MarketDataConfig.empty());
+    Results results = runner.getTaskRunner().calculateSingleScenario(tasks, enhancedMarketData);
+
     return ReportCalculationResults.builder()
         .valuationDate(valuationDate)
         .trades(trades)
@@ -202,6 +221,11 @@ public class ReportRunnerTool {
       return (ReportRunner) CashFlowReportRunner.INSTANCE;
     }
     throw new IllegalArgumentException(Messages.format("Unsupported report type: {}", reportTemplate.getClass().getSimpleName()));
+  }
+
+  @Override
+  public void close() {
+    runner.close();
   }
 
 }

@@ -5,12 +5,15 @@
  */
 package com.opengamma.strata.examples.regression;
 
+import static com.opengamma.strata.function.StandardComponents.marketDataFactory;
+
 import java.time.LocalDate;
 import java.util.List;
 
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.opengamma.strata.basics.PayReceive;
 import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.Currency;
@@ -22,16 +25,18 @@ import com.opengamma.strata.basics.date.HolidayCalendars;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
-import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.config.ReportingRules;
+import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
+import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
+import com.opengamma.strata.calc.runner.CalculationTaskRunner;
+import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.examples.data.ExampleData;
-import com.opengamma.strata.examples.engine.ExampleEngine;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
@@ -76,10 +81,14 @@ public class SwapReportRegressionTest {
         .build();
 
     LocalDate valuationDate = LocalDate.of(2009, 7, 31);
-    MarketEnvironment marketEnvironment = marketDataBuilder.buildSnapshot(valuationDate);
+    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
 
-    CalculationEngine engine = ExampleEngine.create();
-    Results results = engine.calculate(trades, columns, rules, marketEnvironment);
+    // using the direct executor means there is no need to close/shutdown the runner
+    CalculationTasks tasks = CalculationTasks.of(trades, columns, rules);
+    MarketDataRequirements reqs = tasks.getRequirements();
+    MarketEnvironment enhancedMarketData = marketDataFactory().buildMarketData(reqs, marketSnapshot, MarketDataConfig.empty());
+    CalculationTaskRunner runner = CalculationTaskRunner.of(MoreExecutors.newDirectExecutorService());
+    Results results = runner.calculateSingleScenario(tasks, enhancedMarketData);
 
     ReportCalculationResults calculationResults = ReportCalculationResults.of(
         valuationDate,
