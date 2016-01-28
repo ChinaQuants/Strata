@@ -19,7 +19,17 @@ public class DefaultScenarioResultTest {
 
   public void create() {
     DefaultScenarioResult<Integer> test = DefaultScenarioResult.of(1, 2, 3);
-    assertThat(test.getResults()).isEqualTo(ImmutableList.of(1, 2, 3));
+    assertThat(test.getValues()).isEqualTo(ImmutableList.of(1, 2, 3));
+    assertThat(test.size()).isEqualTo(3);
+    assertThat(test.get(0)).isEqualTo(1);
+    assertThat(test.get(1)).isEqualTo(2);
+    assertThat(test.get(2)).isEqualTo(3);
+    assertThat(test.stream().collect(toList())).isEqualTo(ImmutableList.of(1, 2, 3));
+  }
+
+  public void create_withFunction() {
+    DefaultScenarioResult<Integer> test = DefaultScenarioResult.of(3, i -> (i + 1));
+    assertThat(test.getValues()).isEqualTo(ImmutableList.of(1, 2, 3));
     assertThat(test.size()).isEqualTo(3);
     assertThat(test.get(0)).isEqualTo(1);
     assertThat(test.get(1)).isEqualTo(2);

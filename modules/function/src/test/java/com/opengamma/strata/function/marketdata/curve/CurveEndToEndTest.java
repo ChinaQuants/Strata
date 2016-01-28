@@ -5,7 +5,6 @@
  */
 package com.opengamma.strata.function.marketdata.curve;
 
-import static com.opengamma.strata.calc.runner.function.FunctionUtils.toFxConvertibleList;
 import static com.opengamma.strata.collect.CollectProjectAssertions.assertThat;
 import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -21,7 +20,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import org.testng.annotations.Test;
 
@@ -62,11 +60,11 @@ import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
 import com.opengamma.strata.calc.runner.CalculationTaskRunner;
 import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.Results;
-import com.opengamma.strata.calc.runner.SingleCalculationMarketData;
-import com.opengamma.strata.calc.runner.function.CalculationSingleFunction;
-import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
+import com.opengamma.strata.calc.runner.function.CalculationFunction;
+import com.opengamma.strata.calc.runner.function.FunctionUtils;
+import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.function.calculation.swap.SwapPvFunction;
+import com.opengamma.strata.function.calculation.swap.SwapCalculationFunction;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.market.ValueType;
@@ -207,7 +205,7 @@ public class CurveEndToEndTest {
   private static PricingRules pricingRules() {
     FunctionGroup<SwapTrade> swapGroup = DefaultFunctionGroup.builder(SwapTrade.class)
         .name("Swap")
-        .addFunction(Measure.PRESENT_VALUE, SwapPvFunction.class)
+        .addFunction(Measure.PRESENT_VALUE, SwapCalculationFunction.class)
         .build();
 
     FunctionGroup<FraTrade> fraGroup = DefaultFunctionGroup.builder(FraTrade.class)
@@ -225,20 +223,15 @@ public class CurveEndToEndTest {
    * function once it is promoted to the function module.
    */
   public static final class TestFraPresentValueFunction
-      implements CalculationSingleFunction<FraTrade, FxConvertibleList> {
+      implements CalculationFunction<FraTrade> {
 
     @Override
-    public FxConvertibleList execute(FraTrade trade, CalculationMarketData marketData) {
-      ExpandedFra product = trade.getProduct().expand();
-      return IntStream.range(0, marketData.getScenarioCount())
-          .mapToObj(index -> new SingleCalculationMarketData(marketData, index))
-          .map(MarketDataRatesProvider::new)
-          .map(provider -> DiscountingFraProductPricer.DEFAULT.presentValue(product, provider))
-          .collect(toFxConvertibleList());
+    public Set<Measure> supportedMeasures() {
+      return ImmutableSet.of(Measure.PRESENT_VALUE);
     }
 
     @Override
-    public FunctionRequirements requirements(FraTrade trade) {
+    public FunctionRequirements requirements(FraTrade trade, Set<Measure> measures) {
       Fra fra = trade.getProduct();
 
       Set<Index> indices = new HashSet<>();
@@ -264,5 +257,20 @@ public class CurveEndToEndTest {
           .outputCurrencies(fra.getCurrency())
           .build();
     }
+
+    @Override
+    public Map<Measure, Result<?>> calculate(
+        FraTrade trade,
+        Set<Measure> measures,
+        CalculationMarketData marketData) {
+
+      ExpandedFra product = trade.getProduct().expand();
+      CurrencyValuesArray pv = marketData.scenarios()
+          .map(MarketDataRatesProvider::of)
+          .map(provider -> DiscountingFraProductPricer.DEFAULT.presentValue(product, provider))
+          .collect(FunctionUtils.toCurrencyValuesArray());
+      return ImmutableMap.of(Measure.PRESENT_VALUE, Result.success(pv));
+    }
   }
+
 }

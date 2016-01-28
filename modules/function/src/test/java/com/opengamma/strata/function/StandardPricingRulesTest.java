@@ -11,12 +11,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.calc.config.pricing.PricingRules;
-import com.opengamma.strata.function.calculation.deposit.TermDepositFunctionGroupsTest;
-import com.opengamma.strata.function.calculation.fra.FraFunctionGroupsTest;
-import com.opengamma.strata.function.calculation.fx.FxNdfFunctionGroupsTest;
-import com.opengamma.strata.function.calculation.fx.FxSingleFunctionGroupsTest;
-import com.opengamma.strata.function.calculation.fx.FxSwapFunctionGroupsTest;
-import com.opengamma.strata.function.calculation.swap.SwapFunctionGroupsTest;
+import com.opengamma.strata.function.calculation.deposit.TermDepositCalculationFunctionTest;
+import com.opengamma.strata.function.calculation.fra.FraCalculationFunctionTest;
+import com.opengamma.strata.function.calculation.fx.FxNdfCalculationFunctionTest;
+import com.opengamma.strata.function.calculation.fx.FxSingleCalculationFunctionTest;
+import com.opengamma.strata.function.calculation.fx.FxSwapCalculationFunctionTest;
+import com.opengamma.strata.function.calculation.swap.SwapCalculationFunctionTest;
 
 /**
  * Test {@link StandardPricingRules}.
@@ -26,12 +26,12 @@ public class StandardPricingRulesTest {
 
   public void test_standard() {
     PricingRules test = StandardPricingRules.standard();
-    assertThat(test.configuredMeasures(FraFunctionGroupsTest.TRADE)).isNotEmpty();
-    assertThat(test.configuredMeasures(FxSingleFunctionGroupsTest.TRADE)).isNotEmpty();
-    assertThat(test.configuredMeasures(FxNdfFunctionGroupsTest.TRADE)).isNotEmpty();
-    assertThat(test.configuredMeasures(FxSwapFunctionGroupsTest.TRADE)).isNotEmpty();
-    assertThat(test.configuredMeasures(SwapFunctionGroupsTest.TRADE)).isNotEmpty();
-    assertThat(test.configuredMeasures(TermDepositFunctionGroupsTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(FraCalculationFunctionTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(FxSingleCalculationFunctionTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(FxNdfCalculationFunctionTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(FxSwapCalculationFunctionTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(SwapCalculationFunctionTest.TRADE)).isNotEmpty();
+    assertThat(test.configuredMeasures(TermDepositCalculationFunctionTest.TRADE)).isNotEmpty();
   }
 
   public void coverage() {

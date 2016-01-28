@@ -5,12 +5,17 @@
  */
 package com.opengamma.strata.calc.runner.function.result;
 
+import static com.opengamma.strata.collect.Guavate.ensureOnlyOne;
+
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import org.joda.beans.Bean;
+import org.joda.beans.BeanBuilder;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
@@ -28,45 +33,100 @@ import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.basics.market.FxRateKey;
 import com.opengamma.strata.basics.market.MarketDataBox;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
-import com.opengamma.strata.calc.runner.function.CalculationMultiFunction;
-import com.opengamma.strata.calc.runner.function.CalculationSingleFunction;
 import com.opengamma.strata.calc.runner.function.CurrencyConvertible;
+import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleArray;
-import org.joda.beans.BeanBuilder;
 
 /**
- * An array of currency values in one currency representing the result of the same calculation
- * performed for multiple scenarios.
+ * A currency-convertible scenario result for a single currency, holding one amount for each scenario.
  * <p>
- * This class is intended to be used as the return value from the {@code execute} method of
- * implementations of {@link CalculationSingleFunction} and {@link CalculationMultiFunction}.
+ * This contains a list of amounts in a single currency, one amount for each scenario.
+ * The calculation runner is able to convert the currency of the values if required.
  * <p>
- * Instances of this class will be automatically converted to the reporting currency by the calculation engine.
+ * This class uses less memory than an instance based on a list of {@link CurrencyAmount} instances.
+ * Internally, it stores the data using a single currency and a {@link DoubleArray}.
  */
 @BeanDefinition(builderScope = "private")
 public final class CurrencyValuesArray
     implements CurrencyConvertible<CurrencyValuesArray>, ScenarioResult<CurrencyAmount>, ImmutableBean {
 
-  /** The currency of the values. */
+  /**
+   * The currency of the values.
+   * All values have the same currency.
+   */
   @PropertyDefinition(validate = "notNull")
   private final Currency currency;
-
-  /** The currency values. */
+  /**
+   * The calculated values, one per scenario.
+   */
   @PropertyDefinition(validate = "notNull")
   private final DoubleArray values;
 
+  //-------------------------------------------------------------------------
   /**
-   * Returns an instance with the specified currency and values.
+   * Obtains an instance from the specified currency and array of values.
    *
    * @param currency  the currency of the values
-   * @param values  the currency values
+   * @param values  the values, one for each scenario
    * @return an instance with the specified currency and values
    */
   public static CurrencyValuesArray of(Currency currency, DoubleArray values) {
     return new CurrencyValuesArray(currency, values);
   }
 
+  /**
+   * Obtains an instance from the specified list of amounts.
+   * <p>
+   * All amounts must have the same currency.
+   *
+   * @param amounts  the amounts, one for each scenario
+   * @return an instance with the specified amounts
+   * @throws IllegalArgumentException if multiple currencies are found
+   */
+  public static CurrencyValuesArray of(List<CurrencyAmount> amounts) {
+    Currency currency = amounts.stream()
+        .map(ca -> ca.getCurrency())
+        .distinct()
+        .reduce(ensureOnlyOne())
+        .get();
+    double[] values = amounts.stream()
+        .mapToDouble(ca -> ca.getAmount())
+        .toArray();
+    return new CurrencyValuesArray(currency, DoubleArray.ofUnsafe(values));
+  }
+
+  /**
+   * Obtains an instance using a function to create the entries.
+   * <p>
+   * The function is passed the scenario index and returns the {@code CurrencyAmount} for that index.
+   * <p>
+   * In some cases it may be possible to specify the currency with a function providing a {@code double}.
+   * To do this, use {@link DoubleArray#of(int, java.util.function.IntToDoubleFunction)} and
+   * then call {@link #of(Currency, DoubleArray)}.
+   * 
+   * @param size  the number of elements, at least size one
+   * @param valueFunction  the function used to obtain each value
+   * @return an instance initialized using the function
+   * @throws IllegalArgumentException is size is zero or less
+   */
+  public static CurrencyValuesArray of(int size, IntFunction<CurrencyAmount> valueFunction) {
+    ArgChecker.notNegativeOrZero(size, "size");
+    double[] array = new double[size];
+    CurrencyAmount ca0 = valueFunction.apply(0);
+    Currency currency = ca0.getCurrency();
+    array[0] = ca0.getAmount();
+    for (int i = 1; i < size; i++) {
+      CurrencyAmount ca = valueFunction.apply(i);
+      if (!ca.getCurrency().equals(currency)) {
+        throw new IllegalArgumentException(Messages.format("Currencies differ: {} and {}", currency, ca.getCurrency()));
+      }
+      array[i] = ca.getAmount();
+    }
+    return new CurrencyValuesArray(currency, DoubleArray.ofUnsafe(array));
+  }
+
+  //-------------------------------------------------------------------------
   @Override
   public CurrencyValuesArray convertedTo(Currency reportingCurrency, CalculationMarketData marketData) {
     if (currency.equals(reportingCurrency)) {
@@ -144,6 +204,7 @@ public final class CurrencyValuesArray
   //-----------------------------------------------------------------------
   /**
    * Gets the currency of the values.
+   * All values have the same currency.
    * @return the value of the property, not null
    */
   public Currency getCurrency() {
@@ -152,7 +213,7 @@ public final class CurrencyValuesArray
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the currency values.
+   * Gets the calculated values, one per scenario.
    * @return the value of the property, not null
    */
   public DoubleArray getValues() {

@@ -28,8 +28,8 @@ public class FunctionUtilsTest {
         MultiCurrencyAmount.of(Currency.GBP, 1),
         MultiCurrencyAmount.of(CurrencyAmount.of(Currency.USD, 2), CurrencyAmount.of(Currency.GBP, 3)));
 
-    FxConvertibleList expectedList = FxConvertibleList.of(amounts);
-    FxConvertibleList list = amounts.stream().collect(FunctionUtils.toFxConvertibleList());
+    FxConvertibleList<?> expectedList = FxConvertibleList.of(amounts);
+    FxConvertibleList<?> list = amounts.stream().collect(FunctionUtils.toFxConvertibleList());
     assertThat(list).isEqualTo(expectedList);
   }
 
@@ -89,7 +89,7 @@ public class FunctionUtilsTest {
             CurrencyAmount.of(Currency.EUR, 44)));
 
     MultiCurrencyValuesArray expected = MultiCurrencyValuesArray.of(amounts);
-    MultiCurrencyValuesArray array = amounts.stream().collect(FunctionUtils.toMultiCurrencyArray());
+    MultiCurrencyValuesArray array = amounts.stream().collect(FunctionUtils.toMultiCurrencyValuesArray());
     assertThat(array).isEqualTo(expected);
   }
 }
