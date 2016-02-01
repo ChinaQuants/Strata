@@ -26,13 +26,13 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
-import com.opengamma.strata.calc.runner.SingleCalculationMarketData;
 import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
-import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
 import com.opengamma.strata.calc.runner.function.result.MultiCurrencyValuesArray;
+import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.curve.TestMarketDataMap;
@@ -72,11 +72,11 @@ public class BulletPaymentCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<BulletPaymentTrade> test = BulletPaymentFunctionGroups.discounting();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PRESENT_VALUE,
-        Measure.PV01,
-        Measure.BUCKETED_PV01);
+        Measures.PRESENT_VALUE,
+        Measures.PV01,
+        Measures.BUCKETED_PV01);
     FunctionConfig<BulletPaymentTrade> config =
-        BulletPaymentFunctionGroups.discounting().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        BulletPaymentFunctionGroups.discounting().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(BulletPaymentCalculationFunction.class);
   }
 
@@ -87,38 +87,38 @@ public class BulletPaymentCalculationFunctionTest {
     assertThat(reqs.getOutputCurrencies()).containsOnly(CURRENCY);
     assertThat(reqs.getSingleValueRequirements()).isEqualTo(ImmutableSet.of(DiscountCurveKey.of(CURRENCY)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of());
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).hasValue(CURRENCY);
   }
 
   public void test_simpleMeasures() {
     BulletPaymentCalculationFunction function = new BulletPaymentCalculationFunction();
     CalculationMarketData md = marketData();
-    MarketDataRatesProvider provider = new MarketDataRatesProvider(new SingleCalculationMarketData(md, 0));
+    MarketDataRatesProvider provider = MarketDataRatesProvider.of(md.scenario(0));
     DiscountingPaymentPricer pricer = DiscountingPaymentPricer.DEFAULT;
     CurrencyAmount expectedPv = pricer.presentValue(TRADE.getProduct().expandToPayment(), provider);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE);
+    Set<Measure> measures = ImmutableSet.of(Measures.PRESENT_VALUE);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
   }
 
   public void test_pv01() {
     BulletPaymentCalculationFunction function = new BulletPaymentCalculationFunction();
     CalculationMarketData md = marketData();
-    MarketDataRatesProvider provider = new MarketDataRatesProvider(new SingleCalculationMarketData(md, 0));
+    MarketDataRatesProvider provider = MarketDataRatesProvider.of(md.scenario(0));
     DiscountingPaymentPricer pricer = DiscountingPaymentPricer.DEFAULT;
     PointSensitivities pvPointSens = pricer.presentValueSensitivity(TRADE.getProduct().expandToPayment(), provider).build();
     CurveCurrencyParameterSensitivities pvParamSens = provider.curveParameterSensitivity(pvPointSens);
     MultiCurrencyAmount expectedPv01 = pvParamSens.total().multipliedBy(1e-4);
     CurveCurrencyParameterSensitivities expectedBucketedPv01 = pvParamSens.multipliedBy(1e-4);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PV01, Measure.BUCKETED_PV01);
+    Set<Measure> measures = ImmutableSet.of(Measures.PV01, Measures.BUCKETED_PV01);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
+            Measures.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
         .containsEntry(
-            Measure.BUCKETED_PV01, Result.success(FxConvertibleList.of(ImmutableList.of(expectedBucketedPv01))));
+            Measures.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
   }
 
   //-------------------------------------------------------------------------

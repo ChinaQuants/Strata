@@ -34,10 +34,10 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
-import com.opengamma.strata.calc.runner.SingleCalculationMarketData;
 import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
@@ -97,9 +97,9 @@ public class SwaptionCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<SwaptionTrade> test = SwaptionFunctionGroups.standard();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PRESENT_VALUE);
+        Measures.PRESENT_VALUE);
     FunctionConfig<SwaptionTrade> config =
-        SwaptionFunctionGroups.standard().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        SwaptionFunctionGroups.standard().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(SwaptionCalculationFunction.class);
   }
 
@@ -114,20 +114,20 @@ public class SwaptionCalculationFunctionTest {
             IborIndexCurveKey.of(INDEX),
             SwaptionVolatilitiesKey.of(INDEX)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of(IndexRateKey.of(INDEX)));
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).hasValue(CURRENCY);
   }
 
   public void test_simpleMeasures() {
     SwaptionCalculationFunction function = new SwaptionCalculationFunction();
     CalculationMarketData md = marketData();
-    MarketDataRatesProvider provider = new MarketDataRatesProvider(new SingleCalculationMarketData(md, 0));
+    MarketDataRatesProvider provider = MarketDataRatesProvider.of(md.scenario(0));
     VolatilitySwaptionPhysicalProductPricer pricer = VolatilitySwaptionPhysicalProductPricer.DEFAULT;
     CurrencyAmount expectedPv = pricer.presentValue(TRADE.getProduct(), provider, NORMAL_VOL_SWAPTION_PROVIDER_USD);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE);
+    Set<Measure> measures = ImmutableSet.of(Measures.PRESENT_VALUE);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
   }
 
   //-------------------------------------------------------------------------

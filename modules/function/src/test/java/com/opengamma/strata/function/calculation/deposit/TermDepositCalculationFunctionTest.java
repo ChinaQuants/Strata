@@ -25,13 +25,13 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
-import com.opengamma.strata.calc.runner.SingleCalculationMarketData;
 import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
-import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
 import com.opengamma.strata.calc.runner.function.result.MultiCurrencyValuesArray;
+import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.calc.runner.function.result.ValuesArray;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
@@ -74,13 +74,13 @@ public class TermDepositCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<TermDepositTrade> test = TermDepositFunctionGroups.discounting();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PAR_RATE,
-        Measure.PAR_SPREAD,
-        Measure.PRESENT_VALUE,
-        Measure.PV01,
-        Measure.BUCKETED_PV01);
+        Measures.PAR_RATE,
+        Measures.PAR_SPREAD,
+        Measures.PRESENT_VALUE,
+        Measures.PV01,
+        Measures.BUCKETED_PV01);
     FunctionConfig<TermDepositTrade> config =
-        TermDepositFunctionGroups.discounting().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        TermDepositFunctionGroups.discounting().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(TermDepositCalculationFunction.class);
   }
 
@@ -91,44 +91,44 @@ public class TermDepositCalculationFunctionTest {
     assertThat(reqs.getOutputCurrencies()).containsOnly(CURRENCY);
     assertThat(reqs.getSingleValueRequirements()).isEqualTo(ImmutableSet.of(DiscountCurveKey.of(CURRENCY)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of());
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).hasValue(CURRENCY);
   }
 
   public void test_simpleMeasures() {
     TermDepositCalculationFunction function = new TermDepositCalculationFunction();
     CalculationMarketData md = marketData();
-    MarketDataRatesProvider provider = new MarketDataRatesProvider(new SingleCalculationMarketData(md, 0));
+    MarketDataRatesProvider provider = MarketDataRatesProvider.of(md.scenario(0));
     DiscountingTermDepositProductPricer pricer = DiscountingTermDepositProductPricer.DEFAULT;
     CurrencyAmount expectedPv = pricer.presentValue(TRADE.getProduct(), provider);
     double expectedParRate = pricer.parRate(TRADE.getProduct(), provider);
     double expectedParSpread = pricer.parSpread(TRADE.getProduct(), provider);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE, Measure.PAR_RATE, Measure.PAR_SPREAD);
+    Set<Measure> measures = ImmutableSet.of(Measures.PRESENT_VALUE, Measures.PAR_RATE, Measures.PAR_SPREAD);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
         .containsEntry(
-            Measure.PAR_RATE, Result.success(ValuesArray.of(ImmutableList.of(expectedParRate))))
+            Measures.PAR_RATE, Result.success(ValuesArray.of(ImmutableList.of(expectedParRate))))
         .containsEntry(
-            Measure.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))));
+            Measures.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))));
   }
 
   public void test_pv01() {
     TermDepositCalculationFunction function = new TermDepositCalculationFunction();
     CalculationMarketData md = marketData();
-    MarketDataRatesProvider provider = new MarketDataRatesProvider(new SingleCalculationMarketData(md, 0));
+    MarketDataRatesProvider provider = MarketDataRatesProvider.of(md.scenario(0));
     DiscountingTermDepositProductPricer pricer = DiscountingTermDepositProductPricer.DEFAULT;
     PointSensitivities pvPointSens = pricer.presentValueSensitivity(TRADE.getProduct(), provider);
     CurveCurrencyParameterSensitivities pvParamSens = provider.curveParameterSensitivity(pvPointSens);
     MultiCurrencyAmount expectedPv01 = pvParamSens.total().multipliedBy(1e-4);
     CurveCurrencyParameterSensitivities expectedBucketedPv01 = pvParamSens.multipliedBy(1e-4);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PV01, Measure.BUCKETED_PV01);
+    Set<Measure> measures = ImmutableSet.of(Measures.PV01, Measures.BUCKETED_PV01);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
+            Measures.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
         .containsEntry(
-            Measure.BUCKETED_PV01, Result.success(FxConvertibleList.of(ImmutableList.of(expectedBucketedPv01))));
+            Measures.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
   }
 
   //-------------------------------------------------------------------------

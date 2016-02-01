@@ -5,7 +5,6 @@
  */
 package com.opengamma.strata.function.marketdata.curve;
 
-import static com.opengamma.strata.calc.runner.function.FunctionUtils.toFxConvertibleList;
 import static com.opengamma.strata.collect.CollectProjectAssertions.assertThat;
 import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -21,7 +20,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import org.testng.annotations.Test;
 
@@ -47,7 +45,8 @@ import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.config.MarketDataRule;
 import com.opengamma.strata.calc.config.MarketDataRules;
 import com.opengamma.strata.calc.config.Measure;
-import com.opengamma.strata.calc.config.ReportingRules;
+import com.opengamma.strata.calc.config.ReportingCurrency;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.DefaultFunctionGroup;
 import com.opengamma.strata.calc.config.pricing.DefaultPricingRules;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
@@ -62,9 +61,9 @@ import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
 import com.opengamma.strata.calc.runner.CalculationTaskRunner;
 import com.opengamma.strata.calc.runner.CalculationTasks;
 import com.opengamma.strata.calc.runner.Results;
-import com.opengamma.strata.calc.runner.SingleCalculationMarketData;
 import com.opengamma.strata.calc.runner.function.CalculationFunction;
-import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
+import com.opengamma.strata.calc.runner.function.FunctionUtils;
+import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.function.calculation.swap.SwapCalculationFunction;
 import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
@@ -176,12 +175,12 @@ public class CurveEndToEndTest {
     CalculationRules calculationRules = CalculationRules.builder()
         .pricingRules(pricingRules())
         .marketDataRules(marketDataRules)
-        .reportingRules(ReportingRules.fixedCurrency(Currency.USD))
+        .reportingCurrency(ReportingCurrency.of(Currency.USD))
         .build();
 
     // Calculate the results and check the PVs for the node instruments are zero ----------------------
 
-    List<Column> columns = ImmutableList.of(Column.of(Measure.PRESENT_VALUE));
+    List<Column> columns = ImmutableList.of(Column.of(Measures.PRESENT_VALUE));
     MarketEnvironment knownMarketData = MarketEnvironment.builder()
         .valuationDate(date(2011, 3, 8))
         .addValues(parRateData)
@@ -207,12 +206,12 @@ public class CurveEndToEndTest {
   private static PricingRules pricingRules() {
     FunctionGroup<SwapTrade> swapGroup = DefaultFunctionGroup.builder(SwapTrade.class)
         .name("Swap")
-        .addFunction(Measure.PRESENT_VALUE, SwapCalculationFunction.class)
+        .addFunction(Measures.PRESENT_VALUE, SwapCalculationFunction.class)
         .build();
 
     FunctionGroup<FraTrade> fraGroup = DefaultFunctionGroup.builder(FraTrade.class)
         .name("Fra")
-        .addFunction(Measure.PRESENT_VALUE, TestFraPresentValueFunction.class)
+        .addFunction(Measures.PRESENT_VALUE, TestFraPresentValueFunction.class)
         .build();
 
     return DefaultPricingRules.of(
@@ -229,7 +228,7 @@ public class CurveEndToEndTest {
 
     @Override
     public Set<Measure> supportedMeasures() {
-      return ImmutableSet.of(Measure.PRESENT_VALUE);
+      return ImmutableSet.of(Measures.PRESENT_VALUE);
     }
 
     @Override
@@ -267,12 +266,11 @@ public class CurveEndToEndTest {
         CalculationMarketData marketData) {
 
       ExpandedFra product = trade.getProduct().expand();
-      FxConvertibleList pv = IntStream.range(0, marketData.getScenarioCount())
-          .mapToObj(index -> new SingleCalculationMarketData(marketData, index))
-          .map(MarketDataRatesProvider::new)
+      CurrencyValuesArray pv = marketData.scenarios()
+          .map(MarketDataRatesProvider::of)
           .map(provider -> DiscountingFraProductPricer.DEFAULT.presentValue(product, provider))
-          .collect(toFxConvertibleList());
-      return ImmutableMap.of(Measure.PRESENT_VALUE, Result.success(pv));
+          .collect(FunctionUtils.toCurrencyValuesArray());
+      return ImmutableMap.of(Measures.PRESENT_VALUE, Result.success(pv));
     }
   }
 
