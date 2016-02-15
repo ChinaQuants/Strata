@@ -241,8 +241,7 @@ public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
       DiscountingSwapProductPricer.DEFAULT;
   private static final MarketQuoteSensitivityCalculator MQC = MarketQuoteSensitivityCalculator.DEFAULT;
 
-  private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.DEFAULT;
-  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
+  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100);
 
   // Constants
   private static final double TOLERANCE_PV = 1.0E-6;
@@ -547,7 +546,7 @@ public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
           + (endTime - startTime) + " ms.");
     }
     System.out.println("Avoiding hotspot: " + count);
-    // Previous run: 1600 ms for 100 calibrations (2 curve simultaneous - 30 nodes)
+    // Previous run: 1500 ms for 100 calibrations (2 curve simultaneous - 30 nodes)
   }
 
 }

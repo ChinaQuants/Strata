@@ -31,6 +31,7 @@ import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
@@ -39,7 +40,6 @@ import com.opengamma.strata.calc.runner.function.result.MultiCurrencyValuesArray
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.curve.TestMarketDataMap;
 import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
@@ -50,6 +50,7 @@ import com.opengamma.strata.market.key.IborIndexCurveKey;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.market.key.QuoteKey;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.pricer.rate.MarketDataRatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingDeliverableSwapFutureTradePricer;
 import com.opengamma.strata.product.Security;
 import com.opengamma.strata.product.SecurityLink;
@@ -108,11 +109,11 @@ public class DeliverableSwapFutureCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<DeliverableSwapFutureTrade> test = DeliverableSwapFutureFunctionGroups.discounting();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PRESENT_VALUE,
-        Measure.PV01,
-        Measure.BUCKETED_PV01);
+        Measures.PRESENT_VALUE,
+        Measures.PV01,
+        Measures.BUCKETED_PV01);
     FunctionConfig<DeliverableSwapFutureTrade> config =
-        DeliverableSwapFutureFunctionGroups.discounting().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        DeliverableSwapFutureFunctionGroups.discounting().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(DeliverableSwapFutureCalculationFunction.class);
   }
 
@@ -127,7 +128,7 @@ public class DeliverableSwapFutureCalculationFunctionTest {
             DiscountCurveKey.of(CURRENCY),
             IborIndexCurveKey.of(INDEX)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of(IndexRateKey.of(INDEX)));
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).isEqualTo(CURRENCY);
   }
 
   public void test_simpleMeasures() {
@@ -137,10 +138,12 @@ public class DeliverableSwapFutureCalculationFunctionTest {
     DiscountingDeliverableSwapFutureTradePricer pricer = DiscountingDeliverableSwapFutureTradePricer.DEFAULT;
     CurrencyAmount expectedPv = pricer.presentValue(TRADE, provider, REF_PRICE);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE);
+    Set<Measure> measures = ImmutableSet.of(Measures.PRESENT_VALUE, Measures.PRESENT_VALUE_MULTI_CCY);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+        .containsEntry(
+            Measures.PRESENT_VALUE_MULTI_CCY, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
   }
 
   public void test_pv01() {
@@ -153,12 +156,12 @@ public class DeliverableSwapFutureCalculationFunctionTest {
     MultiCurrencyAmount expectedPv01 = pvParamSens.total().multipliedBy(1e-4);
     CurveCurrencyParameterSensitivities expectedBucketedPv01 = pvParamSens.multipliedBy(1e-4);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PV01, Measure.BUCKETED_PV01);
+    Set<Measure> measures = ImmutableSet.of(Measures.PV01, Measures.BUCKETED_PV01);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
+            Measures.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
         .containsEntry(
-            Measure.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
+            Measures.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
   }
 
   //-------------------------------------------------------------------------

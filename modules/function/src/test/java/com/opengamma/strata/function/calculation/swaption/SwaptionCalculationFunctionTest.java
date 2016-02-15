@@ -34,12 +34,12 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
 import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.curve.TestMarketDataMap;
 import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
@@ -48,6 +48,7 @@ import com.opengamma.strata.market.key.DiscountCurveKey;
 import com.opengamma.strata.market.key.IborIndexCurveKey;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.market.key.SwaptionVolatilitiesKey;
+import com.opengamma.strata.pricer.rate.MarketDataRatesProvider;
 import com.opengamma.strata.pricer.swaption.NormalSwaptionExpiryTenorVolatilities;
 import com.opengamma.strata.pricer.swaption.SwaptionNormalVolatilityDataSets;
 import com.opengamma.strata.pricer.swaption.VolatilitySwaptionPhysicalProductPricer;
@@ -96,9 +97,9 @@ public class SwaptionCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<SwaptionTrade> test = SwaptionFunctionGroups.standard();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PRESENT_VALUE);
+        Measures.PRESENT_VALUE);
     FunctionConfig<SwaptionTrade> config =
-        SwaptionFunctionGroups.standard().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        SwaptionFunctionGroups.standard().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(SwaptionCalculationFunction.class);
   }
 
@@ -113,7 +114,7 @@ public class SwaptionCalculationFunctionTest {
             IborIndexCurveKey.of(INDEX),
             SwaptionVolatilitiesKey.of(INDEX)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of(IndexRateKey.of(INDEX)));
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).isEqualTo(CURRENCY);
   }
 
   public void test_simpleMeasures() {
@@ -123,10 +124,12 @@ public class SwaptionCalculationFunctionTest {
     VolatilitySwaptionPhysicalProductPricer pricer = VolatilitySwaptionPhysicalProductPricer.DEFAULT;
     CurrencyAmount expectedPv = pricer.presentValue(TRADE.getProduct(), provider, NORMAL_VOL_SWAPTION_PROVIDER_USD);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE);
+    Set<Measure> measures = ImmutableSet.of(Measures.PRESENT_VALUE, Measures.PRESENT_VALUE_MULTI_CCY);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+        .containsEntry(
+            Measures.PRESENT_VALUE_MULTI_CCY, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))));
   }
 
   //-------------------------------------------------------------------------

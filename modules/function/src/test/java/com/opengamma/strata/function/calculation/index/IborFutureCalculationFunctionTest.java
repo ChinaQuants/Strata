@@ -23,6 +23,7 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
@@ -30,7 +31,6 @@ import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.calc.runner.function.result.ValuesArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.curve.TestMarketDataMap;
 import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
@@ -40,6 +40,7 @@ import com.opengamma.strata.market.key.IborIndexCurveKey;
 import com.opengamma.strata.market.key.IndexRateKey;
 import com.opengamma.strata.market.key.QuoteKey;
 import com.opengamma.strata.pricer.index.DiscountingIborFutureTradePricer;
+import com.opengamma.strata.pricer.rate.MarketDataRatesProvider;
 import com.opengamma.strata.product.index.IborFutureTrade;
 import com.opengamma.strata.product.index.type.IborFutureConventions;
 
@@ -61,9 +62,9 @@ public class IborFutureCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<IborFutureTrade> test = IborFutureFunctionGroups.discounting();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PRESENT_VALUE);
+        Measures.PRESENT_VALUE);
     FunctionConfig<IborFutureTrade> config =
-        IborFutureFunctionGroups.discounting().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        IborFutureFunctionGroups.discounting().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(IborFutureCalculationFunction.class);
   }
 
@@ -75,7 +76,7 @@ public class IborFutureCalculationFunctionTest {
     assertThat(reqs.getSingleValueRequirements()).isEqualTo(
         ImmutableSet.of(DiscountCurveKey.of(CURRENCY), IborIndexCurveKey.of(INDEX), QuoteKey.of(SEC_ID)));
     assertThat(reqs.getTimeSeriesRequirements()).isEqualTo(ImmutableSet.of(IndexRateKey.of(INDEX)));
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(CURRENCY);
+    assertThat(function.naturalCurrency(TRADE)).isEqualTo(CURRENCY);
   }
 
   public void test_simpleMeasures() {
@@ -85,12 +86,17 @@ public class IborFutureCalculationFunctionTest {
     CurrencyAmount expectedPv = DiscountingIborFutureTradePricer.DEFAULT.presentValue(TRADE, provider, MARKET_PRICE / 100);
     double expectedParSpread = DiscountingIborFutureTradePricer.DEFAULT.parSpread(TRADE, provider, MARKET_PRICE / 100);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PRESENT_VALUE, Measure.PAR_SPREAD);
+    Set<Measure> measures = ImmutableSet.of(
+        Measures.PRESENT_VALUE,
+        Measures.PRESENT_VALUE_MULTI_CCY,
+        Measures.PAR_SPREAD);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+            Measures.PRESENT_VALUE, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
         .containsEntry(
-            Measure.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))));
+            Measures.PRESENT_VALUE_MULTI_CCY, Result.success(CurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+        .containsEntry(
+            Measures.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))));
   }
 
   //-------------------------------------------------------------------------

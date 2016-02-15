@@ -7,19 +7,19 @@ package com.opengamma.strata.calc.runner.function;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.DoubleStream;
 
-import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
-import com.opengamma.strata.basics.currency.FxConvertible;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
+import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.runner.function.result.CurrencyValuesArray;
 import com.opengamma.strata.calc.runner.function.result.DefaultScenarioResult;
-import com.opengamma.strata.calc.runner.function.result.FxConvertibleList;
 import com.opengamma.strata.calc.runner.function.result.MultiCurrencyValuesArray;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.calc.runner.function.result.ValuesArray;
+import com.opengamma.strata.collect.result.Result;
 
 /**
  * Static utility methods useful when writing calculation functions.
@@ -31,56 +31,12 @@ public final class FunctionUtils {
   }
 
   /**
-   * Returns a collector which can be used at the end of a stream of {@link FxConvertible}
-   * to build a {@link FxConvertibleList}.
-   *
-   * @return a collector used to create a {@code FxConvertibleList} from a stream of {@code FxConvertible}
-   */
-  public static <T extends FxConvertible<?>> Collector<T, ImmutableList.Builder<T>, FxConvertibleList<T>> toFxConvertibleList() {
-
-    // edited to compile in Eclipse
-    return Collector.of(
-        ImmutableList.Builder<T>::new,
-        (bld, v) -> bld.add(v),
-        (l, r) -> l.addAll(r.build()),
-        builder -> FxConvertibleList.of(builder.build()));
-  }
-
-  /**
-   * Returns a collector which can be used at the end of a stream of results to build a {@link ScenarioResult}
-   * which will support automatic currency conversion where possible.
-   * <p>
-   * If the currency of the result shouldn't be converted, for example when the results contain notional
-   * amounts, call {@link #toScenarioResult(boolean)} specifying {@code convertCurrencies = false}.
-   * <p>
-   * If the results are all instances of {@link FxConvertible} and the {@code convertCurrencies}
-   * flag is true an {@link FxConvertibleList} is created. This can be automatically converted to the
-   * reporting currency by the engine.
+   * Returns a collector which can be used at the end of a stream of results to build a {@link ScenarioResult}.
    *
    * @param <T> the type of the results in the stream
    * @return a collector used to create a {@code CurrencyAmountList} from a stream of {@code CurrencyAmount}
    */
   public static <T> Collector<T, List<T>, ScenarioResult<T>> toScenarioResult() {
-    return toScenarioResult(true);
-  }
-
-  /**
-   * Returns a collector which can be used at the end of a stream of results to build a {@link ScenarioResult}.
-   * <p>
-   * If {@code convertCurrencies} is true the returned result will support automatic currency conversion if
-   * the underlying results support it.
-   * <p>
-   * If the results are all instances of {@link FxConvertible} and the {@code convertCurrencies}
-   * flag is true an {@link FxConvertibleList} is created. This can be automatically converted to the
-   * reporting currency by the engine.
-   *
-   * @param convertCurrencies  if this is true the results will be wrapped in an object supporting automatic
-   *   currency conversion where possible. If the individual results cannot be automatically converted to
-   *   another currency this flag has no effect
-   * @param <T> the type of the results in the stream
-   * @return a collector used to create a {@code CurrencyAmountList} from a stream of {@code CurrencyAmount}
-   */
-  public static <T> Collector<T, List<T>, ScenarioResult<T>> toScenarioResult(boolean convertCurrencies) {
     // edited to compile in Eclipse
     return Collector.of(
         ArrayList<T>::new,
@@ -89,21 +45,11 @@ public final class FunctionUtils {
           l.addAll(r);
           return l;
         },
-        list -> buildResult(list, convertCurrencies));
+        list -> buildResult(list));
   }
 
   @SuppressWarnings("unchecked")
-  private static <T, R> ScenarioResult<T> buildResult(List<T> results, boolean convertCurrencies) {
-    // If currency conversion isn't required return a result that doesn't implement CurrencyConvertible
-    // and the engine won't try to convert it.
-    if (!convertCurrencies) {
-      return DefaultScenarioResult.of(results);
-    }
-    // If all the results are FxConvertible wrap in a type that implements CurrencyConvertible
-    if (results.stream().allMatch(FxConvertible.class::isInstance)) {
-      List<FxConvertible<R>> convertibleResults = (List<FxConvertible<R>>) results;
-      return (ScenarioResult<T>) FxConvertibleList.of(convertibleResults);
-    }
+  private static <T, R> ScenarioResult<T> buildResult(List<T> results) {
     return DefaultScenarioResult.of(results);
   }
 
@@ -148,7 +94,7 @@ public final class FunctionUtils {
   }
 
   /**
-   * Returns a collector that builds a scenerio result based on {@code Double}.
+   * Returns a collector that builds a scenario result based on {@code Double}.
    * <p>
    * This is used at the end of a stream to collect per-scenario instances of {@code Double}
    * into a single instance of {@link ValuesArray}, which is designed to be space-efficient.
@@ -167,6 +113,22 @@ public final class FunctionUtils {
           return l;
         },
         list -> ValuesArray.of(list));
+  }
+
+  /**
+   * Checks if a map of results contains a value for a key, and if it does inserts it into the map for a different key.
+   *
+   * @param existingKey  a key for which the map possibly contains a value
+   * @param newKey  the key which is inserted into the map
+   * @param mutableMeasureMap  a mutable map of values, keyed by measure
+   */
+  public static void duplicateResult(Measure existingKey, Measure newKey, Map<Measure, Result<?>> mutableMeasureMap) {
+    Result<?> result = mutableMeasureMap.get(existingKey);
+
+    if (result == null) {
+      return;
+    }
+    mutableMeasureMap.put(newKey, result);
   }
 
 }

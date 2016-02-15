@@ -26,6 +26,7 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.market.FxRateKey;
 import com.opengamma.strata.calc.config.FunctionConfig;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.config.pricing.FunctionGroup;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
@@ -33,7 +34,6 @@ import com.opengamma.strata.calc.runner.function.result.MultiCurrencyValuesArray
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
 import com.opengamma.strata.calc.runner.function.result.ValuesArray;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.function.marketdata.MarketDataRatesProvider;
 import com.opengamma.strata.function.marketdata.curve.TestMarketDataMap;
 import com.opengamma.strata.market.curve.ConstantNodalCurve;
 import com.opengamma.strata.market.curve.Curve;
@@ -42,6 +42,7 @@ import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.key.DiscountCurveKey;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.fx.DiscountingFxSwapProductPricer;
+import com.opengamma.strata.pricer.rate.MarketDataRatesProvider;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.fx.FxSingle;
 import com.opengamma.strata.product.fx.FxSwap;
@@ -70,14 +71,14 @@ public class FxSwapCalculationFunctionTest {
   public void test_group() {
     FunctionGroup<FxSwapTrade> test = FxSwapFunctionGroups.discounting();
     assertThat(test.configuredMeasures(TRADE)).contains(
-        Measure.PAR_SPREAD,
-        Measure.PRESENT_VALUE,
-        Measure.PV01,
-        Measure.BUCKETED_PV01,
-        Measure.CURRENCY_EXPOSURE,
-        Measure.CURRENT_CASH);
+        Measures.PAR_SPREAD,
+        Measures.PRESENT_VALUE,
+        Measures.PV01,
+        Measures.BUCKETED_PV01,
+        Measures.CURRENCY_EXPOSURE,
+        Measures.CURRENT_CASH);
     FunctionConfig<FxSwapTrade> config =
-        FxSwapFunctionGroups.discounting().functionConfig(TRADE, Measure.PRESENT_VALUE).get();
+        FxSwapFunctionGroups.discounting().functionConfig(TRADE, Measures.PRESENT_VALUE).get();
     assertThat(config.createFunction()).isInstanceOf(FxSwapCalculationFunction.class);
   }
 
@@ -89,7 +90,7 @@ public class FxSwapCalculationFunctionTest {
     assertThat(reqs.getSingleValueRequirements()).isEqualTo(
         ImmutableSet.of(DiscountCurveKey.of(GBP), DiscountCurveKey.of(USD)));
     assertThat(reqs.getTimeSeriesRequirements()).isEmpty();
-    assertThat(function.defaultReportingCurrency(TRADE)).hasValue(GBP);
+    assertThat(function.naturalCurrency(TRADE)).isEqualTo(GBP);
   }
 
   public void test_simpleMeasures() {
@@ -103,16 +104,23 @@ public class FxSwapCalculationFunctionTest {
     MultiCurrencyAmount expectedCash = pricer.currentCash(TRADE.getProduct(), provider.getValuationDate());
 
     Set<Measure> measures = ImmutableSet.of(
-        Measure.PRESENT_VALUE, Measure.PAR_SPREAD, Measure.CURRENCY_EXPOSURE, Measure.CURRENT_CASH, Measure.FORWARD_FX_RATE);
+        Measures.PRESENT_VALUE,
+        Measures.PRESENT_VALUE_MULTI_CCY,
+        Measures.PAR_SPREAD,
+        Measures.CURRENCY_EXPOSURE,
+        Measures.CURRENT_CASH,
+        Measures.FORWARD_FX_RATE);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PRESENT_VALUE, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv))))
+            Measures.PRESENT_VALUE, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv))))
         .containsEntry(
-            Measure.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))))
+            Measures.PRESENT_VALUE_MULTI_CCY, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv))))
         .containsEntry(
-            Measure.CURRENCY_EXPOSURE, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedCurrencyExp))))
+            Measures.PAR_SPREAD, Result.success(ValuesArray.of(ImmutableList.of(expectedParSpread))))
         .containsEntry(
-            Measure.CURRENT_CASH, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedCash))));
+            Measures.CURRENCY_EXPOSURE, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedCurrencyExp))))
+        .containsEntry(
+            Measures.CURRENT_CASH, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedCash))));
   }
 
   public void test_pv01() {
@@ -125,12 +133,12 @@ public class FxSwapCalculationFunctionTest {
     MultiCurrencyAmount expectedPv01 = pvParamSens.total().multipliedBy(1e-4);
     CurveCurrencyParameterSensitivities expectedBucketedPv01 = pvParamSens.multipliedBy(1e-4);
 
-    Set<Measure> measures = ImmutableSet.of(Measure.PV01, Measure.BUCKETED_PV01);
+    Set<Measure> measures = ImmutableSet.of(Measures.PV01, Measures.BUCKETED_PV01);
     assertThat(function.calculate(TRADE, measures, md))
         .containsEntry(
-            Measure.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
+            Measures.PV01, Result.success(MultiCurrencyValuesArray.of(ImmutableList.of(expectedPv01))))
         .containsEntry(
-            Measure.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
+            Measures.BUCKETED_PV01, Result.success(ScenarioResult.of(ImmutableList.of(expectedBucketedPv01))));
   }
 
   //-------------------------------------------------------------------------

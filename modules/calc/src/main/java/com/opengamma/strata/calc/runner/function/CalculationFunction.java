@@ -6,13 +6,13 @@
 package com.opengamma.strata.calc.runner.function;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import com.opengamma.strata.basics.CalculationTarget;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.config.Measure;
+import com.opengamma.strata.calc.config.ReportingCurrency;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
@@ -26,7 +26,7 @@ import com.opengamma.strata.collect.result.Result;
  * The methods of the function allow the {@link CalculationRunner} to correctly invoke the function:
  * <ul>
  * <li>{@link #supportedMeasures()} - the set of measures that can be calculated
- * <li>{@link #defaultReportingCurrency(CalculationTarget)} - the default currency of the target
+ * <li>{@link #naturalCurrency(CalculationTarget)} - the "natural" currency of the target
  * <li>{@link #requirements(CalculationTarget, Set)} - the market data requirements for performing the calculation
  * <li>{@link #calculate(CalculationTarget, Set, CalculationMarketData)} - perform the calculation
  * </ul>
@@ -46,20 +46,24 @@ public interface CalculationFunction<T extends CalculationTarget> {
   public abstract Set<Measure> supportedMeasures();
 
   /**
-   * Returns the default reporting currency for the specified target.
+   * Returns the "natural" currency for the specified target.
    * <p>
-   * This is the currency to which currency amounts are converted if the reporting rules don't specify
-   * a reporting currency. This is normally the 'natural' currency for the trade, for example
-   * the currency of a FRA or the base currency of an FX forward.
+   * This is the currency to which currency amounts are converted if the "natural"
+   * reporting currency is requested using {@link ReportingCurrency#NATURAL}.
+   * Most targets have a "natural" currency, for example the currency of a FRA or
+   * the base currency of an FX forward.
    * <p>
-   * The default implementation returns an empty optional.
+   * It is required that all functions that return a currency-convertible measure
+   * must choose a "natural" currency for each trade. The choice must be consistent
+   * not random, given the same trade the same currency must be returned.
+   * This might involve picking, the first leg or base currency from a currency pair.
+   * An exception must only be thrown if the function handles no currency-convertible measures.
    *
    * @param target  the target of the calculation
-   * @return the default reporting currency for the target if there is a sensible default
+   * @return the "natural" currency of the target
+   * @throws IllegalStateException if the function calculates no currency-convertible measures
    */
-  public default Optional<Currency> defaultReportingCurrency(T target) {
-    return Optional.empty();
-  }
+  public abstract Currency naturalCurrency(T target);
 
   /**
    * Determines the market data required by this function to perform its calculations.
