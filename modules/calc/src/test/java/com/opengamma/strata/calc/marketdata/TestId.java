@@ -7,6 +7,7 @@ package com.opengamma.strata.calc.marketdata;
 
 import java.util.Objects;
 
+import com.opengamma.strata.basics.market.MarketDataFeed;
 import com.opengamma.strata.basics.market.MarketDataId;
 import com.opengamma.strata.basics.market.MarketDataKey;
 
@@ -15,14 +16,16 @@ import com.opengamma.strata.basics.market.MarketDataKey;
  */
 public class TestId implements MarketDataId<String> {
 
-  private final String value;
+  private final String id;
+  private final MarketDataFeed marketDataFeed;
 
-  public static TestId of(String value) {
-    return new TestId(value);
+  public TestId(String id, MarketDataFeed marketDataFeed) {
+    this.id = id;
+    this.marketDataFeed = marketDataFeed;
   }
 
-  public TestId(String value) {
-    this.value = value;
+  public TestId(String id) {
+    this(id, MarketDataFeed.NONE);
   }
 
   @Override
@@ -32,7 +35,7 @@ public class TestId implements MarketDataId<String> {
 
   @Override
   public MarketDataKey<String> toMarketDataKey() {
-    throw new UnsupportedOperationException("toMarketDataKey not implemented");
+    return new TestKey(id);
   }
 
   @Override
@@ -44,16 +47,17 @@ public class TestId implements MarketDataId<String> {
       return false;
     }
     TestId testId = (TestId) o;
-    return Objects.equals(value, testId.value);
+    return Objects.equals(id, testId.id) &&
+        Objects.equals(marketDataFeed, testId.marketDataFeed);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(value);
+    return Objects.hash(id, marketDataFeed);
   }
 
   @Override
   public String toString() {
-    return "TestId [value='" + value + "']";
+    return "TestId [id='" + id + "', marketDataFeed=" + marketDataFeed + "]";
   }
 }
