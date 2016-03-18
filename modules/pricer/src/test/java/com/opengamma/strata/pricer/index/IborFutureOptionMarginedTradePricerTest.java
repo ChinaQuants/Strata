@@ -15,7 +15,6 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.index.ResolvedIborFutureOption;
 import com.opengamma.strata.product.index.ResolvedIborFutureOptionTrade;
@@ -30,25 +29,22 @@ public class IborFutureOptionMarginedTradePricerTest {
   private static final LocalDate VAL_DATE = date(2015, 2, 17);
 
   private static final ResolvedIborFutureOption OPTION = IborFutureDummyData.IBOR_FUTURE_OPTION_2.resolve(REF_DATA);
-  private static final StandardId OPTION_ID = StandardId.of("OG-Ticker", "OptionSec");
   private static final LocalDate TRADE_DATE = date(2015, 2, 16);
   private static final long OPTION_QUANTITY = 12345;
   private static final double TRADE_PRICE = 0.0100;
   private static final ResolvedIborFutureOptionTrade OPTION_TRADE_TD = ResolvedIborFutureOptionTrade.builder()
-      .tradeInfo(TradeInfo.builder()
+      .info(TradeInfo.builder()
           .tradeDate(VAL_DATE)
           .build())
       .product(OPTION)
-      .securityStandardId(OPTION_ID)
       .quantity(OPTION_QUANTITY)
       .price(TRADE_PRICE)
       .build();
   private static final ResolvedIborFutureOptionTrade OPTION_TRADE = ResolvedIborFutureOptionTrade.builder()
-      .tradeInfo(TradeInfo.builder()
+      .info(TradeInfo.builder()
           .tradeDate(TRADE_DATE)
           .build())
       .product(OPTION)
-      .securityStandardId(OPTION_ID)
       .quantity(OPTION_QUANTITY)
       .price(TRADE_PRICE)
       .build();
@@ -66,23 +62,10 @@ public class IborFutureOptionMarginedTradePricerTest {
     double optionPrice = 0.0125;
     double lastClosingPrice = 0.0150;
     ResolvedIborFutureOptionTrade trade = ResolvedIborFutureOptionTrade.builder()
-        .tradeInfo(TradeInfo.builder().build())
+        .info(TradeInfo.builder().build())
         .product(OPTION)
-        .securityStandardId(OPTION_ID)
         .quantity(OPTION_QUANTITY)
         .price(TRADE_PRICE)
-        .build();
-    assertThrowsIllegalArg(() -> OPTION_TRADE_PRICER.presentValue(trade, VAL_DATE, optionPrice, lastClosingPrice));
-  }
-
-  public void presentValue_from_no_trade_price() {
-    double optionPrice = 0.0125;
-    double lastClosingPrice = 0.0150;
-    ResolvedIborFutureOptionTrade trade = ResolvedIborFutureOptionTrade.builder()
-        .tradeInfo(TradeInfo.builder().tradeDate(VAL_DATE).build())
-        .product(OPTION)
-        .securityStandardId(OPTION_ID)
-        .quantity(OPTION_QUANTITY)
         .build();
     assertThrowsIllegalArg(() -> OPTION_TRADE_PRICER.presentValue(trade, VAL_DATE, optionPrice, lastClosingPrice));
   }

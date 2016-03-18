@@ -7,7 +7,6 @@ package com.opengamma.strata.pricer.index;
 
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.OptionalDouble;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
@@ -80,19 +79,17 @@ public abstract class IborFutureOptionMarginedTradePricer {
       double lastClosingPrice) {
 
     ResolvedIborFutureOption option = trade.getProduct();
-    Optional<LocalDate> tradeDateOpt = trade.getTradeInfo().getTradeDate();
+    Optional<LocalDate> tradeDateOpt = trade.getInfo().getTradeDate();
     ArgChecker.isTrue(tradeDateOpt.isPresent(), "trade date not present");
     double priceIndex = getProductPricer().marginIndex(option, currentOptionPrice);
     double marginReferencePrice = lastClosingPrice;
     LocalDate tradeDate = tradeDateOpt.get();
     if (tradeDate.equals(valuationDate)) {
-      OptionalDouble tradePrice = trade.getPrice();
-      ArgChecker.isTrue(tradePrice.isPresent(), "trade price not present");
-      marginReferencePrice = tradePrice.getAsDouble();
+      marginReferencePrice = trade.getPrice();
     }
     double referenceIndex = getProductPricer().marginIndex(option, marginReferencePrice);
     double pv = (priceIndex - referenceIndex) * trade.getQuantity();
-    return CurrencyAmount.of(option.getUnderlying().getCurrency(), pv);
+    return CurrencyAmount.of(option.getUnderlyingFuture().getCurrency(), pv);
   }
 
   /**
