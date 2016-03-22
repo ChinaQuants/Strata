@@ -13,7 +13,7 @@ import java.util.Set;
 import org.joda.beans.Bean;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutablePreBuild;
+import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
@@ -54,7 +54,7 @@ import com.opengamma.strata.product.Product;
  * <p>
  * The accrual factor between two dates is computed {@code dayCount}. 
  * The legal entity of this fixed coupon bond is identified by {@link StandardId}.
- * The enum, {@link YieldConvention}, specifies the yield computation convention.
+ * The enum, {@link FixedCouponBondYieldConvention}, specifies the yield computation convention.
  */
 @BeanDefinition
 public final class FixedCouponBond
@@ -69,7 +69,7 @@ public final class FixedCouponBond
   @PropertyDefinition(validate = "notNull")
   private final Currency currency;
   /**
-   * The notional amount, must be positive. 
+   * The notional amount, must be positive.
    * <p>
    * The notional expressed here must be positive.
    * The currency of the notional is specified by {@code currency}.
@@ -85,16 +85,16 @@ public final class FixedCouponBond
   @PropertyDefinition(validate = "notNull")
   private final PeriodicSchedule periodicSchedule;
   /**
-   * The fixed coupon rate. 
+   * The fixed coupon rate.
    * <p>
    * The periodic payments are based on this fixed coupon rate.
    */
   @PropertyDefinition
   private final double fixedRate;
   /**
-   * The day count convention applicable. 
+   * The day count convention applicable.
    * <p>
-   * The conversion from dates to a numerical value is made based on this day count. 
+   * The conversion from dates to a numerical value is made based on this day count.
    * For the fixed bond, the day count convention is used to compute accrued interest.
    * <p>
    * Note that the year fraction of a coupon payment is computed based on the unadjusted
@@ -105,24 +105,24 @@ public final class FixedCouponBond
   /**
    * Yield convention.
    * <p>
-   * The convention defines how to convert from yield to price and inversely.  
+   * The convention defines how to convert from yield to price and inversely.
    */
   @PropertyDefinition(validate = "notNull")
-  private final YieldConvention yieldConvention;
+  private final FixedCouponBondYieldConvention yieldConvention;
   /**
    * The legal entity identifier.
    * <p>
-   * This identifier is used for the legal entity which issues the fixed coupon bond product. 
+   * This identifier is used for the legal entity which issues the fixed coupon bond product.
    */
   @PropertyDefinition(validate = "notNull")
   private final StandardId legalEntityId;
   /**
-   * The number of days between valuation date and settlement date. 
+   * The number of days between valuation date and settlement date.
    * <p>
-   * This is used to compute clean price. 
+   * This is used to compute clean price.
    * The clean price is the relative price to be paid at the standard settlement date in exchange for the bond.
    * <p>
-   * It is usually one business day for US treasuries and UK Gilts and three days for Euroland government bonds. 
+   * It is usually one business day for US treasuries and UK Gilts and three days for Euroland government bonds.
    */
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment settlementDateOffset;
@@ -134,23 +134,21 @@ public final class FixedCouponBond
    * The difference between the two is the ex-coupon period (measured in days).
    * <p>
    * Because the detachment date is not after the coupon date, the number of days
-   * stored in this field should be zero or negative. 
+   * stored in this field should be zero or negative.
    */
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment exCouponPeriod;
 
   //-------------------------------------------------------------------------
-  @ImmutablePreBuild
-  private static void preBuild(Builder builder) {
-    if (builder.exCouponPeriod == null) {
-      builder.exCouponPeriod = DaysAdjustment.NONE;
-    }
+  @ImmutableDefaults
+  private static void applyDefaults(Builder builder) {
+    builder.exCouponPeriod = DaysAdjustment.NONE;
   }
 
   @ImmutableValidator
   private void validate() {
-    ArgChecker.isTrue(settlementDateOffset.getDays() >= 0d, "The settlement date offset must be non-negative");
-    ArgChecker.isTrue(exCouponPeriod.getDays() <= 0d,
+    ArgChecker.isTrue(settlementDateOffset.getDays() >= 0, "The settlement date offset must be non-negative");
+    ArgChecker.isTrue(exCouponPeriod.getDays() <= 0,
         "The ex-coupon period is measured from the payment date, thus the days must be non-positive");
   }
 
@@ -226,7 +224,7 @@ public final class FixedCouponBond
       PeriodicSchedule periodicSchedule,
       double fixedRate,
       DayCount dayCount,
-      YieldConvention yieldConvention,
+      FixedCouponBondYieldConvention yieldConvention,
       StandardId legalEntityId,
       DaysAdjustment settlementDateOffset,
       DaysAdjustment exCouponPeriod) {
@@ -334,7 +332,7 @@ public final class FixedCouponBond
    * The convention defines how to convert from yield to price and inversely.
    * @return the value of the property, not null
    */
-  public YieldConvention getYieldConvention() {
+  public FixedCouponBondYieldConvention getYieldConvention() {
     return yieldConvention;
   }
 
@@ -478,8 +476,8 @@ public final class FixedCouponBond
     /**
      * The meta-property for the {@code yieldConvention} property.
      */
-    private final MetaProperty<YieldConvention> yieldConvention = DirectMetaProperty.ofImmutable(
-        this, "yieldConvention", FixedCouponBond.class, YieldConvention.class);
+    private final MetaProperty<FixedCouponBondYieldConvention> yieldConvention = DirectMetaProperty.ofImmutable(
+        this, "yieldConvention", FixedCouponBond.class, FixedCouponBondYieldConvention.class);
     /**
      * The meta-property for the {@code legalEntityId} property.
      */
@@ -601,7 +599,7 @@ public final class FixedCouponBond
      * The meta-property for the {@code yieldConvention} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<YieldConvention> yieldConvention() {
+    public MetaProperty<FixedCouponBondYieldConvention> yieldConvention() {
       return yieldConvention;
     }
 
@@ -677,7 +675,7 @@ public final class FixedCouponBond
     private PeriodicSchedule periodicSchedule;
     private double fixedRate;
     private DayCount dayCount;
-    private YieldConvention yieldConvention;
+    private FixedCouponBondYieldConvention yieldConvention;
     private StandardId legalEntityId;
     private DaysAdjustment settlementDateOffset;
     private DaysAdjustment exCouponPeriod;
@@ -686,6 +684,7 @@ public final class FixedCouponBond
      * Restricted constructor.
      */
     private Builder() {
+      applyDefaults(this);
     }
 
     /**
@@ -750,7 +749,7 @@ public final class FixedCouponBond
           this.dayCount = (DayCount) newValue;
           break;
         case -1895216418:  // yieldConvention
-          this.yieldConvention = (YieldConvention) newValue;
+          this.yieldConvention = (FixedCouponBondYieldConvention) newValue;
           break;
         case 866287159:  // legalEntityId
           this.legalEntityId = (StandardId) newValue;
@@ -793,7 +792,6 @@ public final class FixedCouponBond
 
     @Override
     public FixedCouponBond build() {
-      preBuild(this);
       return new FixedCouponBond(
           currency,
           notional,
@@ -885,7 +883,7 @@ public final class FixedCouponBond
      * @param yieldConvention  the new value, not null
      * @return this, for chaining, not null
      */
-    public Builder yieldConvention(YieldConvention yieldConvention) {
+    public Builder yieldConvention(FixedCouponBondYieldConvention yieldConvention) {
       JodaBeanUtils.notNull(yieldConvention, "yieldConvention");
       this.yieldConvention = yieldConvention;
       return this;
