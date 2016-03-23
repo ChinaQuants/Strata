@@ -27,10 +27,10 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
-import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.product.SecurityInfo;
 import com.opengamma.strata.product.SecurityPriceInfo;
 import com.opengamma.strata.product.TradeInfo;
@@ -98,7 +98,7 @@ public class FixedCouponBondSecurityTest {
   public void test_createProduct() {
     FixedCouponBondSecurity test = sut();
     assertEquals(test.createProduct(ReferenceData.empty()), PRODUCT);
-    TradeInfo tradeInfo = TradeInfo.builder().tradeDate(date(2016, 6, 30)).build();
+    TradeInfo tradeInfo = TradeInfo.of(date(2016, 6, 30));
     FixedCouponBondTrade expectedTrade = FixedCouponBondTrade.builder()
         .info(tradeInfo)
         .product(PRODUCT)

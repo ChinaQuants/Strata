@@ -27,12 +27,12 @@ import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
-import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
@@ -83,6 +83,7 @@ public class DiscountingCapitalIndexedBondTradePricerTest {
       .index(US_CPI_U)
       .lag(Period.ofMonths(3))
       .interpolated(true)
+      .firstIndexValue(START_INDEX)
       .build();
   private static final BusinessDayAdjustment EX_COUPON_ADJ =
       BusinessDayAdjustment.of(BusinessDayConventions.PRECEDING, USNY);
@@ -106,7 +107,6 @@ public class DiscountingCapitalIndexedBondTradePricerTest {
       .yieldConvention(US_IL_REAL)
       .settlementDateOffset(SETTLE_OFFSET)
       .accrualSchedule(SCHEDULE)
-      .startIndexValue(START_INDEX)
       .build();
   private static final ResolvedCapitalIndexedBond RPRODUCT = PRODUCT.resolve(REF_DATA);
   private static final DaysAdjustment EX_COUPON = DaysAdjustment.ofCalendarDays(-5, EX_COUPON_ADJ);
@@ -121,7 +121,6 @@ public class DiscountingCapitalIndexedBondTradePricerTest {
       .settlementDateOffset(SETTLE_OFFSET)
       .accrualSchedule(SCHEDULE)
       .exCouponPeriod(EX_COUPON)
-      .startIndexValue(START_INDEX)
       .build();
   private static final ResolvedCapitalIndexedBond RPRODUCT_EX_COUPON = PRODUCT_EX_COUPON.resolve(REF_DATA);
   private static final CapitalIndexedBond PRODUCT_ILF = CapitalIndexedBond.builder()
@@ -134,7 +133,6 @@ public class DiscountingCapitalIndexedBondTradePricerTest {
       .yieldConvention(INDEX_LINKED_FLOAT)
       .settlementDateOffset(SETTLE_OFFSET)
       .accrualSchedule(SCHEDULE)
-      .startIndexValue(START_INDEX)
       .build();
   private static final ResolvedCapitalIndexedBond RPRODUCT_ILF = PRODUCT_ILF.resolve(REF_DATA);
 

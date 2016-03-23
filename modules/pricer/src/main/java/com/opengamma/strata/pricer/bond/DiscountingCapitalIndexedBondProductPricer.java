@@ -17,8 +17,8 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.sensitivity.RepoCurveZeroRateSensitivity;
@@ -621,7 +621,7 @@ public class DiscountingCapitalIndexedBondProductPricer {
       RateObservation obs = period.getRateObservation();
       LocalDateDoubleTimeSeries ts = ratesProvider.priceIndexValues(bond.getRateCalculation().getIndex()).getFixings();
       YearMonth lastKnownFixingMonth = YearMonth.from(ts.getLatestDate());
-      double indexRatio = ts.getLatestValue() / bond.getStartIndexValue();
+      double indexRatio = ts.getLatestValue() / bond.getFirstIndexValue();
       YearMonth endFixingMonth = null;
       if (obs instanceof InflationEndInterpolatedRateObservation) {
         endFixingMonth = ((InflationEndInterpolatedRateObservation) obs).getEndSecondObservation().getFixingMonth();
@@ -1162,8 +1162,7 @@ public class DiscountingCapitalIndexedBondProductPricer {
   double indexRatio(ResolvedCapitalIndexedBond bond, RatesProvider ratesProvider, LocalDate settlementDate) {
     LocalDate endReferenceDate = settlementDate.isBefore(ratesProvider.getValuationDate()) ?
         ratesProvider.getValuationDate() : settlementDate;
-    RateObservation modifiedObservation =
-        bond.getRateCalculation().createRateObservation(endReferenceDate, bond.getStartIndexValue());
+    RateObservation modifiedObservation = bond.getRateCalculation().createRateObservation(endReferenceDate);
     return 1d + periodPricer.getRateObservationFn().rate(
         modifiedObservation,
         bond.getUnadjustedStartDate(), // dates not used
@@ -1178,8 +1177,7 @@ public class DiscountingCapitalIndexedBondProductPricer {
 
     LocalDate endReferenceDate = settlementDate.isBefore(ratesProvider.getValuationDate()) ?
         ratesProvider.getValuationDate() : settlementDate;
-    RateObservation modifiedObservation =
-        bond.getRateCalculation().createRateObservation(endReferenceDate, bond.getStartIndexValue());
+    RateObservation modifiedObservation = bond.getRateCalculation().createRateObservation(endReferenceDate);
     return periodPricer.getRateObservationFn().rateSensitivity(
         modifiedObservation,
         bond.getUnadjustedStartDate(), // dates not used
