@@ -17,6 +17,7 @@ import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
+import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.function.CalculationFunction;
 import com.opengamma.strata.calc.runner.function.FunctionUtils;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
@@ -59,6 +60,11 @@ public class SecurityTradeCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
+  public Class<SecurityTrade> targetType() {
+    return SecurityTrade.class;
+  }
+
+  @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
   }
@@ -71,7 +77,12 @@ public class SecurityTradeCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
-  public FunctionRequirements requirements(SecurityTrade trade, Set<Measure> measures, ReferenceData refData) {
+  public FunctionRequirements requirements(
+      SecurityTrade trade,
+      Set<Measure> measures,
+      CalculationParameters parameters,
+      ReferenceData refData) {
+
     Security security = refData.getValue(trade.getSecurityId());
     QuoteKey key = QuoteKey.of(trade.getSecurityId().getStandardId());
 
@@ -86,6 +97,7 @@ public class SecurityTradeCalculationFunction
   public Map<Measure, Result<?>> calculate(
       SecurityTrade trade,
       Set<Measure> measures,
+      CalculationParameters parameters,
       CalculationMarketData scenarioMarketData,
       ReferenceData refData) {
 

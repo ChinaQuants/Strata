@@ -15,7 +15,7 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.collect.type.TypedString;
+import com.opengamma.strata.collect.TypedString;
 import com.opengamma.strata.product.rate.IborInterpolatedRateObservation;
 import com.opengamma.strata.product.swap.CompoundingMethod;
 
@@ -197,6 +197,10 @@ public final class ExplainKey<T>
    * The method of compounding.
    */
   public static final ExplainKey<CompoundingMethod> COMPOUNDING = of("CompoundingMethod");
+  /**
+   * The strike value.
+   */
+  public static final ExplainKey<Double> STRIKE_VALUE = of("StrikeValue");
 
   //-------------------------------------------------------------------------
   /**

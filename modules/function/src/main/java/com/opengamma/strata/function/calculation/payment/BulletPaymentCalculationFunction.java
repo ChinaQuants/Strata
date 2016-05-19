@@ -17,6 +17,7 @@ import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
+import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.function.CalculationFunction;
 import com.opengamma.strata.calc.runner.function.FunctionUtils;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
@@ -67,6 +68,11 @@ public class BulletPaymentCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
+  public Class<BulletPaymentTrade> targetType() {
+    return BulletPaymentTrade.class;
+  }
+
+  @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
   }
@@ -78,7 +84,12 @@ public class BulletPaymentCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
-  public FunctionRequirements requirements(BulletPaymentTrade trade, Set<Measure> measures, ReferenceData refData) {
+  public FunctionRequirements requirements(
+      BulletPaymentTrade trade,
+      Set<Measure> measures,
+      CalculationParameters parameters,
+      ReferenceData refData) {
+
     BulletPayment product = trade.getProduct();
 
     Set<DiscountCurveKey> discountCurveKeys =
@@ -96,6 +107,7 @@ public class BulletPaymentCalculationFunction
   public Map<Measure, Result<?>> calculate(
       BulletPaymentTrade trade,
       Set<Measure> measures,
+      CalculationParameters parameters,
       CalculationMarketData scenarioMarketData,
       ReferenceData refData) {
 

@@ -15,7 +15,6 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.market.ImmutableMarketData;
@@ -24,12 +23,13 @@ import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
+import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.calc.config.MarketDataRules;
 import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
-import com.opengamma.strata.calc.runner.Results;
+import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.result.Result;
@@ -42,6 +42,7 @@ import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.node.IborFixingDepositCurveNode;
 import com.opengamma.strata.market.id.QuoteId;
+import com.opengamma.strata.product.Trade;
 
 /**
  * Test for curve calibration with 2 curves in USD. 
@@ -109,7 +110,7 @@ public class CalibrationSimpleForwardCheckExample {
     // check that all trades have a PV of near 0
     for (int i = 0; i < results.getFirst().size(); i++) {
       Trade trade = results.getFirst().get(i);
-      Result<?> pv = results.getSecond().getItems().get(i);
+      Result<?> pv = results.getSecond().getCells().get(i);
       String output = "  |--> PV for " + trade.getClass().getSimpleName() + " computed: " + pv.isSuccess();
       Object pvValue = pv.getValue();
       ArgChecker.isTrue((pvValue instanceof MultiCurrencyAmount) || (pvValue instanceof CurrencyAmount), "result type");
@@ -174,7 +175,7 @@ public class CalibrationSimpleForwardCheckExample {
 
     // create the market data used for calculations
     MarketEnvironment marketSnapshot = MarketEnvironment.builder(VAL_DATE)
-        .addValues(quotes)
+        .addSingleValues(quotes)
         .build();
 
     // create the market data used for building trades
@@ -213,10 +214,8 @@ public class CalibrationSimpleForwardCheckExample {
             .build());
 
     // the complete set of rules for calculating measures
-    CalculationRules rules = CalculationRules.builder()
-        .pricingRules(StandardComponents.pricingRules())
-        .marketDataRules(marketDataRules)
-        .build();
+    CalculationFunctions functions = StandardComponents.calculationFunctions();
+    CalculationRules rules = CalculationRules.of(functions, marketDataRules);
 
     // calibrate the curves and calculate the results
     MarketDataRequirements reqs = MarketDataRequirements.of(rules, trades, columns, refData);

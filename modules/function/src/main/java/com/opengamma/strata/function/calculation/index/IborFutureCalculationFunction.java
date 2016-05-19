@@ -12,11 +12,13 @@ import java.util.Set;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.basics.market.FieldName;
 import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
+import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.function.CalculationFunction;
 import com.opengamma.strata.calc.runner.function.FunctionUtils;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
@@ -70,6 +72,11 @@ public class IborFutureCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
+  public Class<IborFutureTrade> targetType() {
+    return IborFutureTrade.class;
+  }
+
+  @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
   }
@@ -81,10 +88,15 @@ public class IborFutureCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
-  public FunctionRequirements requirements(IborFutureTrade trade, Set<Measure> measures, ReferenceData refData) {
+  public FunctionRequirements requirements(
+      IborFutureTrade trade,
+      Set<Measure> measures,
+      CalculationParameters parameters,
+      ReferenceData refData) {
+
     IborFuture product = trade.getProduct();
 
-    QuoteKey quoteKey = QuoteKey.of(trade.getProduct().getSecurityId().getStandardId());
+    QuoteKey quoteKey = QuoteKey.of(trade.getProduct().getSecurityId().getStandardId(), FieldName.SETTLEMENT_PRICE);
     IborIndexCurveKey indexForwardCurveKey = IborIndexCurveKey.of(product.getIndex());
     DiscountCurveKey discountFactorsKey = DiscountCurveKey.of(product.getCurrency());
     IndexRateKey indexTimeSeriesKey = IndexRateKey.of(product.getIndex());
@@ -101,6 +113,7 @@ public class IborFutureCalculationFunction
   public Map<Measure, Result<?>> calculate(
       IborFutureTrade trade,
       Set<Measure> measures,
+      CalculationParameters parameters,
       CalculationMarketData scenarioMarketData,
       ReferenceData refData) {
 

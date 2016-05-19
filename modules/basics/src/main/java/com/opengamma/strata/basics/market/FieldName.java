@@ -7,7 +7,7 @@ package com.opengamma.strata.basics.market;
 
 import org.joda.convert.FromString;
 
-import com.opengamma.strata.collect.type.TypedString;
+import com.opengamma.strata.collect.TypedString;
 
 /**
  * The name of a field in a market data record.
@@ -29,10 +29,18 @@ public final class FieldName
 
   //-------------------------------------------------------------------------
   /**
-   * The field name for market value.
-   * This is typically used as the default when no field name is specified.
+   * The field name for the market value - 'MarketValue'.
+   * <p>
+   * This is used to refer to the standard market quote for the identifier.
+   * It is typically used as the default when no field name is specified.
    */
   public static final FieldName MARKET_VALUE = of("MarketValue");
+  /**
+   * The field name for the settlement price - 'SettlementPrice'.
+   * <p>
+   * This is used to refer to the daily settlement price used in margining.
+   */
+  public static final FieldName SETTLEMENT_PRICE = of("SettlementPrice");
 
   //-------------------------------------------------------------------------
   /**

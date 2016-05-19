@@ -7,6 +7,7 @@ package com.opengamma.strata.pricer.rate;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.joda.beans.JodaBeanUtils;
 
@@ -23,6 +24,7 @@ import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.basics.market.MarketDataKey;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.curve.Curve;
+import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.key.DiscountCurveKey;
 import com.opengamma.strata.market.key.IborIndexCurveKey;
@@ -32,7 +34,6 @@ import com.opengamma.strata.market.key.PriceIndexCurveKey;
 import com.opengamma.strata.market.view.DiscountFactors;
 import com.opengamma.strata.market.view.DiscountFxForwardRates;
 import com.opengamma.strata.market.view.DiscountFxIndexRates;
-import com.opengamma.strata.market.view.ForwardPriceIndexValues;
 import com.opengamma.strata.market.view.FxForwardRates;
 import com.opengamma.strata.market.view.FxIndexRates;
 import com.opengamma.strata.market.view.IborIndexRates;
@@ -91,6 +92,11 @@ public final class MarketDataRatesProvider
 
   //-------------------------------------------------------------------------
   @Override
+  public Optional<Curve> findCurve(CurveName name) {
+    return Optional.empty();
+  }
+
+  @Override
   public LocalDateDoubleTimeSeries timeSeries(Index index) {
     return marketData.getTimeSeries(IndexRateKey.of(index));
   }
@@ -148,7 +154,7 @@ public final class MarketDataRatesProvider
     if (!(curve instanceof InterpolatedNodalCurve)) {
       throw new IllegalArgumentException("Curve must be an InterpolatedNodalCurve: " + index);
     }
-    return ForwardPriceIndexValues.of(index, getValuationDate(), (InterpolatedNodalCurve) curve, timeSeries(index));
+    return PriceIndexValues.of(index, getValuationDate(), (InterpolatedNodalCurve) curve, timeSeries(index));
   }
 
 }

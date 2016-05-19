@@ -16,23 +16,22 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.base.Strings;
-import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.config.pricing.PricingRules;
+import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
+import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.calc.runner.CalculationTasks;
-import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.function.StandardComponents;
-import com.opengamma.strata.product.FinanceTrade;
+import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.report.Report;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.ReportRequirements;
@@ -167,15 +166,11 @@ public class ReportRunnerTool implements AutoCloseable {
   private ReportCalculationResults runCalculationRequirements(ReportRequirements requirements) {
     List<Column> columns = requirements.getTradeMeasureRequirements();
 
-    PricingRules pricingRules = StandardComponents.pricingRules();
-
     ExampleMarketDataBuilder marketDataBuilder = marketDataRoot == null ?
         ExampleMarketData.builder() : ExampleMarketDataBuilder.ofPath(marketDataRoot.toPath());
 
-    CalculationRules rules = CalculationRules.builder()
-        .pricingRules(pricingRules)
-        .marketDataRules(marketDataBuilder.rules())
-        .build();
+    CalculationFunctions functions = StandardComponents.calculationFunctions();
+    CalculationRules rules = CalculationRules.of(functions, marketDataBuilder.rules());
 
     MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
 
@@ -185,8 +180,6 @@ public class ReportRunnerTool implements AutoCloseable {
       trades = portfolio.getTrades();
     } else {
       trades = portfolio.getTrades().stream()
-          .filter(t -> t instanceof FinanceTrade)
-          .map(t -> (FinanceTrade) t)
           .filter(t -> t.getInfo().getId().isPresent())
           .filter(t -> t.getInfo().getId().get().getValue().equals(idSearch))
           .collect(toImmutableList());

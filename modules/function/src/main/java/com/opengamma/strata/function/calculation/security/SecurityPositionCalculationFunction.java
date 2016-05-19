@@ -17,6 +17,7 @@ import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.calc.marketdata.CalculationMarketData;
 import com.opengamma.strata.calc.marketdata.FunctionRequirements;
+import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.function.CalculationFunction;
 import com.opengamma.strata.calc.runner.function.FunctionUtils;
 import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
@@ -59,6 +60,11 @@ public class SecurityPositionCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
+  public Class<SecurityPosition> targetType() {
+    return SecurityPosition.class;
+  }
+
+  @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
   }
@@ -71,7 +77,12 @@ public class SecurityPositionCalculationFunction
 
   //-------------------------------------------------------------------------
   @Override
-  public FunctionRequirements requirements(SecurityPosition position, Set<Measure> measures, ReferenceData refData) {
+  public FunctionRequirements requirements(
+      SecurityPosition position,
+      Set<Measure> measures,
+      CalculationParameters parameters,
+      ReferenceData refData) {
+
     Security security = refData.getValue(position.getSecurityId());
     QuoteKey key = QuoteKey.of(position.getSecurityId().getStandardId());
 
@@ -86,6 +97,7 @@ public class SecurityPositionCalculationFunction
   public Map<Measure, Result<?>> calculate(
       SecurityPosition position,
       Set<Measure> measures,
+      CalculationParameters parameters,
       CalculationMarketData scenarioMarketData,
       ReferenceData refData) {
 
