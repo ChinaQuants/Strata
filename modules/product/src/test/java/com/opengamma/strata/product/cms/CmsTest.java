@@ -5,14 +5,14 @@
  */
 package com.opengamma.strata.product.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
@@ -20,11 +20,11 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
@@ -82,14 +82,14 @@ public class CmsTest {
 
   public void test_resolve_twoLegs() {
     Cms base = sutCap();
-    ResolvedCms test = base.resolve(REF_DATA);;
+    ResolvedCms test = base.resolve(REF_DATA);
     assertEquals(test.getCmsLeg(), CMS_LEG.resolve(REF_DATA));
     assertEquals(test.getPayLeg().get(), PAY_LEG.resolve(REF_DATA));
   }
 
   public void test_resolve_oneLeg() {
     Cms base = Cms.of(CMS_LEG);
-    ResolvedCms test = base.resolve(REF_DATA);;
+    ResolvedCms test = base.resolve(REF_DATA);
     assertEquals(test.getCmsLeg(), CMS_LEG.resolve(REF_DATA));
     assertFalse(test.getPayLeg().isPresent());
   }

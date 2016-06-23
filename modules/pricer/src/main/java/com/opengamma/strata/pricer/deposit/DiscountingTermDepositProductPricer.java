@@ -9,14 +9,14 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.view.DiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.deposit.ResolvedTermDeposit;
 
 /**
  * The methods associated to the pricing of term deposit by discounting.
  * <p>
- * This function provides the ability to price {@link ResolvedTermDeposit}.
+ * This provides the ability to price {@link ResolvedTermDeposit}.
  */
 public class DiscountingTermDepositProductPricer {
 

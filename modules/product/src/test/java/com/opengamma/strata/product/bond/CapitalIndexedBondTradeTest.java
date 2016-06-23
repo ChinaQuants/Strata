@@ -19,10 +19,10 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
 
@@ -65,7 +65,7 @@ public class CapitalIndexedBondTradeTest {
       .unadjustedStartDate(START)
       .endDate(SETTLEMENT_DATE)
       .currency(USD)
-      .rateObservation(PRODUCT.getRateCalculation().createRateObservation(SETTLEMENT_DATE))
+      .rateComputation(PRODUCT.getRateCalculation().createRateComputation(SETTLEMENT_DATE))
       .notional(
           -PRODUCT.getNotional() * QUANTITY *
               (PRICE + PRODUCT.resolve(REF_DATA).accruedInterest(SETTLEMENT_DATE) / PRODUCT.getNotional()))

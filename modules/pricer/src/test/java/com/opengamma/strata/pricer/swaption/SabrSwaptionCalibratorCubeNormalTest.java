@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,33 +24,33 @@ import java.util.Map;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.PutCall;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ImmutableMarketData;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
-import com.opengamma.strata.market.id.QuoteId;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.market.surface.ConstantNodalSurface;
-import com.opengamma.strata.market.surface.NodalSurface;
+import com.opengamma.strata.market.observable.QuoteId;
+import com.opengamma.strata.market.surface.ConstantSurface;
+import com.opengamma.strata.market.surface.DefaultSurfaceMetadata;
+import com.opengamma.strata.market.surface.Surface;
 import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolator;
 import com.opengamma.strata.math.impl.interpolation.GridInterpolator2D;
 import com.opengamma.strata.math.impl.interpolation.Interpolator1D;
-import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
-import com.opengamma.strata.pricer.calibration.CurveCalibrator;
-import com.opengamma.strata.pricer.calibration.RawOptionData;
+import com.opengamma.strata.pricer.curve.CalibrationMeasures;
+import com.opengamma.strata.pricer.curve.CurveCalibrator;
+import com.opengamma.strata.pricer.curve.RawOptionData;
 import com.opengamma.strata.pricer.impl.option.BlackFormulaRepository;
 import com.opengamma.strata.pricer.impl.option.NormalFormulaRepository;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
+import com.opengamma.strata.product.common.BuySell;
+import com.opengamma.strata.product.common.PutCall;
 import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
@@ -80,8 +79,7 @@ public class SabrSwaptionCalibratorCubeNormalTest {
           ResourceLocator.of(BASE_DIR + NODES_FILE)).get(0);
   private static final Map<QuoteId, Double> MAP_MQ =
       QuotesCsvLoader.load(CALIBRATION_DATE, ImmutableList.of(ResourceLocator.of(BASE_DIR + QUOTES_FILE)));
-  private static final ImmutableMarketData MARKET_QUOTES = ImmutableMarketData.builder(CALIBRATION_DATE)
-      .addValuesById(MAP_MQ).build();
+  private static final ImmutableMarketData MARKET_QUOTES = ImmutableMarketData.of(CALIBRATION_DATE, MAP_MQ);
 
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.PAR_SPREAD;
   private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
@@ -89,7 +87,8 @@ public class SabrSwaptionCalibratorCubeNormalTest {
       CALIBRATOR.calibrate(CONFIGS, CALIBRATION_DATE, MARKET_QUOTES, REF_DATA, TS);
 
   private static final DiscountingSwapProductPricer SWAP_PRICER = DiscountingSwapProductPricer.DEFAULT;
-  private static final List<RawOptionData> DATA_SPARSE = rawData(DATA_ARRAY_SPARSE);
+  private static final List<RawOptionData> DATA_SPARSE = SabrSwaptionCalibratorSmileTestUtils
+      .rawData(ValueType.SIMPLE_MONEYNESS, MONEYNESS, EXPIRIES, ValueType.NORMAL_VOLATILITY, DATA_ARRAY_SPARSE);
   private static final Interpolator1D LINEAR_FLAT = CombinedInterpolatorExtrapolator.of(
       CurveInterpolators.LINEAR.getName(), CurveExtrapolators.FLAT.getName(), CurveExtrapolators.FLAT.getName());
   private static final GridInterpolator2D INTERPOLATOR_2D = new GridInterpolator2D(LINEAR_FLAT, LINEAR_FLAT);
@@ -99,12 +98,25 @@ public class SabrSwaptionCalibratorCubeNormalTest {
   @Test
   public void normal_cube() {
     double beta = 0.50;
-    NodalSurface betaSurface = ConstantNodalSurface.of("Beta", beta);
+    Surface betaSurface = ConstantSurface.of("Beta", beta)
+        .withMetadata(DefaultSurfaceMetadata.builder()
+            .xValueType(ValueType.YEAR_FRACTION).yValueType(ValueType.YEAR_FRACTION)
+            .zValueType(ValueType.SABR_BETA).surfaceName("Beta").build());
     double shift = 0.0300;
-    NodalSurface shiftSurface = ConstantNodalSurface.of("Shift", shift);
+    Surface shiftSurface = ConstantSurface.of("Shift", shift)
+        .withMetadata(DefaultSurfaceMetadata.builder()
+            .xValueType(ValueType.YEAR_FRACTION).yValueType(ValueType.YEAR_FRACTION).surfaceName("Shift").build());
     SabrParametersSwaptionVolatilities calibrated = SABR_CALIBRATION.calibrateWithFixedBetaAndShift(
-        EUR_FIXED_1Y_EURIBOR_6M, CALIBRATION_TIME, ACT_365F, TENORS, DATA_SPARSE,
-        MULTICURVE, betaSurface, shiftSurface, INTERPOLATOR_2D);
+        SwaptionVolatilitiesName.of("Calibrated-SABR"),
+        EUR_FIXED_1Y_EURIBOR_6M,
+        CALIBRATION_TIME,
+        ACT_365F,
+        TENORS,
+        DATA_SPARSE,
+        MULTICURVE,
+        betaSurface,
+        shiftSurface,
+        INTERPOLATOR_2D);
 
     for (int looptenor = 0; looptenor < TENORS.size(); looptenor++) {
       double tenor = TENORS.get(looptenor).get(ChronoUnit.YEARS);
@@ -131,15 +143,6 @@ public class SabrSwaptionCalibratorCubeNormalTest {
         }
       }
     }
-  }
-
-  private static List<RawOptionData> rawData(double[][][] dataArray) {
-    List<RawOptionData> raw = new ArrayList<>();
-    for (int looptenor = 0; looptenor < dataArray.length; looptenor++) {
-      raw.add(RawOptionData.of(MONEYNESS, ValueType.SIMPLE_MONEYNESS, EXPIRIES,
-          DoubleMatrix.ofUnsafe(dataArray[looptenor]), ValueType.NORMAL_VOLATILITY));
-    }
-    return raw;
   }
 
 }

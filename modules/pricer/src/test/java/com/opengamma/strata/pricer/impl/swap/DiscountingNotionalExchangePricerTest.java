@@ -34,8 +34,8 @@ import com.opengamma.strata.market.explain.ExplainMapBuilder;
 import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
-import com.opengamma.strata.market.view.DiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.ZeroRateSensitivity;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.rate.SimpleRatesProvider;
@@ -118,7 +118,7 @@ public class DiscountingNotionalExchangePricerTest {
     double pvDw = pricer.presentValue(event, provDw);
     double res = 0.5 * (pvUp - pvDw) / eps;
     List<ZeroRateSensitivity> zeroRateSensi = new ArrayList<>();
-    zeroRateSensi.add(ZeroRateSensitivity.of(currency, paymentDate, res));
+    zeroRateSensi.add(ZeroRateSensitivity.of(currency, paymentTime, res));
     return zeroRateSensi;
   }
 
@@ -203,12 +203,12 @@ public class DiscountingNotionalExchangePricerTest {
   // creates a simple provider
   private SimpleRatesProvider createProvider(NotionalExchange ne) {
     LocalDate paymentDate = ne.getPaymentDate();
-    double paymentTime = DAY_COUNT.relativeYearFraction(VAL_DATE, ne.getPaymentDate());
+    double paymentTime = DAY_COUNT.relativeYearFraction(VAL_DATE, paymentDate);
     Currency currency = ne.getCurrency();
 
     DiscountFactors mockDf = mock(DiscountFactors.class);
     when(mockDf.discountFactor(paymentDate)).thenReturn(DISCOUNT_FACTOR);
-    ZeroRateSensitivity sens = ZeroRateSensitivity.of(currency, paymentDate, -DISCOUNT_FACTOR * paymentTime);
+    ZeroRateSensitivity sens = ZeroRateSensitivity.of(currency, paymentTime, -DISCOUNT_FACTOR * paymentTime);
     when(mockDf.zeroRatePointSensitivity(paymentDate)).thenReturn(sens);
     SimpleRatesProvider prov = new SimpleRatesProvider(VAL_DATE, mockDf);
     prov.setDayCount(DAY_COUNT);

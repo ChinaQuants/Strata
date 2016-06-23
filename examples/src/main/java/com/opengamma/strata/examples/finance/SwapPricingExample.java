@@ -11,8 +11,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCounts;
@@ -20,8 +20,6 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.OvernightIndices;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -30,25 +28,28 @@ import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.Results;
-import com.opengamma.strata.calc.config.Measures;
-import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
+import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.examples.data.ExampleData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
-import com.opengamma.strata.function.StandardComponents;
+import com.opengamma.strata.measure.AdvancedMeasures;
+import com.opengamma.strata.measure.Measures;
+import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeAttributeType;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.BuySell;
+import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.CompoundingMethod;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
 import com.opengamma.strata.product.swap.IborRateCalculation;
+import com.opengamma.strata.product.swap.IborRateStubCalculation;
 import com.opengamma.strata.product.swap.NotionalSchedule;
 import com.opengamma.strata.product.swap.OvernightAccrualMethod;
 import com.opengamma.strata.product.swap.OvernightRateCalculation;
 import com.opengamma.strata.product.swap.PaymentSchedule;
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
-import com.opengamma.strata.product.swap.StubCalculation;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapLeg;
 import com.opengamma.strata.product.swap.SwapTrade;
@@ -59,9 +60,9 @@ import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
 
 /**
- * Example to illustrate using the engine to price a swap.
+ * Example to illustrate using the calculation API to price a swap.
  * <p>
- * This makes use of the example engine and the example market data environment.
+ * This makes use of the example market data environment.
  */
 public class SwapPricingExample {
 
@@ -88,32 +89,30 @@ public class SwapPricingExample {
         Column.of(Measures.LEG_INITIAL_NOTIONAL),
         Column.of(Measures.PRESENT_VALUE),
         Column.of(Measures.LEG_PRESENT_VALUE),
-        Column.of(Measures.PV01),
+        Column.of(Measures.PV01_CALIBRATED_SUM),
         Column.of(Measures.PAR_RATE),
         Column.of(Measures.ACCRUED_INTEREST),
-        Column.of(Measures.BUCKETED_PV01),
-        Column.of(Measures.BUCKETED_GAMMA_PV01));
+        Column.of(Measures.PV01_CALIBRATED_BUCKETED),
+        Column.of(AdvancedMeasures.PV01_SEMI_PARALLEL_GAMMA_BUCKETED));
 
     // use the built-in example market data
+    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
     ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    MarketData marketData = marketDataBuilder.buildSnapshot(valuationDate);
 
     // the complete set of rules for calculating measures
     CalculationFunctions functions = StandardComponents.calculationFunctions();
-    CalculationRules rules = CalculationRules.of(functions, marketDataBuilder.rules());
-
-    // build a market data snapshot for the valuation date
-    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
-    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
+    CalculationRules rules = CalculationRules.of(functions, marketDataBuilder.ratesLookup(valuationDate));
 
     // the reference data, such as holidays and securities
     ReferenceData refData = ReferenceData.standard();
 
     // calculate the results
-    Results results = runner.calculateSingleScenario(rules, trades, columns, marketSnapshot, refData);
+    Results results = runner.calculate(rules, trades, columns, marketData, refData);
 
     // use the report runner to transform the engine results into a trade report
     ReportCalculationResults calculationResults =
-        ReportCalculationResults.of(valuationDate, trades, columns, results, refData);
+        ReportCalculationResults.of(valuationDate, trades, columns, results, functions, refData);
 
     TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("swap-report-template");
     TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
@@ -413,7 +412,7 @@ public class SwapPricingExample {
         .notionalSchedule(notional)
         .calculation(IborRateCalculation.builder()
             .index(IborIndices.USD_LIBOR_6M)
-            .initialStub(StubCalculation.ofIborInterpolatedRate(IborIndices.USD_LIBOR_3M, IborIndices.USD_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(IborIndices.USD_LIBOR_3M, IborIndices.USD_LIBOR_6M))
             .build())
         .build();
 
@@ -465,7 +464,7 @@ public class SwapPricingExample {
         .notionalSchedule(notional)
         .calculation(IborRateCalculation.builder()
             .index(IborIndices.USD_LIBOR_6M)
-            .initialStub(StubCalculation.ofIborInterpolatedRate(IborIndices.USD_LIBOR_3M, IborIndices.USD_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(IborIndices.USD_LIBOR_3M, IborIndices.USD_LIBOR_6M))
             .build())
         .build();
 

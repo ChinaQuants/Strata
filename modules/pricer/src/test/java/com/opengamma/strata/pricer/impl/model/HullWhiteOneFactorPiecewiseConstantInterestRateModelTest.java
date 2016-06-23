@@ -15,17 +15,17 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantInterestRateModel;
-import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
+import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParameters;
 
 /**
  * Test {@link HullWhiteOneFactorPiecewiseConstantInterestRateModel}.

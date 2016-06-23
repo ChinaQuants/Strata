@@ -8,7 +8,7 @@
   <parent>
     <groupId>com.opengamma.strata</groupId>
     <artifactId>strata-parent</artifactId>
-    <version>0.14.0-SNAPSHOT</version>
+    <version>0.16.0-SNAPSHOT</version>
     <relativePath>../modules</relativePath>
   </parent>  
   <artifactId>strata-examples</artifactId>
@@ -21,7 +21,7 @@
     <!-- OpenGamma, relying on transitive dependencies -->
     <dependency>
       <groupId>com.opengamma.strata</groupId>
-      <artifactId>strata-function</artifactId>
+      <artifactId>strata-measure</artifactId>
     </dependency>
     <dependency>
       <groupId>com.opengamma.strata</groupId>

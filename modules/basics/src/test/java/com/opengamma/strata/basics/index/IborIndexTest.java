@@ -34,11 +34,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.TenorAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 
 /**
  * Test Ibor Index.
@@ -50,8 +50,9 @@ public class IborIndexTest {
 
   public void test_gbpLibor3m() {
     IborIndex test = IborIndex.of("GBP-LIBOR-3M");
-    assertEquals(test.getCurrency(), GBP);
     assertEquals(test.getName(), "GBP-LIBOR-3M");
+    assertEquals(test.getCurrency(), GBP);
+    assertEquals(test.isActive(), true);
     assertEquals(test.getTenor(), TENOR_3M);
     assertEquals(test.getFixingCalendar(), GBLO);
     assertEquals(test.getFixingDateOffset(),

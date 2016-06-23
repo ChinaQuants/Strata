@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.pricer.swap.e2e;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.PRECEDING;
@@ -18,6 +16,8 @@ import static com.opengamma.strata.basics.schedule.Frequency.P1M;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.basics.schedule.Frequency.TERM;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -26,15 +26,14 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ImmutableReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.basics.index.ImmutableIborIndex;
-import com.opengamma.strata.basics.market.ImmutableReferenceData;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -48,6 +47,7 @@ import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.pricer.swap.DiscountingSwapTradePricer;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.CompoundingMethod;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
 import com.opengamma.strata.product.swap.IborRateCalculation;
@@ -58,7 +58,7 @@ import com.opengamma.strata.product.swap.PaymentSchedule;
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
 import com.opengamma.strata.product.swap.ResolvedSwap;
 import com.opengamma.strata.product.swap.ResolvedSwapTrade;
-import com.opengamma.strata.product.swap.StubCalculation;
+import com.opengamma.strata.product.swap.IborRateStubCalculation;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapLeg;
 import com.opengamma.strata.product.swap.SwapTrade;
@@ -402,7 +402,7 @@ public class SwapEnd2EndTest {
         .calculation(IborRateCalculation.builder()
             .index(USD_LIBOR_6M)
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, CalendarUSD.NYC, BDA_P))
-            .initialStub(StubCalculation.ofIborInterpolatedRate(USD_LIBOR_3M, USD_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(USD_LIBOR_3M, USD_LIBOR_6M))
             .build())
         .build();
 
@@ -439,7 +439,7 @@ public class SwapEnd2EndTest {
         .calculation(IborRateCalculation.builder()
             .index(USD_LIBOR_6M)
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, CalendarUSD.NYC, BDA_P))
-            .initialStub(StubCalculation.ofIborInterpolatedRate(USD_LIBOR_3M, USD_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(USD_LIBOR_3M, USD_LIBOR_6M))
             .build())
         .build();
 

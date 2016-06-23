@@ -5,10 +5,6 @@
  */
 package com.opengamma.strata.pricer.swaption;
 
-import static com.opengamma.strata.basics.LongShort.LONG;
-import static com.opengamma.strata.basics.LongShort.SHORT;
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
@@ -17,6 +13,10 @@ import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 import static com.opengamma.strata.basics.schedule.Frequency.P12M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
+import static com.opengamma.strata.product.common.LongShort.LONG;
+import static com.opengamma.strata.product.common.LongShort.SHORT;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -27,6 +27,7 @@ import java.time.ZoneOffset;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
@@ -34,13 +35,10 @@ import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivity;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
@@ -48,12 +46,13 @@ import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSensitivity;
 import com.opengamma.strata.market.surface.InterpolatedNodalSurface;
-import com.opengamma.strata.market.surface.NodalSurface;
+import com.opengamma.strata.market.surface.Surface;
 import com.opengamma.strata.market.surface.SurfaceMetadata;
 import com.opengamma.strata.market.surface.Surfaces;
 import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolator;
@@ -116,7 +115,7 @@ public class BlackSwaptionCashParYieldProductPricerTest {
   private static final FixedIborSwapConvention SWAP_CONVENTION = FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
   private static final SurfaceMetadata METADATA =
       Surfaces.swaptionBlackExpiryTenor("Black Vol", ACT_ACT_ISDA, SWAP_CONVENTION);
-  private static final NodalSurface SURFACE = InterpolatedNodalSurface.of(METADATA, EXPIRY, TENOR, VOL, INTERPOLATOR_2D);
+  private static final Surface SURFACE = InterpolatedNodalSurface.of(METADATA, EXPIRY, TENOR, VOL, INTERPOLATOR_2D);
   private static final BlackSwaptionExpiryTenorVolatilities VOL_PROVIDER =
       BlackSwaptionExpiryTenorVolatilities.of(SURFACE, VAL_DATE.atStartOfDay(ZoneOffset.UTC));
   // underlying swap and swaption
@@ -481,13 +480,13 @@ public class BlackSwaptionCashParYieldProductPricerTest {
     MultiCurrencyAmount computedRec = PRICER.currencyExposure(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
     MultiCurrencyAmount computedPay = PRICER.currencyExposure(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
     MultiCurrencyAmount expectedRec = RATE_PROVIDER.currencyExposure(pointRec.build())
         .plus(PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER));
     assertEquals(computedRec.size(), 1);
     assertEquals(computedRec.getAmount(EUR).getAmount(), expectedRec.getAmount(EUR).getAmount(), NOTIONAL * TOL);
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
     MultiCurrencyAmount expectedPay = RATE_PROVIDER.currencyExposure(pointPay.build())
         .plus(PRICER.presentValue(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER));
     assertEquals(computedPay.size(), 1);
@@ -500,13 +499,13 @@ public class BlackSwaptionCashParYieldProductPricerTest {
     MultiCurrencyAmount computedPay = PRICER.currencyExposure(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
     MultiCurrencyAmount expectedRec = RATE_PROVIDER.currencyExposure(pointRec.build())
         .plus(PRICER.presentValue(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY));
     assertEquals(computedRec.size(), 1);
     assertEquals(computedRec.getAmount(EUR).getAmount(), expectedRec.getAmount(EUR).getAmount(), NOTIONAL * TOL);
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
     MultiCurrencyAmount expectedPay = RATE_PROVIDER.currencyExposure(pointPay.build())
         .plus(PRICER.presentValue(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY));
     assertEquals(computedPay.size(), 1);
@@ -555,58 +554,58 @@ public class BlackSwaptionCashParYieldProductPricerTest {
   }
 
   //-------------------------------------------------------------------------
-  public void test_presentValueSensitivityStickyStrike() {
+  public void test_presentValueSensitivityRatesStickyStrike() {
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
-    CurveCurrencyParameterSensitivities computedRec = RATE_PROVIDER.curveParameterSensitivity(pointRec.build());
-    CurveCurrencyParameterSensitivities expectedRec =
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
+    CurrencyParameterSensitivities computedRec = RATE_PROVIDER.parameterSensitivity(pointRec.build());
+    CurrencyParameterSensitivities expectedRec =
         FD_CAL.sensitivity(RATE_PROVIDER, (p) -> PRICER.presentValue(SWAPTION_REC_LONG, (p), VOL_PROVIDER));
     assertTrue(computedRec.equalWithTolerance(expectedRec, NOTIONAL * FD_EPS * 100d));
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
-    CurveCurrencyParameterSensitivities computedPay = RATE_PROVIDER.curveParameterSensitivity(pointPay.build());
-    CurveCurrencyParameterSensitivities expectedPay =
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
+    CurrencyParameterSensitivities computedPay = RATE_PROVIDER.parameterSensitivity(pointPay.build());
+    CurrencyParameterSensitivities expectedPay =
         FD_CAL.sensitivity(RATE_PROVIDER, (p) -> PRICER.presentValue(SWAPTION_PAY_SHORT, (p), VOL_PROVIDER));
     assertTrue(computedPay.equalWithTolerance(expectedPay, NOTIONAL * FD_EPS * 100d));
   }
 
-  public void test_presentValueSensitivityStickyStrike_atMaturity() {
+  public void test_presentValueSensitivityRatesStickyStrike_atMaturity() {
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
-    CurveCurrencyParameterSensitivities computedRec =
-        RATES_PROVIDER_AT_MATURITY.curveParameterSensitivity(pointRec.build());
-    CurveCurrencyParameterSensitivities expectedRec = FD_CAL.sensitivity(
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
+    CurrencyParameterSensitivities computedRec =
+        RATES_PROVIDER_AT_MATURITY.parameterSensitivity(pointRec.build());
+    CurrencyParameterSensitivities expectedRec = FD_CAL.sensitivity(
         RATES_PROVIDER_AT_MATURITY, (p) -> PRICER.presentValue(SWAPTION_REC_LONG, (p), VOL_PROVIDER_AT_MATURITY));
     assertTrue(computedRec.equalWithTolerance(expectedRec, NOTIONAL * FD_EPS * 100d));
-    PointSensitivities pointPay = PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_SHORT,
+    PointSensitivities pointPay = PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_SHORT,
         RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY).build();
     for (PointSensitivity sensi : pointPay.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
     }
   }
 
-  public void test_presentValueSensitivityStickyStrike_afterMaturity() {
-    PointSensitivities pointRec = PRICER.presentValueSensitivityStickyStrike(
+  public void test_presentValueSensitivityRatesStickyStrike_afterMaturity() {
+    PointSensitivities pointRec = PRICER.presentValueSensitivityRatesStickyStrike(
         SWAPTION_REC_LONG, RATES_PROVIDER_AFTER_MATURITY, VOL_PROVIDER_AFTER_MATURITY).build();
     for (PointSensitivity sensi : pointRec.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
     }
-    PointSensitivities pointPay = PRICER.presentValueSensitivityStickyStrike(
+    PointSensitivities pointPay = PRICER.presentValueSensitivityRatesStickyStrike(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AFTER_MATURITY, VOL_PROVIDER_AFTER_MATURITY).build();
     for (PointSensitivity sensi : pointPay.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
     }
   }
 
-  public void test_presentValueSensitivityStickyStrike_parity() {
-    CurveCurrencyParameterSensitivities pvSensiRecLong = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiRecShort = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_SHORT, RATE_PROVIDER, VOL_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiPayLong = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_LONG, RATE_PROVIDER, VOL_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiPayShort = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivityStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER).build());
+  public void test_presentValueSensitivityRatesStickyStrike_parity() {
+    CurrencyParameterSensitivities pvSensiRecLong = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiRecShort = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_SHORT, RATE_PROVIDER, VOL_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiPayLong = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_LONG, RATE_PROVIDER, VOL_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiPayShort = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER).build());
     assertTrue(pvSensiRecLong.equalWithTolerance(pvSensiRecShort.multipliedBy(-1d), NOTIONAL * TOL));
     assertTrue(pvSensiPayLong.equalWithTolerance(pvSensiPayShort.multipliedBy(-1d), NOTIONAL * TOL));
 
@@ -614,12 +613,12 @@ public class BlackSwaptionCashParYieldProductPricerTest {
     PointSensitivityBuilder forwardSensi = SWAP_PRICER.parRateSensitivity(RSWAP_REC, RATE_PROVIDER);
     double annuityCash = SWAP_PRICER.getLegPricer().annuityCash(RSWAP_REC.getLegs(SwapLegType.FIXED).get(0), forward);
     double annuityCashDeriv = SWAP_PRICER.getLegPricer()
-        .annuityCashDerivative(RSWAP_REC.getLegs(SwapLegType.FIXED).get(0), forward);
+        .annuityCashDerivative(RSWAP_REC.getLegs(SwapLegType.FIXED).get(0), forward).getDerivative(0);
     double discount = RATE_PROVIDER.discountFactor(EUR, SETTLE);
     PointSensitivityBuilder discountSensi = RATE_PROVIDER.discountFactors(EUR).zeroRatePointSensitivity(SETTLE);
     PointSensitivities expecedPoint = discountSensi.multipliedBy(annuityCash * (forward - RATE)).combinedWith(
         forwardSensi.multipliedBy(discount * annuityCash + discount * annuityCashDeriv * (forward - RATE))).build();
-    CurveCurrencyParameterSensitivities expected = RATE_PROVIDER.curveParameterSensitivity(expecedPoint);
+    CurrencyParameterSensitivities expected = RATE_PROVIDER.parameterSensitivity(expecedPoint);
     assertTrue(expected.equalWithTolerance(pvSensiPayLong.combinedWith(pvSensiRecLong.multipliedBy(-1d)),
         NOTIONAL * TOL));
     assertTrue(expected.equalWithTolerance(pvSensiRecShort.combinedWith(pvSensiPayShort.multipliedBy(-1d)),
@@ -629,9 +628,9 @@ public class BlackSwaptionCashParYieldProductPricerTest {
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivityBlackVolatility() {
     SwaptionSensitivity sensiRec =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
     SwaptionSensitivity sensiPay =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
     double forward = SWAP_PRICER.parRate(RSWAP_REC, RATE_PROVIDER);
     double annuityCash = SWAP_PRICER.getLegPricer().annuityCash(RFIXED_LEG_REC, forward);
     double expiry = VOL_PROVIDER.relativeTime(SWAPTION_REC_LONG.getExpiry());
@@ -658,32 +657,32 @@ public class BlackSwaptionCashParYieldProductPricerTest {
   }
 
   public void test_presentValueSensitivityBlackVolatility_atMaturity() {
-    SwaptionSensitivity sensiRec = PRICER.presentValueSensitivityVolatility(
+    SwaptionSensitivity sensiRec = PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
     assertEquals(sensiRec.getSensitivity(), 0d, NOTIONAL * TOL);
-    SwaptionSensitivity sensiPay = PRICER.presentValueSensitivityVolatility(
+    SwaptionSensitivity sensiPay = PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, VOL_PROVIDER_AT_MATURITY);
     assertEquals(sensiPay.getSensitivity(), 0d, NOTIONAL * TOL);
   }
 
   public void test_presentValueSensitivityBlackVolatility_afterMaturity() {
-    SwaptionSensitivity sensiRec = PRICER.presentValueSensitivityVolatility(
+    SwaptionSensitivity sensiRec = PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_REC_LONG, RATES_PROVIDER_AFTER_MATURITY, VOL_PROVIDER_AFTER_MATURITY);
     assertEquals(sensiRec.getSensitivity(), 0d, NOTIONAL * TOL);
-    SwaptionSensitivity sensiPay = PRICER.presentValueSensitivityVolatility(
+    SwaptionSensitivity sensiPay = PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AFTER_MATURITY, VOL_PROVIDER_AFTER_MATURITY);
     assertEquals(sensiPay.getSensitivity(), 0d, NOTIONAL * TOL);
   }
 
   public void test_presentValueSensitivityBlackVolatility_parity() {
     SwaptionSensitivity pvSensiRecLong =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
     SwaptionSensitivity pvSensiRecShort =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_REC_SHORT, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_REC_SHORT, RATE_PROVIDER, VOL_PROVIDER);
     SwaptionSensitivity pvSensiPayLong =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_PAY_LONG, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_PAY_LONG, RATE_PROVIDER, VOL_PROVIDER);
     SwaptionSensitivity pvSensiPayShort =
-        PRICER.presentValueSensitivityVolatility(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsVolatility(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOL_PROVIDER);
     assertEquals(pvSensiRecLong.getSensitivity(), -pvSensiRecShort.getSensitivity(), NOTIONAL * TOL);
     assertEquals(pvSensiPayLong.getSensitivity(), -pvSensiPayShort.getSensitivity(), NOTIONAL * TOL);
     assertEquals(pvSensiRecLong.getSensitivity(), pvSensiPayLong.getSensitivity(), NOTIONAL * TOL);
@@ -697,16 +696,16 @@ public class BlackSwaptionCashParYieldProductPricerTest {
   }
 
   public void pvCurveSensiRegression() {
-    PointSensitivityBuilder point = PRICER.presentValueSensitivityStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
-    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point.build());
+    PointSensitivityBuilder point = PRICER.presentValueSensitivityRatesStickyStrike(SWAPTION_REC_LONG, RATE_PROVIDER, VOL_PROVIDER);
+    CurrencyParameterSensitivities computed = RATE_PROVIDER.parameterSensitivity(point.build());
     computed.getSensitivity(DSC_NAME, EUR).getSensitivity();
     DoubleArray dscSensi = DoubleArray.of(
         0.0, 0.0, 0.0, -7143525.908886078, -1749520.4110068753, -719115.4683096837); // 2.x
     DoubleArray fwdSensi = DoubleArray.of(
         0d, 0d, 0d, 1.7943318714062232E8, -3.4987983718159467E8, -2.6516758066404995E8); // 2.x
-    CurveCurrencyParameterSensitivity dsc = CurveCurrencyParameterSensitivity.of(META_DSC, EUR, dscSensi);
-    CurveCurrencyParameterSensitivity fwd = CurveCurrencyParameterSensitivity.of(META_FWD6, EUR, fwdSensi);
-    CurveCurrencyParameterSensitivities expected = CurveCurrencyParameterSensitivities.of(ImmutableList.of(dsc, fwd));
+    CurrencyParameterSensitivity dsc = DSC_CURVE.createParameterSensitivity(EUR, dscSensi);
+    CurrencyParameterSensitivity fwd = FWD6_CURVE.createParameterSensitivity(EUR, fwdSensi);
+    CurrencyParameterSensitivities expected = CurrencyParameterSensitivities.of(ImmutableList.of(dsc, fwd));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * TOL));
   }
 

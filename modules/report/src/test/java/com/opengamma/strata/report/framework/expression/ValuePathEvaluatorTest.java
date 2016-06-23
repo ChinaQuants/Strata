@@ -5,9 +5,9 @@
  */
 package com.opengamma.strata.report.framework.expression;
 
-import static com.opengamma.strata.basics.BuySell.BUY;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.BuySell.BUY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
@@ -17,13 +17,13 @@ import java.util.List;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.calc.Column;
+import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.Results;
-import com.opengamma.strata.calc.config.Measure;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;

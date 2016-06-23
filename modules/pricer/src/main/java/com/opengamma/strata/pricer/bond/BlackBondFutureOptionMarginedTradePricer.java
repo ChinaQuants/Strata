@@ -7,8 +7,6 @@ package com.opengamma.strata.pricer.bond;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.market.sensitivity.BondFutureOptionSensitivity;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 import com.opengamma.strata.product.bond.ResolvedBondFuture;
 import com.opengamma.strata.product.bond.ResolvedBondFutureOption;
 import com.opengamma.strata.product.bond.ResolvedBondFutureOptionTrade;
@@ -118,7 +116,7 @@ public final class BlackBondFutureOptionMarginedTradePricer extends BondFutureOp
     BondFutureOptionSensitivity priceSensitivity =
         futureOptionPricer.priceSensitivityBlackVolatility(product, ratesProvider, volatilityProvider, futurePrice);
     double factor = futureOptionPricer.marginIndex(product, 1) * futureOptionTrade.getQuantity();
-    return priceSensitivity.withSensitivity(priceSensitivity.getSensitivity() * factor);
+    return priceSensitivity.multipliedBy(factor);
   }
 
 }

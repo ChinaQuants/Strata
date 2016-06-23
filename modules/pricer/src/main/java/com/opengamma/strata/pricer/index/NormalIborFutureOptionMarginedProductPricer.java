@@ -6,7 +6,6 @@
 package com.opengamma.strata.pricer.index;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.market.sensitivity.IborFutureOptionSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.impl.option.NormalFormulaRepository;
 import com.opengamma.strata.pricer.rate.RatesProvider;
@@ -100,7 +99,7 @@ public class NormalIborFutureOptionMarginedProductPricer extends IborFutureOptio
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double strike = futureOption.getStrikePrice();
     ResolvedIborFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(
+    double volatility = volatilityProvider.volatility(
         futureOption.getExpiry(), future.getLastTradeDate(), strike, futurePrice);
 
     return NormalFormulaRepository.price(futurePrice, strike, timeToExpiry, volatility, futureOption.getPutCall());
@@ -165,7 +164,7 @@ public class NormalIborFutureOptionMarginedProductPricer extends IborFutureOptio
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double strike = futureOption.getStrikePrice();
     ResolvedIborFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
 
     return NormalFormulaRepository.delta(futurePrice, strike, timeToExpiry, volatility, futureOption.getPutCall());
@@ -280,7 +279,7 @@ public class NormalIborFutureOptionMarginedProductPricer extends IborFutureOptio
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double strike = futureOption.getStrikePrice();
     ResolvedIborFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
 
     double vega = NormalFormulaRepository.vega(futurePrice, strike, timeToExpiry, volatility, futureOption.getPutCall());

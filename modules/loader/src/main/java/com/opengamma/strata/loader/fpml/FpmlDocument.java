@@ -10,6 +10,7 @@ import static com.opengamma.strata.collect.Guavate.toImmutableList;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Period;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -25,8 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
-import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
@@ -40,14 +41,14 @@ import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.FloatingRateName;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.index.PriceIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.RollConvention;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.io.XmlElement;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.TradeInfoBuilder;
+import com.opengamma.strata.product.common.BuySell;
+import com.opengamma.strata.product.common.PayReceive;
 
 /**
  * Provides data about the whole FpML document and parse helper methods.
@@ -130,6 +131,20 @@ public final class FpmlDocument {
       .build();
 
   /**
+   * The map of holiday calendar ids to zone ids.
+   */
+  private static final Map<String, ZoneId> HOLIDAY_CALENDARID_MAP = ImmutableMap.<String, ZoneId>builder()
+      .put("BEBR", ZoneId.of("Europe/Brussels"))
+      .put("CATO", ZoneId.of("America/Toronto"))
+      .put("CHZU", ZoneId.of("Europe/Zurich"))
+      .put("DEFR", ZoneId.of("Europe/Berlin"))
+      .put("FRPA", ZoneId.of("Europe/Paris"))
+      .put("GBLO", ZoneId.of("Europe/London"))
+      .put("JPTO", ZoneId.of("Asia/Tokyo"))
+      .put("USNY", ZoneId.of("America/New_York"))
+      .build();
+
+  /**
    * Constant defining the "any" selector.
    * This must be defined as a constant so that == works when comparing it.
    * FpmlPartySelector is an interface and can only define public constants, thus it is declared here.
@@ -144,7 +159,6 @@ public final class FpmlDocument {
     builder.id(allTradeIds.get(doc.getOurPartyHrefId()).stream().findFirst().orElse(null));
     return builder;
   };
-
 
   /**
    * The parsed file.
@@ -802,6 +816,20 @@ public final class FpmlDocument {
    */
   public LocalDate convertDate(String dateStr) {
     return LocalDate.parse(dateStr, FPML_DATE_FORMAT);
+  }
+
+  /**
+  * Returns the {@code ZoneId} matching this string representation of a holiday calendar id.
+  * 
+  * @param holidayCalendarId  the holiday calendar id string.
+  * @return an optional zone id, an empty optional is returned if no zone id can be found for the holiday calendar id.
+  */
+  public Optional<ZoneId> getZoneId(String holidayCalendarId) {
+    ZoneId zoneId = HOLIDAY_CALENDARID_MAP.get(holidayCalendarId);
+    if (zoneId == null) {
+      return Optional.empty();
+    }
+    return Optional.of(zoneId);
   }
 
   //-------------------------------------------------------------------------

@@ -5,13 +5,13 @@
  */
 package com.opengamma.strata.pricer.capfloor;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
-import static com.opengamma.strata.basics.PutCall.CALL;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static com.opengamma.strata.collect.TestHelper.dateUtc;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
+import static com.opengamma.strata.product.common.PutCall.CALL;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -24,7 +24,6 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.pricer.impl.capfloor.IborCapletFloorletDataSet;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapLegPricer;
 import com.opengamma.strata.product.capfloor.ResolvedIborCapFloor;

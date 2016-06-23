@@ -25,18 +25,19 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.CalculationTarget;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.market.MarketDataId;
-import com.opengamma.strata.basics.market.ObservableId;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.runner.CalculationTasks;
+import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.ObservableId;
 
 /**
- * A collection of market data IDs defining a set of market data.
+ * Requirements for market data.
  * <p>
- * This class is used when building instances of {@link MarketEnvironment}.
+ * This class is used as the input to {@link MarketDataFactory}.
+ * It includes the market data identifiers that the application needs.
  */
 @BeanDefinition(builderScope = "private", constructorScope = "package")
 public final class MarketDataRequirements implements ImmutableBean {

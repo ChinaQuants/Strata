@@ -7,7 +7,6 @@ package com.opengamma.strata.pricer.index;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.market.sensitivity.IborFutureOptionSensitivity;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.index.IborFutureOption;
 import com.opengamma.strata.product.index.ResolvedIborFuture;
@@ -119,7 +118,7 @@ public final class NormalIborFutureOptionMarginedTradePricer extends IborFutureO
     IborFutureOptionSensitivity priceSensitivity =
         futureOptionPricer.priceSensitivityNormalVolatility(product, ratesProvider, volatilityProvider, futurePrice);
     double factor = futureOptionPricer.marginIndex(product, 1) * futureOptionTrade.getQuantity();
-    return priceSensitivity.withSensitivity(priceSensitivity.getSensitivity() * factor);
+    return priceSensitivity.multipliedBy(factor);
   }
 
 }

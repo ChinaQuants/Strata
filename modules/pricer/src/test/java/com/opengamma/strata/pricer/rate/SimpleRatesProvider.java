@@ -22,27 +22,21 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyPair;
-import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.index.FxIndex;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.index.OvernightIndex;
 import com.opengamma.strata.basics.index.PriceIndex;
-import com.opengamma.strata.basics.market.MarketDataKey;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.market.curve.Curve;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.FxForwardRates;
-import com.opengamma.strata.market.view.FxIndexRates;
-import com.opengamma.strata.market.view.IborIndexRates;
-import com.opengamma.strata.market.view.OvernightIndexRates;
-import com.opengamma.strata.market.view.PriceIndexValues;
+import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.MarketDataName;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.fx.FxForwardRates;
+import com.opengamma.strata.pricer.fx.FxIndexRates;
 
 /**
  * A simple rates provider for overnight rates.
@@ -101,7 +95,40 @@ public class SimpleRatesProvider
 
   //-------------------------------------------------------------------------
   @Override
-  public <T> T data(MarketDataKey<T> key) {
+  public ImmutableSet<Currency> getDiscountCurrencies() {
+    if (discountFactors != null) {
+      return ImmutableSet.of(discountFactors.getCurrency());
+    }
+    return ImmutableSet.of();
+  }
+
+  @Override
+  public ImmutableSet<IborIndex> getIborIndices() {
+    if (iborRates != null) {
+      return ImmutableSet.of(iborRates.getIndex());
+    }
+    return ImmutableSet.of();
+  }
+
+  @Override
+  public ImmutableSet<OvernightIndex> getOvernightIndices() {
+    if (overnightRates != null) {
+      return ImmutableSet.of(overnightRates.getIndex());
+    }
+    return ImmutableSet.of();
+  }
+
+  @Override
+  public ImmutableSet<PriceIndex> getPriceIndices() {
+    if (priceIndexValues != null) {
+      return ImmutableSet.of(priceIndexValues.getIndex());
+    }
+    return ImmutableSet.of();
+  }
+
+  //-------------------------------------------------------------------------
+  @Override
+  public <T> T data(MarketDataId<T> key) {
     throw new UnsupportedOperationException();
   }
 
@@ -144,17 +171,7 @@ public class SimpleRatesProvider
   }
 
   @Override
-  public CurveCurrencyParameterSensitivities curveParameterSensitivity(PointSensitivities pointSensitivities) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public MultiCurrencyAmount currencyExposure(PointSensitivities pointSensitivities) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Optional<Curve> findCurve(CurveName name) {
+  public <T> Optional<T> findData(MarketDataName<T> name) {
     return Optional.empty();
   }
 

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
@@ -23,8 +24,7 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.FxIndex;
 import com.opengamma.strata.basics.index.FxIndexObservation;
 import com.opengamma.strata.basics.index.ImmutableFxIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
@@ -120,8 +120,8 @@ public class DiscountingFxNdfProductPricerTest {
 
   public void test_presentValueSensitivity() {
     PointSensitivities point = PRICER.presentValueSensitivity(NDF, PROVIDER);
-    CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expected = CAL_FD.sensitivity(
+    CurrencyParameterSensitivities computed = PROVIDER.parameterSensitivity(point);
+    CurrencyParameterSensitivities expected = CAL_FD.sensitivity(
         (ImmutableRatesProvider) PROVIDER, (p) -> PRICER.presentValue(NDF, (p)));
     assertTrue(computed.equalWithTolerance(expected, NOMINAL_USD * EPS_FD));
   }
@@ -185,7 +185,7 @@ public class DiscountingFxNdfProductPricerTest {
   private static final DiscountingFxSingleProductPricer PRICER_FX = DiscountingFxSingleProductPricer.DEFAULT;
 
   // Checks that the NDF present value is coherent with the standard FX forward present value.
-  public void presentValueVsForex() {
+  public void test_presentValueVsForex() {
     CurrencyAmount pvNDF = PRICER.presentValue(NDF, PROVIDER);
     MultiCurrencyAmount pvFX = PRICER_FX.presentValue(FOREX, PROVIDER);
     assertEquals(
@@ -195,7 +195,7 @@ public class DiscountingFxNdfProductPricerTest {
   }
 
   // Checks that the NDF currency exposure is coherent with the standard FX forward present value.
-  public void currencyExposureVsForex() {
+  public void test_currencyExposureVsForex() {
     MultiCurrencyAmount pvNDF = PRICER.currencyExposure(NDF, PROVIDER);
     MultiCurrencyAmount pvFX = PRICER_FX.currencyExposure(FOREX, PROVIDER);
     assertEquals(pvNDF.getAmount(USD).getAmount(), pvFX.getAmount(USD).getAmount(), NOMINAL_USD * TOL);
@@ -204,18 +204,18 @@ public class DiscountingFxNdfProductPricerTest {
   }
 
   // Checks that the NDF forward rate is coherent with the standard FX forward present value.
-  public void forwardRateVsForex() {
+  public void test_forwardRateVsForex() {
     FxRate fwdNDF = PRICER.forwardFxRate(NDF, PROVIDER);
     FxRate fwdFX = PRICER_FX.forwardFxRate(FOREX, PROVIDER);
     assertEquals(fwdNDF.fxRate(fwdNDF.getPair()), fwdFX.fxRate(fwdFX.getPair()), 1e-10);
   }
 
   // Checks that the NDF present value sensitivity is coherent with the standard FX forward present value.
-  public void presentValueCurveSensitivityVsForex() {
+  public void test_presentValueCurveSensitivityVsForex() {
     PointSensitivities pvcsNDF = PRICER.presentValueSensitivity(NDF, PROVIDER).normalized();
-    CurveCurrencyParameterSensitivities sensiNDF = PROVIDER.curveParameterSensitivity(pvcsNDF);
+    CurrencyParameterSensitivities sensiNDF = PROVIDER.parameterSensitivity(pvcsNDF);
     PointSensitivities pvcsFX = PRICER_FX.presentValueSensitivity(FOREX, PROVIDER).normalized();
-    CurveCurrencyParameterSensitivities sensiFX = PROVIDER.curveParameterSensitivity(pvcsFX);
+    CurrencyParameterSensitivities sensiFX = PROVIDER.parameterSensitivity(pvcsFX);
     assertTrue(sensiNDF.equalWithTolerance(sensiFX.convertedTo(USD, PROVIDER), NOMINAL_USD * TOL));
   }
 

@@ -5,6 +5,8 @@
  */
 package com.opengamma.strata.pricer.rate;
 
+import static com.opengamma.strata.collect.Guavate.toImmutableSet;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Map;
@@ -29,6 +31,7 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxMatrix;
@@ -38,20 +41,17 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.index.OvernightIndex;
 import com.opengamma.strata.basics.index.PriceIndex;
-import com.opengamma.strata.basics.market.MarketDataKey;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.MarketDataName;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.DiscountFxForwardRates;
-import com.opengamma.strata.market.view.DiscountFxIndexRates;
-import com.opengamma.strata.market.view.DiscountOvernightIndexRates;
-import com.opengamma.strata.market.view.FxForwardRates;
-import com.opengamma.strata.market.view.FxIndexRates;
-import com.opengamma.strata.market.view.IborIndexRates;
-import com.opengamma.strata.market.view.OvernightIndexRates;
-import com.opengamma.strata.market.view.PriceIndexValues;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.fx.DiscountFxForwardRates;
+import com.opengamma.strata.pricer.fx.DiscountFxIndexRates;
+import com.opengamma.strata.pricer.fx.FxForwardRates;
+import com.opengamma.strata.pricer.fx.FxIndexRates;
 
 /**
  * The default immutable rates provider, used to calculate analytic measures.
@@ -61,8 +61,7 @@ import com.opengamma.strata.market.view.PriceIndexValues;
  */
 @BeanDefinition(builderScope = "private", constructorScope = "package")
 public final class ImmutableRatesProvider
-    extends AbstractRatesProvider
-    implements ImmutableBean, Serializable {
+    implements RatesProvider, ImmutableBean, Serializable {
 
   /** Serialization version. */
   private static final long serialVersionUID = 1L;
@@ -148,18 +147,6 @@ public final class ImmutableRatesProvider
    * @return the builder
    */
   public ImmutableRatesProviderBuilder toBuilder() {
-    return toBuilder(valuationDate);
-  }
-
-  /**
-   * Converts this instance to a builder allowing changes to be made.
-   * <p>
-   * This overload allows the valuation date to be altered.
-   * 
-   * @param valuationDate  the new valuation date
-   * @return the builder
-   */
-  public ImmutableRatesProviderBuilder toBuilder(LocalDate valuationDate) {
     return new ImmutableRatesProviderBuilder(valuationDate)
         .fxRateProvider(fxRateProvider)
         .discountCurves(discountCurves)
@@ -169,23 +156,51 @@ public final class ImmutableRatesProvider
   }
 
   //-------------------------------------------------------------------------
-  /**
-   * Finds the curve with the specified name.
-   * 
-   * @param name  the curve name
-   * @return the curve
-   */
   @Override
-  public Optional<Curve> findCurve(CurveName name) {
-    return Stream.concat(discountCurves.values().stream(), indexCurves.values().stream())
-        .filter(c -> c.getName().equals(name))
-        .findFirst();
+  public ImmutableSet<Currency> getDiscountCurrencies() {
+    return discountCurves.keySet();
+  }
+
+  @Override
+  public ImmutableSet<IborIndex> getIborIndices() {
+    return indexCurves.keySet().stream()
+        .filter(IborIndex.class::isInstance)
+        .map(IborIndex.class::cast)
+        .collect(toImmutableSet());
+  }
+
+  @Override
+  public ImmutableSet<OvernightIndex> getOvernightIndices() {
+    return indexCurves.keySet().stream()
+        .filter(OvernightIndex.class::isInstance)
+        .map(OvernightIndex.class::cast)
+        .collect(toImmutableSet());
+  }
+
+  @Override
+  public ImmutableSet<PriceIndex> getPriceIndices() {
+    return priceIndexValues.keySet().stream()
+        .filter(PriceIndex.class::isInstance)
+        .map(PriceIndex.class::cast)
+        .collect(toImmutableSet());
   }
 
   //-------------------------------------------------------------------------
   @Override
-  public <T> T data(MarketDataKey<T> key) {
-    throw new IllegalArgumentException("Unknown key: " + key.toString());
+  public <T> Optional<T> findData(MarketDataName<T> name) {
+    if (name instanceof CurveName) {
+      return Stream.concat(discountCurves.values().stream(), indexCurves.values().stream())
+          .filter(c -> c.getName().equals(name))
+          .map(v -> name.getMarketDataType().cast(v))
+          .findFirst();
+    }
+    return Optional.empty();
+  }
+
+  //-------------------------------------------------------------------------
+  @Override
+  public <T> T data(MarketDataId<T> id) {
+    throw new IllegalArgumentException("Unknown identifier: " + id.toString());
   }
 
   //-------------------------------------------------------------------------

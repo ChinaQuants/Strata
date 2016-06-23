@@ -33,24 +33,24 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.ReferenceDataNotFoundException;
-import com.opengamma.strata.product.rate.FixedRateObservation;
-import com.opengamma.strata.product.rate.IborRateObservation;
-import com.opengamma.strata.product.rate.OvernightCompoundedRateObservation;
+import com.opengamma.strata.product.common.PayReceive;
+import com.opengamma.strata.product.rate.FixedRateComputation;
+import com.opengamma.strata.product.rate.IborRateComputation;
+import com.opengamma.strata.product.rate.OvernightCompoundedRateComputation;
 
 /**
  * A rate swap leg defined using payment and accrual periods.
  * <p>
  * This defines a single swap leg paying a rate, such as an interest rate.
- * The rate may be fixed or floating, for examples see {@link FixedRateObservation},
- * {@link IborRateObservation} and {@link OvernightCompoundedRateObservation}.
+ * The rate may be fixed or floating, for examples see {@link FixedRateComputation},
+ * {@link IborRateComputation} and {@link OvernightCompoundedRateComputation}.
  * <p>
  * The swap is built up of one or more <i>payment periods</i>, each of which produces a single payment.
  * Each payment period is made up of one or more <i>accrual periods</i>.
@@ -231,7 +231,7 @@ public final class RatePeriodSwapLeg
   @Override
   public ResolvedSwapLeg resolve(ReferenceData refData) {
     DateAdjuster paymentDateAdjuster = paymentBusinessDayAdjustment.resolve(refData);
-    ImmutableList<RatePaymentPeriod> adjusted = paymentPeriods.stream()
+    ImmutableList<NotionalPaymentPeriod> adjusted = paymentPeriods.stream()
         .map(pp -> pp.adjustPaymentDate(paymentDateAdjuster))
         .collect(toImmutableList());
     return ResolvedSwapLeg.builder()
@@ -244,7 +244,7 @@ public final class RatePeriodSwapLeg
 
   // notional exchange events
   private ImmutableList<PaymentEvent> createEvents(
-      List<RatePaymentPeriod> adjPaymentPeriods,
+      List<NotionalPaymentPeriod> adjPaymentPeriods,
       DateAdjuster paymentDateAdjuster,
       ReferenceData refData) {
 

@@ -9,8 +9,8 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.view.IborCapletFloorletVolatilities;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.capfloor.IborCapFloorTrade;
@@ -90,7 +90,7 @@ public class VolatilityIborCapFloorTradePricer {
    * @param volatilities  the caplet/floorlet volatilities
    * @return the present value sensitivity
    */
-  public PointSensitivityBuilder presentValueSensitivity(
+  public PointSensitivities presentValueSensitivity(
       ResolvedIborCapFloorTrade trade,
       RatesProvider ratesProvider,
       IborCapletFloorletVolatilities volatilities) {
@@ -98,11 +98,11 @@ public class VolatilityIborCapFloorTradePricer {
     PointSensitivityBuilder pvSensiProduct =
         productPricer.presentValueSensitivity(trade.getProduct(), ratesProvider, volatilities);
     if (!trade.getPremium().isPresent()) {
-      return pvSensiProduct;
+      return pvSensiProduct.build();
     }
     PointSensitivityBuilder pvSensiPremium =
         paymentPricer.presentValueSensitivity(trade.getPremium().get(), ratesProvider);
-    return pvSensiProduct.combinedWith(pvSensiPremium);
+    return pvSensiProduct.combinedWith(pvSensiPremium).build();
   }
 
   //-------------------------------------------------------------------------

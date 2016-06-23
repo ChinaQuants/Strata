@@ -16,7 +16,7 @@ import org.joda.beans.ser.JodaBeanSer;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.examples.report.ReportRunnerTool;
-import com.opengamma.strata.examples.report.TradePortfolio;
+import com.opengamma.strata.examples.report.TradeList;
 
 /**
  * Test examples do not throw exceptions.
@@ -90,6 +90,11 @@ public class ExamplesTest {
   }
 
   //-------------------------------------------------------------------------
+  public void test_swapPricingCcp_standalone() {
+    assertValidCapturedAsciiTable(caputureSystemOut(() -> SwapPricingCcpExample.main(NO_ARGS)));
+  }
+
+  //-------------------------------------------------------------------------
   public void test_swapPricingWithCalibration_standalone() {
     assertValidCapturedAsciiTable(caputureSystemOut(() -> SwapPricingWithCalibrationExample.main(NO_ARGS)));
   }
@@ -137,8 +142,8 @@ public class ExamplesTest {
     assertTrue(baseDir.exists());
     for (File file : baseDir.listFiles(f -> f.getName().endsWith(".xml"))) {
       try (FileInputStream in = new FileInputStream(file)) {
-        TradePortfolio portfolio = JodaBeanSer.COMPACT.xmlReader().read(in, TradePortfolio.class);
-        assertTrue(portfolio.getTrades().size() > 0);
+        TradeList tradeList = JodaBeanSer.COMPACT.xmlReader().read(in, TradeList.class);
+        assertTrue(tradeList.getTrades().size() > 0);
       }
     }
   }

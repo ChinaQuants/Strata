@@ -26,15 +26,15 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableSet;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
+import com.opengamma.strata.product.common.PayReceive;
 
 /**
  * A rate swap leg defined using a parameterized schedule and calculation.
@@ -148,7 +148,7 @@ public final class RateCalculationSwapLeg
     Schedule resolvedAccruals = accrualSchedule.createSchedule(refData);
     Schedule resolvedPayments = paymentSchedule.createSchedule(resolvedAccruals, refData);
     List<RateAccrualPeriod> accrualPeriods = calculation.createAccrualPeriods(resolvedAccruals, resolvedPayments, refData);
-    List<RatePaymentPeriod> payPeriods = paymentSchedule.createPaymentPeriods(
+    List<NotionalPaymentPeriod> payPeriods = paymentSchedule.createPaymentPeriods(
         resolvedAccruals, resolvedPayments, accrualPeriods, dayCount, notionalSchedule, payReceive, refData);
     LocalDate startDate = accrualPeriods.get(0).getStartDate();
     return ResolvedSwapLeg.builder()

@@ -13,22 +13,22 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.ImmutableReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataId;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
-import com.opengamma.strata.basics.market.ImmutableReferenceData;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.ReferenceDataId;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.Results;
-import com.opengamma.strata.calc.config.Measures;
-import com.opengamma.strata.calc.marketdata.MarketEnvironment;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
+import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.examples.data.ExampleData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
-import com.opengamma.strata.function.StandardComponents;
+import com.opengamma.strata.measure.Measures;
+import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.product.GenericSecurity;
 import com.opengamma.strata.product.GenericSecurityTrade;
 import com.opengamma.strata.product.SecurityAttributeType;
@@ -95,26 +95,24 @@ public class GenericSecurityPricingExample {
         Column.of(Measures.PRESENT_VALUE));
 
     // use the built-in example market data
+    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
     ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
+    MarketData marketData = marketDataBuilder.buildSnapshot(valuationDate);
 
     // the complete set of rules for calculating measures
     CalculationFunctions functions = StandardComponents.calculationFunctions();
-    CalculationRules rules = CalculationRules.of(functions, marketDataBuilder.rules());
-
-    // build a market data snapshot for the valuation date
-    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
-    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
+    CalculationRules rules = CalculationRules.of(functions);
 
     // the reference data, such as holidays and securities
     ReferenceData refData = ImmutableReferenceData.of(ImmutableMap.<ReferenceDataId<?>, Object>of(
         FGBL_MAR14_ID, FGBL_MAR14, OGBL_MAR14_C150_ID, OGBL_MAR14_C150, ED_MAR14_ID, ED_MAR14));
 
     // calculate the results
-    Results results = runner.calculateSingleScenario(rules, trades, columns, marketSnapshot, refData);
+    Results results = runner.calculate(rules, trades, columns, marketData, refData);
 
     // use the report runner to transform the engine results into a trade report
     ReportCalculationResults calculationResults =
-        ReportCalculationResults.of(valuationDate, trades, columns, results, refData);
+        ReportCalculationResults.of(valuationDate, trades, columns, results, functions, refData);
 
     TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("security-report-template");
     TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);

@@ -11,10 +11,9 @@ import java.util.stream.Collectors;
 
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.market.sensitivity.FxOptionSensitivity;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.market.surface.SurfaceCurrencyParameterSensitivities;
-import com.opengamma.strata.market.surface.SurfaceCurrencyParameterSensitivity;
 
 /**
  * Data provider of volatility for FX options in the lognormal or Black-Scholes model.
@@ -57,9 +56,28 @@ public interface BlackVolatilityFxProvider {
    * @param forward  the underling forward
    * @return the volatility
    */
-  public abstract double getVolatility(
+  public default double volatility(
       CurrencyPair currencyPair,
       ZonedDateTime expiryDateTime,
+      double strike,
+      double forward) {
+
+    double expiryTime = relativeTime(expiryDateTime);
+    return volatility(currencyPair, expiryTime, strike, forward);
+  }
+
+  /**
+   * Calculates the Black volatility.
+   * 
+   * @param currencyPair  the currency pair
+   * @param expiryTime  the option expiry
+   * @param strike  the option strike
+   * @param forward  the underling forward
+   * @return the volatility
+   */
+  public abstract double volatility(
+      CurrencyPair currencyPair,
+      double expiryTime,
       double strike,
       double forward);
 
@@ -70,7 +88,7 @@ public interface BlackVolatilityFxProvider {
    * @param point  the point sensitivity at a given key
    * @return the sensitivity to the nodes
    */
-  public abstract SurfaceCurrencyParameterSensitivity surfaceParameterSensitivity(FxOptionSensitivity point);
+  public abstract CurrencyParameterSensitivity surfaceParameterSensitivity(FxOptionSensitivity point);
 
   /**
    * Calculates the surface parameter sensitivities from the point sensitivities. 
@@ -79,16 +97,16 @@ public interface BlackVolatilityFxProvider {
    * @return the parameter sensitivity
    * @throws RuntimeException if the result cannot be calculated
    */
-  public default SurfaceCurrencyParameterSensitivities surfaceParameterSensitivity(
+  public default CurrencyParameterSensitivities surfaceParameterSensitivity(
       PointSensitivities sensitivities) {
-    List<SurfaceCurrencyParameterSensitivity> sensitivitiesTotal =
+    List<CurrencyParameterSensitivity> sensitivitiesTotal =
         sensitivities.getSensitivities()
             .stream()
             .filter(pointSensitivity -> pointSensitivity instanceof FxOptionSensitivity)
             .map(pointSensitivity -> surfaceParameterSensitivity((FxOptionSensitivity) pointSensitivity))
             .collect(Collectors.toList());
-    SurfaceCurrencyParameterSensitivities sensi = SurfaceCurrencyParameterSensitivities.of(sensitivitiesTotal);
-    // sensi should be single SurfaceCurrencyParameterSensitivity or empty
+    CurrencyParameterSensitivities sensi = CurrencyParameterSensitivities.of(sensitivitiesTotal);
+    // sensi should be single CurrencyParameterSensitivity or empty
     ArgChecker.isTrue(sensi.getSensitivities().size() <= 1, "The underlying surface must be unique");
     return sensi;
   }

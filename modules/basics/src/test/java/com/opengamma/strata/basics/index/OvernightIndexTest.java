@@ -23,8 +23,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.market.ReferenceData;
 
 /**
  * Test Overnight Index.
@@ -36,8 +36,9 @@ public class OvernightIndexTest {
 
   public void test_gbpSonia() {
     OvernightIndex test = OvernightIndex.of("GBP-SONIA");
-    assertEquals(test.getCurrency(), GBP);
     assertEquals(test.getName(), "GBP-SONIA");
+    assertEquals(test.getCurrency(), GBP);
+    assertEquals(test.isActive(), true);
     assertEquals(test.getFixingCalendar(), GBLO);
     assertEquals(test.getPublicationDateOffset(), 0);
     assertEquals(test.getEffectiveDateOffset(), 0);

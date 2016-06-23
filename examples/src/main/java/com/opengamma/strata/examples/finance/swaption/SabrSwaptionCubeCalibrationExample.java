@@ -23,33 +23,34 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.BuySell;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ImmutableMarketData;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
-import com.opengamma.strata.market.id.QuoteId;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.market.surface.ConstantNodalSurface;
-import com.opengamma.strata.market.surface.NodalSurface;
+import com.opengamma.strata.market.observable.QuoteId;
+import com.opengamma.strata.market.surface.ConstantSurface;
+import com.opengamma.strata.market.surface.Surface;
 import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolator;
 import com.opengamma.strata.math.impl.interpolation.GridInterpolator2D;
 import com.opengamma.strata.math.impl.interpolation.Interpolator1D;
-import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
-import com.opengamma.strata.pricer.calibration.CurveCalibrator;
-import com.opengamma.strata.pricer.calibration.RawOptionData;
+import com.opengamma.strata.pricer.curve.CalibrationMeasures;
+import com.opengamma.strata.pricer.curve.CurveCalibrator;
+import com.opengamma.strata.pricer.curve.RawOptionData;
 import com.opengamma.strata.pricer.impl.option.NormalFormulaRepository;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.pricer.swaption.SabrParametersSwaptionVolatilities;
 import com.opengamma.strata.pricer.swaption.SabrSwaptionCalibrator;
+import com.opengamma.strata.pricer.swaption.SwaptionVolatilitiesName;
+import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
@@ -77,8 +78,7 @@ public class SabrSwaptionCubeCalibrationExample {
           ResourceLocator.of(BASE_DIR + NODES_FILE)).get(0);
   private static final Map<QuoteId, Double> MAP_MQ =
       QuotesCsvLoader.load(CALIBRATION_DATE, ImmutableList.of(ResourceLocator.of(BASE_DIR + QUOTES_FILE)));
-  private static final ImmutableMarketData MARKET_QUOTES = ImmutableMarketData.builder(CALIBRATION_DATE)
-      .addValuesById(MAP_MQ).build();
+  private static final ImmutableMarketData MARKET_QUOTES = ImmutableMarketData.of(CALIBRATION_DATE, MAP_MQ);
 
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.PAR_SPREAD;
   private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
@@ -112,12 +112,20 @@ public class SabrSwaptionCubeCalibrationExample {
     }
     System.out.println("Start calibration");
     double beta = 0.50;
-    NodalSurface betaSurface = ConstantNodalSurface.of("Beta", beta);
+    Surface betaSurface = ConstantSurface.of("Beta", beta);
     double shift = 0.0300;
-    NodalSurface shiftSurface = ConstantNodalSurface.of("Shift", shift);
+    Surface shiftSurface = ConstantSurface.of("Shift", shift);
     SabrParametersSwaptionVolatilities calibrated = SABR_CALIBRATION.calibrateWithFixedBetaAndShift(
-        EUR_FIXED_1Y_EURIBOR_6M, CALIBRATION_TIME, ACT_365F, TENORS, data,
-        MULTICURVE, betaSurface, shiftSurface, INTERPOLATOR_2D);
+        SwaptionVolatilitiesName.of("Calibrated-SABR"),
+        EUR_FIXED_1Y_EURIBOR_6M,
+        CALIBRATION_TIME,
+        ACT_365F,
+        TENORS,
+        data,
+        MULTICURVE,
+        betaSurface,
+        shiftSurface,
+        INTERPOLATOR_2D);
     /* Graph calibration */
     int nbStrikesGraph = 50;
     double moneyMin = -0.0250;

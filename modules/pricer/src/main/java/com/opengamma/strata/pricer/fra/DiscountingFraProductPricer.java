@@ -19,16 +19,16 @@ import com.opengamma.strata.market.explain.ExplainMap;
 import com.opengamma.strata.market.explain.ExplainMapBuilder;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.pricer.rate.RateObservationFn;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.rate.RateComputationFn;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.fra.ResolvedFra;
-import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.RateComputation;
 
 /**
  * Pricer for for forward rate agreement (FRA) products.
  * <p>
- * This function provides the ability to price {@link ResolvedFra}.
+ * This provides the ability to price {@link ResolvedFra}.
  * The product is priced using a forward curve for the index.
  */
 public class DiscountingFraProductPricer {
@@ -37,21 +37,21 @@ public class DiscountingFraProductPricer {
    * Default implementation.
    */
   public static final DiscountingFraProductPricer DEFAULT = new DiscountingFraProductPricer(
-      RateObservationFn.instance());
+      RateComputationFn.standard());
 
   /**
-   * Rate observation.
+   * Rate computation.
    */
-  private final RateObservationFn<RateObservation> rateObservationFn;
+  private final RateComputationFn<RateComputation> rateComputationFn;
 
   /**
    * Creates an instance.
    * 
-   * @param rateObservationFn  the rate observation function
+   * @param rateComputationFn  the rate computation function
    */
   public DiscountingFraProductPricer(
-      RateObservationFn<RateObservation> rateObservationFn) {
-    this.rateObservationFn = ArgChecker.notNull(rateObservationFn, "rateObservationFn");
+      RateComputationFn<RateComputation> rateComputationFn) {
+    this.rateComputationFn = ArgChecker.notNull(rateComputationFn, "rateComputationFn");
   }
 
   //-------------------------------------------------------------------------
@@ -229,7 +229,7 @@ public class DiscountingFraProductPricer {
       builder.put(ExplainKey.FORECAST_VALUE, CurrencyAmount.zero(currency));
       builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
     } else {
-      double rate = rateObservationFn.explainRate(
+      double rate = rateComputationFn.explainRate(
           fra.getFloatingRate(), fra.getStartDate(), fra.getEndDate(), provider, builder);
       builder.put(ExplainKey.FIXED_RATE, fra.getFixedRate());
       builder.put(ExplainKey.DISCOUNT_FACTOR, provider.discountFactor(currency, fra.getPaymentDate()));
@@ -329,12 +329,12 @@ public class DiscountingFraProductPricer {
   //-------------------------------------------------------------------------
   // query the forward rate
   private double forwardRate(ResolvedFra fra, RatesProvider provider) {
-    return rateObservationFn.rate(fra.getFloatingRate(), fra.getStartDate(), fra.getEndDate(), provider);
+    return rateComputationFn.rate(fra.getFloatingRate(), fra.getStartDate(), fra.getEndDate(), provider);
   }
 
   // query the sensitivity
   private PointSensitivityBuilder forwardRateSensitivity(ResolvedFra fra, RatesProvider provider) {
-    return rateObservationFn.rateSensitivity(fra.getFloatingRate(), fra.getStartDate(), fra.getEndDate(), provider);
+    return rateComputationFn.rateSensitivity(fra.getFloatingRate(), fra.getStartDate(), fra.getEndDate(), provider);
   }
 
 }

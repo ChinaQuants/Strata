@@ -5,7 +5,7 @@
  */
 package com.opengamma.strata.examples.finance;
 
-import static com.opengamma.strata.function.StandardComponents.marketDataFactory;
+import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
 import static java.util.stream.Collectors.toMap;
 
 import java.time.LocalDate;
@@ -14,43 +14,43 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.market.ObservableId;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
 import com.opengamma.strata.calc.Results;
-import com.opengamma.strata.calc.config.MarketDataRules;
-import com.opengamma.strata.calc.config.Measures;
+import com.opengamma.strata.calc.marketdata.MarketDataConfig;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
-import com.opengamma.strata.calc.marketdata.MarketEnvironment;
-import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
 import com.opengamma.strata.calc.runner.CalculationFunctions;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.MarketData;
+import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.examples.data.ExampleData;
-import com.opengamma.strata.function.StandardComponents;
-import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.loader.csv.FixingSeriesCsvLoader;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
-import com.opengamma.strata.market.id.QuoteId;
+import com.opengamma.strata.market.observable.QuoteId;
+import com.opengamma.strata.measure.AdvancedMeasures;
+import com.opengamma.strata.measure.Measures;
+import com.opengamma.strata.measure.StandardComponents;
+import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeAttributeType;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.trade.TradeReport;
 import com.opengamma.strata.report.trade.TradeReportTemplate;
 
 /**
- * Example to illustrate using the engine to price a swap.
+ * Example to illustrate using the calculation API to price a swap.
  * <p>
- * This makes use of the example engine and the example market data environment.
+ * This makes use of the example market data environment.
  */
 public class SwapPricingWithCalibrationExample {
 
@@ -87,11 +87,11 @@ public class SwapPricingWithCalibrationExample {
   private static final ResourceLocator QUOTES_RESOURCE =
       ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/quotes/quotes.csv");
   /**
-   * The location of the market quotes file.
+   * The location of the historical fixing file.
    */
   private static final ResourceLocator FIXINGS_RESOURCE =
-      ResourceLocator
-          .of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-marketdata/historical-fixings/usd-libor-3m.csv");
+      ResourceLocator.of(
+          ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-marketdata/historical-fixings/usd-libor-3m.csv");
 
   /**
    * Runs the example, pricing the instruments, producing the output as an ASCII table.
@@ -116,11 +116,11 @@ public class SwapPricingWithCalibrationExample {
         Column.of(Measures.LEG_INITIAL_NOTIONAL),
         Column.of(Measures.PRESENT_VALUE),
         Column.of(Measures.LEG_PRESENT_VALUE),
-        Column.of(Measures.PV01),
+        Column.of(Measures.PV01_CALIBRATED_SUM),
         Column.of(Measures.PAR_RATE),
         Column.of(Measures.ACCRUED_INTEREST),
-        Column.of(Measures.BUCKETED_PV01),
-        Column.of(Measures.BUCKETED_GAMMA_PV01));
+        Column.of(Measures.PV01_CALIBRATED_BUCKETED),
+        Column.of(AdvancedMeasures.PV01_SEMI_PARALLEL_GAMMA_BUCKETED));
 
     // load quotes
     ImmutableMap<QuoteId, Double> quotes = QuotesCsvLoader.load(VAL_DATE, QUOTES_RESOURCE);
@@ -128,11 +128,8 @@ public class SwapPricingWithCalibrationExample {
     // load fixings
     ImmutableMap<ObservableId, LocalDateDoubleTimeSeries> fixings = FixingSeriesCsvLoader.load(FIXINGS_RESOURCE);
 
-    // create the market data used for calculations
-    MarketEnvironment marketSnapshot = MarketEnvironment.builder(VAL_DATE)
-        .addSingleValues(quotes)
-        .addTimeSeries(fixings)
-        .build();
+    // create the market data
+    MarketData marketData = MarketData.of(VAL_DATE, quotes, fixings);
 
     // load the curve definition
     List<CurveGroupDefinition> defns =
@@ -145,27 +142,22 @@ public class SwapPricingWithCalibrationExample {
         .add(CURVE_GROUP_NAME, curveGroupDefinition)
         .build();
 
-    // the configuration defining the curve group to use when finding a curve
-    MarketDataRules marketDataRules = MarketDataRules.anyTarget(
-        MarketDataMappingsBuilder.create()
-            .curveGroup(CURVE_GROUP_NAME)
-            .build());
-
     // the complete set of rules for calculating measures
     CalculationFunctions functions = StandardComponents.calculationFunctions();
-    CalculationRules rules = CalculationRules.of(functions, marketDataRules);
+    RatesMarketDataLookup ratesLookup = RatesMarketDataLookup.of(curveGroupDefinition);
+    CalculationRules rules = CalculationRules.of(functions, ratesLookup);
 
     // the reference data, such as holidays and securities
     ReferenceData refData = ReferenceData.standard();
 
     // calibrate the curves and calculate the results
     MarketDataRequirements reqs = MarketDataRequirements.of(rules, trades, columns, refData);
-    MarketEnvironment enhancedMarketData = marketDataFactory()
-        .buildMarketData(reqs, marketDataConfig, marketSnapshot, refData);
-    Results results = runner.calculateSingleScenario(rules, trades, columns, enhancedMarketData, refData);
+    MarketData calibratedMarketData = marketDataFactory().create(reqs, marketDataConfig, marketData, refData);
+    Results results = runner.calculate(rules, trades, columns, calibratedMarketData, refData);
 
     // use the report runner to transform the engine results into a trade report
-    ReportCalculationResults calculationResults = ReportCalculationResults.of(VAL_DATE, trades, columns, results, refData);
+    ReportCalculationResults calculationResults =
+        ReportCalculationResults.of(VAL_DATE, trades, columns, results, functions, refData);
     TradeReportTemplate reportTemplate = ExampleData.loadTradeReportTemplate("swap-report-template");
     TradeReport tradeReport = TradeReport.of(calculationResults, reportTemplate);
     tradeReport.writeAsciiTable(System.out);

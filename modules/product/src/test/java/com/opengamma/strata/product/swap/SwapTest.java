@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.product.swap;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
@@ -18,6 +16,8 @@ import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.MockSwapLeg.MOCK_EXPANDED_GBP1;
 import static com.opengamma.strata.product.swap.MockSwapLeg.MOCK_EXPANDED_USD1;
 import static com.opengamma.strata.product.swap.MockSwapLeg.MOCK_GBP1;
@@ -36,14 +36,14 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
-import com.opengamma.strata.product.rate.FixedRateObservation;
+import com.opengamma.strata.product.rate.FixedRateComputation;
 
 /**
  * Test.
@@ -186,7 +186,7 @@ public class SwapTest {
             .endDate(date(2016, 2, 3))
             .unadjustedEndDate(date(2016, 2, 3))
             .yearFraction(ACT_360.yearFraction(date(2016, 1, 3), date(2016, 2, 3)))
-            .rateObservation(FixedRateObservation.of(RATE))
+            .rateComputation(FixedRateComputation.of(RATE))
             .build())
         .dayCount(ACT_360)
         .currency(GBP)
@@ -200,7 +200,7 @@ public class SwapTest {
             .endDate(date(2016, 3, 3))
             .unadjustedEndDate(date(2016, 3, 3))
             .yearFraction(ACT_360.yearFraction(date(2016, 2, 3), date(2016, 3, 3)))
-            .rateObservation(FixedRateObservation.of(RATE))
+            .rateComputation(FixedRateComputation.of(RATE))
             .build())
         .dayCount(ACT_360)
         .currency(GBP)
@@ -214,7 +214,7 @@ public class SwapTest {
             .endDate(date(2016, 4, 3))
             .unadjustedEndDate(date(2016, 4, 3))
             .yearFraction(ACT_360.yearFraction(date(2016, 3, 3), date(2016, 4, 3)))
-            .rateObservation(FixedRateObservation.of(RATE))
+            .rateComputation(FixedRateComputation.of(RATE))
             .build())
         .dayCount(ACT_360)
         .currency(GBP)
@@ -228,7 +228,7 @@ public class SwapTest {
             .endDate(date(2016, 5, 3))
             .unadjustedEndDate(date(2016, 5, 3))
             .yearFraction(ACT_360.yearFraction(date(2016, 4, 3), date(2016, 5, 3)))
-            .rateObservation(FixedRateObservation.of(RATE))
+            .rateComputation(FixedRateComputation.of(RATE))
             .build())
         .dayCount(ACT_360)
         .currency(GBP)

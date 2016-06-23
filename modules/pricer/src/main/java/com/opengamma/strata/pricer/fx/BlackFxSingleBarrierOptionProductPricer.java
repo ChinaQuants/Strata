@@ -12,10 +12,9 @@ import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.sensitivity.FxOptionSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
-import com.opengamma.strata.market.view.DiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.ZeroRateSensitivity;
 import com.opengamma.strata.pricer.impl.option.BlackBarrierPriceFormulaRepository;
 import com.opengamma.strata.pricer.impl.option.BlackOneTouchAssetPriceFormulaRepository;
 import com.opengamma.strata.pricer.impl.option.BlackOneTouchCashPriceFormulaRepository;
@@ -123,7 +122,7 @@ public class BlackFxSingleBarrierOptionProductPricer {
     double todayFx = ratesProvider.fxRate(currencyPair);
     double strike = underlyingOption.getStrike();
     double forward = todayFx * dfBase / dfCounter;
-    double volatility = volatilityProvider.getVolatility(currencyPair, underlyingOption.getExpiry(), strike, forward);
+    double volatility = volatilityProvider.volatility(currencyPair, underlyingOption.getExpiry(), strike, forward);
     double timeToExpiry = volatilityProvider.relativeTime(underlyingOption.getExpiry());
     double price = BARRIER_PRICER.price(
         todayFx, strike, timeToExpiry, costOfCarry, rateCounter, volatility, underlyingOption.getPutCall().isCall(), barrier);
@@ -164,13 +163,17 @@ public class BlackFxSingleBarrierOptionProductPricer {
     ResolvedFxSingle underlyingFx = underlyingOption.getUnderlying();
     CurrencyPair currencyPair = underlyingFx.getCurrencyPair();
     double signedNotional = signedNotional(underlyingOption);
+    double counterYearFraction =
+        ratesProvider.discountFactors(currencyPair.getCounter()).relativeYearFraction(underlyingFx.getPaymentDate());
     ZeroRateSensitivity counterSensi = ZeroRateSensitivity.of(
         currencyPair.getCounter(),
-        underlyingFx.getPaymentDate(),
+        counterYearFraction,
         signedNotional * (priceDerivatives.getDerivative(2) + priceDerivatives.getDerivative(3)));
+    double baseYearFraction =
+        ratesProvider.discountFactors(currencyPair.getBase()).relativeYearFraction(underlyingFx.getPaymentDate());
     ZeroRateSensitivity baseSensi = ZeroRateSensitivity.of(
         currencyPair.getBase(),
-        underlyingFx.getPaymentDate(),
+        baseYearFraction,
         currencyPair.getCounter(),
         -priceDerivatives.getDerivative(3) * signedNotional);
     return counterSensi.combinedWith(baseSensi);
@@ -414,7 +417,7 @@ public class BlackFxSingleBarrierOptionProductPricer {
     double todayFx = ratesProvider.fxRate(currencyPair);
     double strike = underlyingOption.getStrike();
     double forward = todayFx * dfBase / dfCounter;
-    double volatility = volatilityProvider.getVolatility(currencyPair, underlyingOption.getExpiry(), strike, forward);
+    double volatility = volatilityProvider.volatility(currencyPair, underlyingOption.getExpiry(), strike, forward);
     double timeToExpiry = volatilityProvider.relativeTime(underlyingOption.getExpiry());
     ValueDerivatives valueDerivatives = BARRIER_PRICER.priceAdjoint(
         todayFx, strike, timeToExpiry, costOfCarry, rateCounter, volatility, underlyingOption.getPutCall().isCall(), barrier);

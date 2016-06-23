@@ -5,10 +5,10 @@
  */
 package com.opengamma.strata.pricer.fx;
 
-import static com.opengamma.strata.basics.LongShort.SHORT;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
+import static com.opengamma.strata.product.common.LongShort.SHORT;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -26,7 +26,6 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.datasets.RatesProviderDataSets;
 import com.opengamma.strata.pricer.rate.RatesProvider;
@@ -106,10 +105,10 @@ public class BlackFxVanillaOptionTradePricerTest {
   }
 
   public void test_presentValueSensitivityBlackVolatility() {
-    PointSensitivityBuilder pvSensiTrade =
+    PointSensitivities pvSensiTrade =
         PRICER_TRADE.presentValueSensitivityBlackVolatility(OPTION_TRADE, RATES_PROVIDER, VOL_PROVIDER);
-    PointSensitivityBuilder pvSensiProduct =
-        PRICER_PRODUCT.presentValueSensitivityBlackVolatility(OPTION_PRODUCT, RATES_PROVIDER, VOL_PROVIDER);
+    PointSensitivities pvSensiProduct =
+        PRICER_PRODUCT.presentValueSensitivityBlackVolatility(OPTION_PRODUCT, RATES_PROVIDER, VOL_PROVIDER).build();
     assertEquals(pvSensiTrade, pvSensiProduct);
   }
 

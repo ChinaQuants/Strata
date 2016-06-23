@@ -8,8 +8,8 @@ package com.opengamma.strata.pricer.bond;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.collect.TestHelper.date;
-import static com.opengamma.strata.market.value.CompoundedRateType.CONTINUOUS;
-import static com.opengamma.strata.market.value.CompoundedRateType.PERIODIC;
+import static com.opengamma.strata.pricer.CompoundedRateType.CONTINUOUS;
+import static com.opengamma.strata.pricer.CompoundedRateType.PERIODIC;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -19,6 +19,8 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
@@ -30,29 +32,22 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.tuple.Pair;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.value.BondGroup;
-import com.opengamma.strata.market.value.LegalEntityGroup;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.ZeroRateDiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
-import com.opengamma.strata.pricer.impl.bond.DiscountingFixedCouponBondPaymentPeriodPricer;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
+import com.opengamma.strata.pricer.ZeroRateDiscountFactors;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.TradeInfo;
@@ -836,53 +831,53 @@ public class DiscountingFixedCouponBondTradePricerTest {
 
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivity() {
-    PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE, PROVIDER);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
+    PointSensitivities pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE, PROVIDER);
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
         (p) -> TRADE_PRICER.presentValue(TRADE, (p)));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 30d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_continuous() {
-    PointSensitivityBuilder pointTrade =
+    PointSensitivities pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
         PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, CONTINUOUS, 0));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic() {
-    PointSensitivityBuilder pointTrade =
+    PointSensitivities pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
         (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueProductSensitivity_noExcoupon() {
-    PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE_NO_EXCOUPON, PROVIDER);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+    PointSensitivities pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE_NO_EXCOUPON, PROVIDER);
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
         PROVIDER, (p) -> TRADE_PRICER.presentValue(TRADE_NO_EXCOUPON, (p)));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 30d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_continuous_noExcoupon() {
-    PointSensitivityBuilder pointTrade =
+    PointSensitivities pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE_NO_EXCOUPON, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER, (p) ->
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER, (p) ->
         TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, CONTINUOUS, 0));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic_noExcoupon() {
-    PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivityWithZSpread(
+    PointSensitivities pointTrade = TRADE_PRICER.presentValueSensitivityWithZSpread(
         TRADE_NO_EXCOUPON, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
-    CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER, (p) ->
+    CurrencyParameterSensitivities computedTrade = PROVIDER.parameterSensitivity(pointTrade);
+    CurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER, (p) ->
         TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
@@ -895,7 +890,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER_BEFORE).build();
+    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER_BEFORE);
     // settle before detachment date
     ResolvedFixedCouponBondTrade tradeBefore = ResolvedFixedCouponBondTrade.builder()
         .info(TRADE_INFO_BEFORE)
@@ -904,7 +899,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeBefore =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER_BEFORE).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER_BEFORE);
     FixedCouponBondPaymentPeriod periodExtra = findPeriod(PRODUCT, SETTLE_BEFORE, SETTLEMENT);
     PointSensitivities sensiExtra = COUPON_PRICER
         .presentValueSensitivity(periodExtra, PROVIDER_BEFORE.issuerCurveDiscountFactors(ISSUER_ID, EUR)).build();
@@ -918,7 +913,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeOnDetachment =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnDetachment, PROVIDER_BEFORE).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnDetachment, PROVIDER_BEFORE);
     assertTrue(computedTradeOnDetachment.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
     // settle between detachment date and coupon date
     ResolvedFixedCouponBondTrade tradeBtwnDetachmentCoupon = ResolvedFixedCouponBondTrade.builder()
@@ -928,7 +923,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeBtwnDetachmentCoupon =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBtwnDetachmentCoupon, PROVIDER_BEFORE).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBtwnDetachmentCoupon, PROVIDER_BEFORE);
     assertTrue(computedTradeBtwnDetachmentCoupon.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
   }
 
@@ -939,7 +934,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER).build();
+    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER);
     // settle before detachment date
     ResolvedFixedCouponBondTrade tradeBefore = ResolvedFixedCouponBondTrade.builder()
         .info(TRADE_INFO_BEFORE)
@@ -947,7 +942,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeBefore = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER).build();
+    PointSensitivities computedTradeBefore = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER);
     assertTrue(computedTradeBefore.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
     // settle on detachment date
     ResolvedFixedCouponBondTrade tradeOnDetachment = ResolvedFixedCouponBondTrade.builder()
@@ -957,7 +952,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeOnDetachment =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnDetachment, PROVIDER).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnDetachment, PROVIDER);
     assertTrue(computedTradeOnDetachment.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
     // settle between detachment date and coupon date
     ResolvedFixedCouponBondTrade tradeBtwnDetachmentCoupon = ResolvedFixedCouponBondTrade.builder()
@@ -967,7 +962,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeBtwnDetachmentCoupon =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBtwnDetachmentCoupon, PROVIDER).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBtwnDetachmentCoupon, PROVIDER);
     assertTrue(computedTradeBtwnDetachmentCoupon.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
   }
 
@@ -978,7 +973,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER_BEFORE).build();
+    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER_BEFORE);
     // settle before coupon date
     ResolvedFixedCouponBondTrade tradeBefore = ResolvedFixedCouponBondTrade.builder()
         .info(TRADE_INFO_BEFORE)
@@ -987,7 +982,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .price(CLEAN_PRICE)
         .build();
     PointSensitivities computedTradeBefore =
-        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER_BEFORE).build();
+        TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER_BEFORE);
     FixedCouponBondPaymentPeriod periodExtra = findPeriod(PRODUCT_NO_EXCOUPON, SETTLE_BEFORE, SETTLEMENT);
     PointSensitivities sensiExtra = COUPON_PRICER
         .presentValueSensitivity(periodExtra, PROVIDER_BEFORE.issuerCurveDiscountFactors(ISSUER_ID, EUR)).build();
@@ -1000,8 +995,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeOnCoupon = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnCoupon, PROVIDER_BEFORE)
-        .build();
+    PointSensitivities computedTradeOnCoupon = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnCoupon, PROVIDER_BEFORE);
     assertTrue(computedTradeOnCoupon.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
   }
 
@@ -1012,7 +1006,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER).build();
+    PointSensitivities computedTradeAfter = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeAfter, PROVIDER);
     // settle before coupon date
     ResolvedFixedCouponBondTrade tradeBefore = ResolvedFixedCouponBondTrade.builder()
         .info(TRADE_INFO_BEFORE)
@@ -1020,7 +1014,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeBefore = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER).build();
+    PointSensitivities computedTradeBefore = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeBefore, PROVIDER);
     assertTrue(computedTradeBefore.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
     // settle on coupon date
     ResolvedFixedCouponBondTrade tradeOnCoupon = ResolvedFixedCouponBondTrade.builder()
@@ -1029,7 +1023,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
         .quantity(QUANTITY)
         .price(CLEAN_PRICE)
         .build();
-    PointSensitivities computedTradeOnCoupon = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnCoupon, PROVIDER).build();
+    PointSensitivities computedTradeOnCoupon = TRADE_PRICER_NO_UPFRONT.presentValueSensitivity(tradeOnCoupon, PROVIDER);
     assertTrue(computedTradeOnCoupon.equalWithTolerance(computedTradeAfter, NOTIONAL * QUANTITY * TOL));
   }
 

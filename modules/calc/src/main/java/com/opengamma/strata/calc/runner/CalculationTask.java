@@ -23,29 +23,28 @@ import org.joda.beans.impl.light.LightMetaBean;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.CalculationTarget;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
-import com.opengamma.strata.basics.market.FxRateKey;
-import com.opengamma.strata.basics.market.MarketDataId;
-import com.opengamma.strata.basics.market.MarketDataKey;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.calc.config.Measure;
-import com.opengamma.strata.calc.marketdata.CalculationEnvironment;
-import com.opengamma.strata.calc.marketdata.CalculationMarketData;
-import com.opengamma.strata.calc.marketdata.DefaultCalculationMarketData;
-import com.opengamma.strata.calc.marketdata.FunctionRequirements;
+import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirementsBuilder;
-import com.opengamma.strata.calc.marketdata.mapping.MarketDataMappings;
-import com.opengamma.strata.calc.runner.function.CalculationFunction;
 import com.opengamma.strata.collect.result.Result;
+import com.opengamma.strata.data.FxRateId;
+import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.ObservableId;
+import com.opengamma.strata.data.ObservableSource;
+import com.opengamma.strata.data.scenario.ScenarioFxRateProvider;
+import com.opengamma.strata.data.scenario.ScenarioMarketData;
 
 /**
  * A single task that will be used to perform a calculation.
  * <p>
- * This presents a uniform interface to the engine so all functions can be treated equally during execution.
- * Without this class the engine would need to keep track of which functions to use for each input.
+ * This is a single unit of execution in the calculation runner.
+ * It consists of a {@link CalculationFunction} and the appropriate inputs,
+ * including a single {@link CalculationTarget}. When invoked, it will
+ * calculate a result for one or more columns in the grid of results.
  */
 @BeanDefinition(style = "light")
 public final class CalculationTask implements ImmutableBean {
@@ -61,11 +60,6 @@ public final class CalculationTask implements ImmutableBean {
    */
   @PropertyDefinition(validate = "notNull")
   private final CalculationFunction<CalculationTarget> function;
-  /**
-   * The mappings to select market data.
-   */
-  @PropertyDefinition(validate = "notNull")
-  private final MarketDataMappings marketDataMappings;
   /**
    * The additional parameters.
    */
@@ -86,17 +80,15 @@ public final class CalculationTask implements ImmutableBean {
    *
    * @param target  the target for which the value will be calculated
    * @param function  the function that performs the calculation
-   * @param marketDataMappings  the mappings that specify the market data that should be used in the calculation
    * @param cells  the cells to be calculated by this task
    * @return the task
    */
   public static CalculationTask of(
       CalculationTarget target,
       CalculationFunction<? extends CalculationTarget> function,
-      MarketDataMappings marketDataMappings,
       CalculationTaskCell... cells) {
 
-    return of(target, function, marketDataMappings, CalculationParameters.empty(), ImmutableList.copyOf(cells));
+    return of(target, function, CalculationParameters.empty(), ImmutableList.copyOf(cells));
   }
 
   /**
@@ -106,7 +98,6 @@ public final class CalculationTask implements ImmutableBean {
    *
    * @param target  the target for which the value will be calculated
    * @param function  the function that performs the calculation
-   * @param marketDataMappings  the mappings that specify the market data that should be used in the calculation
    * @param parameters  the additional parameters
    * @param cells  the cells to be calculated by this task
    * @return the task
@@ -114,13 +105,12 @@ public final class CalculationTask implements ImmutableBean {
   public static CalculationTask of(
       CalculationTarget target,
       CalculationFunction<? extends CalculationTarget> function,
-      MarketDataMappings marketDataMappings,
       CalculationParameters parameters,
       List<CalculationTaskCell> cells) {
 
     @SuppressWarnings("unchecked")
     CalculationFunction<CalculationTarget> functionCast = (CalculationFunction<CalculationTarget>) function;
-    return new CalculationTask(target, functionCast, marketDataMappings, parameters, cells);
+    return new CalculationTask(target, functionCast, parameters, cells);
   }
 
   //-------------------------------------------------------------------------
@@ -153,14 +143,19 @@ public final class CalculationTask implements ImmutableBean {
   public MarketDataRequirements requirements(ReferenceData refData) {
     // determine market data requirements of the function
     FunctionRequirements functionRequirements = function.requirements(target, getMeasures(), parameters, refData);
+    ObservableSource obsSource = functionRequirements.getObservableSource();
 
     // convert function requirements to market data requirements
     MarketDataRequirementsBuilder requirementsBuilder = MarketDataRequirements.builder();
-    functionRequirements.getTimeSeriesRequirements().stream()
-        .map(marketDataMappings::getIdForObservableKey)
-        .forEach(requirementsBuilder::addTimeSeries);
-    for (MarketDataKey<?> key : functionRequirements.getSingleValueRequirements()) {
-      requirementsBuilder.addValues(marketDataMappings.getIdForKey(key));
+    for (ObservableId id : functionRequirements.getTimeSeriesRequirements()) {
+      requirementsBuilder.addTimeSeries(id.withObservableSource(obsSource));
+    }
+    for (MarketDataId<?> id : functionRequirements.getValueRequirements()) {
+      if (id instanceof ObservableId) {
+        requirementsBuilder.addValues(((ObservableId) id).withObservableSource(obsSource));
+      } else {
+        requirementsBuilder.addValues(id);
+      }
     }
 
     // add requirements for the FX rates needed to convert the output values into the reporting currency
@@ -170,8 +165,7 @@ public final class CalculationTask implements ImmutableBean {
         List<MarketDataId<FxRate>> fxRateIds = functionRequirements.getOutputCurrencies().stream()
             .filter(outputCurrency -> !outputCurrency.equals(reportingCurrency))
             .map(outputCurrency -> CurrencyPair.of(outputCurrency, reportingCurrency))
-            .map(FxRateKey::of)
-            .map(marketDataMappings::getIdForKey)
+            .map(pair -> FxRateId.of(pair, obsSource))
             .collect(toImmutableList());
         requirementsBuilder.addValues(fxRateIds);
       }
@@ -202,17 +196,15 @@ public final class CalculationTask implements ImmutableBean {
    * @return results of the calculation, one for every scenario in the market data
    */
   @SuppressWarnings("unchecked")
-  public CalculationResults execute(CalculationEnvironment marketData, ReferenceData refData) {
-    // use the mappings to filter the complete market data to the subset needed here
-    CalculationMarketData selectedMarketData = DefaultCalculationMarketData.of(marketData, marketDataMappings);
-
+  public CalculationResults execute(ScenarioMarketData marketData, ReferenceData refData) {
     // calculate the results
-    Map<Measure, Result<?>> results = calculate(selectedMarketData, refData);
+    Map<Measure, Result<?>> results = calculate(marketData, refData);
 
     // convert the results, using a normal loop for better stack traces
+    ScenarioFxRateProvider fxProvider = ScenarioFxRateProvider.of(marketData);
     ImmutableList.Builder<CalculationResult> resultBuilder = ImmutableList.builder();
     for (CalculationTaskCell cell : cells) {
-      resultBuilder.add(cell.createResult(this, target, results, selectedMarketData, refData));
+      resultBuilder.add(cell.createResult(this, target, results, fxProvider, refData));
     }
 
     // return the result
@@ -220,7 +212,7 @@ public final class CalculationTask implements ImmutableBean {
   }
 
   // calculates the result
-  private Map<Measure, Result<?>> calculate(CalculationMarketData marketData, ReferenceData refData) {
+  private Map<Measure, Result<?>> calculate(ScenarioMarketData marketData, ReferenceData refData) {
     try {
       return function.calculate(target, getMeasures(), parameters, marketData, refData);
 
@@ -261,17 +253,14 @@ public final class CalculationTask implements ImmutableBean {
   private CalculationTask(
       CalculationTarget target,
       CalculationFunction<CalculationTarget> function,
-      MarketDataMappings marketDataMappings,
       CalculationParameters parameters,
       List<CalculationTaskCell> cells) {
     JodaBeanUtils.notNull(target, "target");
     JodaBeanUtils.notNull(function, "function");
-    JodaBeanUtils.notNull(marketDataMappings, "marketDataMappings");
     JodaBeanUtils.notNull(parameters, "parameters");
     JodaBeanUtils.notEmpty(cells, "cells");
     this.target = target;
     this.function = function;
-    this.marketDataMappings = marketDataMappings;
     this.parameters = parameters;
     this.cells = ImmutableList.copyOf(cells);
   }
@@ -312,15 +301,6 @@ public final class CalculationTask implements ImmutableBean {
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the mappings to select market data.
-   * @return the value of the property, not null
-   */
-  public MarketDataMappings getMarketDataMappings() {
-    return marketDataMappings;
-  }
-
-  //-----------------------------------------------------------------------
-  /**
    * Gets the additional parameters.
    * @return the value of the property, not null
    */
@@ -347,7 +327,6 @@ public final class CalculationTask implements ImmutableBean {
       CalculationTask other = (CalculationTask) obj;
       return JodaBeanUtils.equal(target, other.target) &&
           JodaBeanUtils.equal(function, other.function) &&
-          JodaBeanUtils.equal(marketDataMappings, other.marketDataMappings) &&
           JodaBeanUtils.equal(parameters, other.parameters) &&
           JodaBeanUtils.equal(cells, other.cells);
     }
@@ -359,7 +338,6 @@ public final class CalculationTask implements ImmutableBean {
     int hash = getClass().hashCode();
     hash = hash * 31 + JodaBeanUtils.hashCode(target);
     hash = hash * 31 + JodaBeanUtils.hashCode(function);
-    hash = hash * 31 + JodaBeanUtils.hashCode(marketDataMappings);
     hash = hash * 31 + JodaBeanUtils.hashCode(parameters);
     hash = hash * 31 + JodaBeanUtils.hashCode(cells);
     return hash;

@@ -10,9 +10,9 @@ import java.time.LocalDate;
 import org.joda.convert.FromString;
 import org.joda.convert.ToString;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.named.ExtendedEnum;
 import com.opengamma.strata.collect.named.Named;
@@ -62,6 +62,16 @@ public interface OvernightIndex
   }
 
   //-------------------------------------------------------------------------
+  /**
+   * Gets whether the index is active.
+   * <p>
+   * Over time some indices become inactive and are no longer produced.
+   * If this occurs, this method will return false.
+   * 
+   * @return true if the index is active, false if inactive
+   */
+  public abstract boolean isActive();
+
   /**
    * Gets the day count convention of the index.
    * 

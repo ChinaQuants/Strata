@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.pricer.dsf;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.PRECEDING;
@@ -15,6 +13,8 @@ import static com.opengamma.strata.basics.date.DayCounts.THIRTY_U_360;
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -22,28 +22,26 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.pricer.dsf.DiscountingDsfProductPricer;
-import com.opengamma.strata.pricer.dsf.DiscountingDsfTradePricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.product.SecurityId;
@@ -181,8 +179,8 @@ public class DiscountingDsfTradePricerTest {
 
   public void test_presentValueSensitivity() {
     PointSensitivities point = TRADE_PRICER.presentValueSensitivity(FUTURE_TRADE, PROVIDER);
-    CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(
+    CurrencyParameterSensitivities computed = PROVIDER.parameterSensitivity(point);
+    CurrencyParameterSensitivities expected = FD_CAL.sensitivity(
         PROVIDER, (p) -> TRADE_PRICER.presentValue(FUTURE_TRADE, (p), LASTMARG_PRICE));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * QUANTITY * EPS * 10d));
   }
@@ -207,7 +205,7 @@ public class DiscountingDsfTradePricerTest {
         1.5288758221797276E7, 1.2510651813905597E7, -1535786.53682933,
         -9496881.09854053, -3.583343769759877E7, -1.1342379328462188E9);
     PointSensitivities point = TRADE_PRICER.presentValueSensitivity(FUTURE_TRADE, PROVIDER);
-    CurveCurrencyParameterSensitivities sensi = PROVIDER.curveParameterSensitivity(point);
+    CurrencyParameterSensitivities sensi = PROVIDER.parameterSensitivity(point);
     double tolerance = NOTIONAL * QUANTITY * EPS;
     assertTrue(sensi.getSensitivity(USD_DSC_NAME, USD).getSensitivity().equalWithTolerance(dscExp, tolerance));
     assertTrue(sensi.getSensitivity(USD_FWD3_NAME, USD).getSensitivity().equalWithTolerance(fwdExp, tolerance));

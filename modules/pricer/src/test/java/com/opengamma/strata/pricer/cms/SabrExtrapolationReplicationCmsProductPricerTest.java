@@ -5,32 +5,31 @@
  */
 package com.opengamma.strata.pricer.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSabrSensitivities;
-import com.opengamma.strata.pricer.impl.cms.SabrExtrapolationReplicationCmsPeriodPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapLegPricer;
 import com.opengamma.strata.pricer.swaption.SabrParametersSwaptionVolatilities;
@@ -134,12 +133,12 @@ public class SabrExtrapolationReplicationCmsProductPricerTest {
   }
 
   public void test_presentValueSensitivitySabrParameter() {
-    SwaptionSabrSensitivities pt1 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities pt2 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities ptCms =
-        CMS_LEG_PRICER.presentValueSensitivitySabrParameter(CMS_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt1 =
+        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES).build();
+    PointSensitivities pt2 =
+        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES).build();
+    PointSensitivities ptCms =
+        CMS_LEG_PRICER.presentValueSensitivitySabrParameter(CMS_LEG, RATES_PROVIDER, VOLATILITIES).build();
     assertEquals(pt1, ptCms);
     assertEquals(pt2, ptCms);
   }

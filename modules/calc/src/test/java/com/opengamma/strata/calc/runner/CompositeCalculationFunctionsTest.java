@@ -13,13 +13,11 @@ import java.util.Set;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.CalculationTarget;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.calc.config.Measure;
-import com.opengamma.strata.calc.marketdata.CalculationMarketData;
-import com.opengamma.strata.calc.marketdata.FunctionRequirements;
-import com.opengamma.strata.calc.runner.function.CalculationFunction;
+import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.collect.result.Result;
+import com.opengamma.strata.data.scenario.ScenarioMarketData;
 
 @Test
 public class CompositeCalculationFunctionsTest {
@@ -60,7 +58,7 @@ public class CompositeCalculationFunctionsTest {
         Target1 target,
         Set<Measure> measures,
         CalculationParameters parameters,
-        CalculationMarketData marketData,
+        ScenarioMarketData marketData,
         ReferenceData refData) {
 
       throw new UnsupportedOperationException("calculate not implemented");
@@ -109,7 +107,7 @@ public class CompositeCalculationFunctionsTest {
         Target2 target,
         Set<Measure> measures,
         CalculationParameters parameters,
-        CalculationMarketData marketData,
+        ScenarioMarketData marketData,
         ReferenceData refData) {
 
       throw new UnsupportedOperationException("calculate not implemented");

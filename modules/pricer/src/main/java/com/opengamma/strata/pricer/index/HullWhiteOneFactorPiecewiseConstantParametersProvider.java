@@ -31,7 +31,6 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantInterestRateModel;
-import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
 
 /**
  * Hull-White one factor model with piecewise constant volatility.
@@ -60,7 +59,7 @@ public final class HullWhiteOneFactorPiecewiseConstantParametersProvider
   /** 
    * The valuation date. 
    * <p>
-   * All data items in this environment are calibrated for this date-time. 
+   * The volatilities are calibrated for this date-time. 
    */
   @PropertyDefinition(validate = "notNull")
   private final ZonedDateTime valuationDateTime;
@@ -270,7 +269,7 @@ public final class HullWhiteOneFactorPiecewiseConstantParametersProvider
   /**
    * Gets the valuation date.
    * <p>
-   * All data items in this environment are calibrated for this date-time.
+   * The volatilities are calibrated for this date-time.
    * @return the value of the property, not null
    */
   public ZonedDateTime getValuationDateTime() {

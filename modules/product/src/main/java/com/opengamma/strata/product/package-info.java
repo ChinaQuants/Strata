@@ -13,7 +13,6 @@
  * a transaction between two organizations, known as counterparties.
  * Most trades represented in the system will be contracts that have been agreed on a date in the past.
  * The trade model also allows trades with a date in the future, or without any date.
- * This supports "what if" trades and aggregated trades, also known as <i>positions</i>.
  * <p>
  * A {@link com.opengamma.strata.product.Security Security} is a standard contract that is traded,
  * such as an equity share or futures contract. Securities are typically created once and shared
@@ -46,7 +45,7 @@
  * The first approach is to use {@link com.opengamma.strata.product.SecurityTrade SecurityTrade}.
  * A {@code SecurityTrade} stores just the security identifier, quantity and trade price.
  * When the trade needs to be priced, the identifier can be resolved to a {@code Security} using
- * {@link com.opengamma.strata.basics.market.ReferenceData ReferenceData}.
+ * {@link com.opengamma.strata.basics.ReferenceData ReferenceData}.
  * The reference data could be backed by an in-memory store or a database.
  * <p>
  * The second approach is to use a more specific trade type, such as

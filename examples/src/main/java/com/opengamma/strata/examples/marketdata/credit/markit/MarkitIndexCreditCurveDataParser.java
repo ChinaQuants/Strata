@@ -16,17 +16,17 @@ import java.util.Map;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharSource;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.Tenor;
-import com.opengamma.strata.basics.market.StandardId;
-import com.opengamma.strata.calc.marketdata.MarketEnvironmentBuilder;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.io.CsvFile;
 import com.opengamma.strata.collect.io.CsvRow;
+import com.opengamma.strata.data.ImmutableMarketDataBuilder;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.IsdaCreditCurveInputs;
-import com.opengamma.strata.market.id.IsdaIndexCreditCurveInputsId;
-import com.opengamma.strata.market.id.IsdaIndexRecoveryRateId;
-import com.opengamma.strata.market.value.CdsRecoveryRate;
+import com.opengamma.strata.pricer.credit.CdsRecoveryRate;
+import com.opengamma.strata.pricer.credit.IsdaCreditCurveInputs;
+import com.opengamma.strata.pricer.credit.IsdaIndexCreditCurveInputsId;
+import com.opengamma.strata.pricer.credit.IsdaIndexRecoveryRateId;
 import com.opengamma.strata.product.credit.IndexReferenceInformation;
 import com.opengamma.strata.product.credit.type.CdsConvention;
 
@@ -77,7 +77,7 @@ public class MarkitIndexCreditCurveDataParser {
    * @param staticDataSource  the source of static data to parse
    */
   public static void parse(
-      MarketEnvironmentBuilder builder,
+      ImmutableMarketDataBuilder builder,
       CharSource curveSource,
       CharSource staticDataSource) {
 

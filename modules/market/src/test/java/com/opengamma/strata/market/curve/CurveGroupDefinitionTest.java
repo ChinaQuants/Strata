@@ -26,16 +26,15 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.strata.basics.market.ImmutableMarketData;
-import com.opengamma.strata.basics.market.MarketData;
-import com.opengamma.strata.basics.market.ObservableKey;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
+import com.opengamma.strata.data.ImmutableMarketData;
+import com.opengamma.strata.data.MarketData;
+import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.curve.node.DummyFraCurveNode;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.market.key.QuoteKey;
+import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.product.Trade;
 
 /**
@@ -45,8 +44,8 @@ import com.opengamma.strata.product.Trade;
 public class CurveGroupDefinitionTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
-  private static final ObservableKey GBP_LIBOR_1M_ID = QuoteKey.of(StandardId.of("OG", "Ticker1"));
-  private static final ObservableKey GBP_LIBOR_3M_ID = QuoteKey.of(StandardId.of("OG", "Ticker3"));
+  private static final ObservableId GBP_LIBOR_1M_ID = QuoteId.of(StandardId.of("OG", "Ticker1"));
+  private static final ObservableId GBP_LIBOR_3M_ID = QuoteId.of(StandardId.of("OG", "Ticker3"));
   private static final DummyFraCurveNode NODE1 = DummyFraCurveNode.of(Period.ofMonths(1), GBP_LIBOR_1M, GBP_LIBOR_1M_ID);
   private static final DummyFraCurveNode NODE2 = DummyFraCurveNode.of(Period.ofMonths(3), GBP_LIBOR_3M, GBP_LIBOR_3M_ID);
   private static final CurveName CURVE_NAME1 = CurveName.of("Test");
@@ -167,11 +166,10 @@ public class CurveGroupDefinitionTest {
         .build();
 
     LocalDate valuationDate = date(2015, 6, 30);
-    MarketData marketData = ImmutableMarketData.builder(valuationDate)
-        .addValues(ImmutableMap.of(GBP_LIBOR_1M_ID, 0.5d, GBP_LIBOR_3M_ID, 1.5d))
-        .build();
-    Trade trade1 = NODE1.resolvedTrade(valuationDate, marketData, REF_DATA);
-    Trade trade2 = NODE2.resolvedTrade(valuationDate, marketData, REF_DATA);
+    MarketData marketData = ImmutableMarketData.of(
+        valuationDate, ImmutableMap.of(GBP_LIBOR_1M_ID, 0.5d, GBP_LIBOR_3M_ID, 1.5d));
+    Trade trade1 = NODE1.trade(valuationDate, 1d, marketData, REF_DATA);
+    Trade trade2 = NODE2.trade(valuationDate, 1d, marketData, REF_DATA);
     assertEquals(test.getTotalParameterCount(), 2);
     assertEquals(test.resolvedTrades(valuationDate, marketData, REF_DATA), ImmutableList.of(trade1, trade2));
     assertEquals(test.initialGuesses(valuationDate, marketData), ImmutableList.of(0.5d, 1.5d));

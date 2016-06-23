@@ -10,15 +10,14 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.strata.basics.market.FieldName;
-import com.opengamma.strata.basics.market.MarketDataFeed;
-import com.opengamma.strata.basics.market.ObservableId;
-import com.opengamma.strata.basics.market.StandardId;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.io.CsvFile;
 import com.opengamma.strata.collect.io.CsvRow;
 import com.opengamma.strata.collect.io.ResourceLocator;
-import com.opengamma.strata.market.id.QuoteId;
+import com.opengamma.strata.data.FieldName;
+import com.opengamma.strata.data.ObservableId;
+import com.opengamma.strata.market.observable.QuoteId;
 
 /**
  * Loads a set of quotes into memory from CSV resources.
@@ -115,7 +114,7 @@ public final class QuotesCsvLoader {
           StandardId id = StandardId.of(symbologyStr, tickerStr);
           FieldName fieldName = fieldNameStr.isEmpty() ? FieldName.MARKET_VALUE : FieldName.of(fieldNameStr);
 
-          builder.put(QuoteId.of(id, MarketDataFeed.NONE, fieldName), value);
+          builder.put(QuoteId.of(id, fieldName), value);
         }
       }
     } catch (RuntimeException ex) {

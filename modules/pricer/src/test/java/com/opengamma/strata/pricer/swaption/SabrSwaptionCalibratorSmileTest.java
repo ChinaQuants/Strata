@@ -17,16 +17,17 @@ import java.util.BitSet;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.PutCall;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.math.impl.statistics.leastsquare.LeastSquareResultsWithTransform;
 import com.opengamma.strata.pricer.impl.option.BlackFormulaRepository;
 import com.opengamma.strata.pricer.impl.option.NormalFormulaRepository;
-import com.opengamma.strata.pricer.impl.volatility.smile.function.SabrFormulaData;
-import com.opengamma.strata.pricer.impl.volatility.smile.function.SabrHaganVolatilityFunctionProvider;
+import com.opengamma.strata.pricer.impl.volatility.smile.SabrFormulaData;
+import com.opengamma.strata.pricer.model.SabrVolatilityFormula;
+import com.opengamma.strata.product.common.PutCall;
 
 /**
  * Tests {@link SabrSwaptionCalibrator} with single smile.
@@ -39,7 +40,7 @@ public class SabrSwaptionCalibratorSmileTest {
   private static final LocalDate CALIBRATION_DATE = LocalDate.of(2015, 8, 7);
   private static final ZonedDateTime CALIBRATION_TIME = CALIBRATION_DATE.atTime(11, 0).atZone(ZoneId.of("America/New_York"));
 
-  private static final SabrHaganVolatilityFunctionProvider SABR_FORMULA = SabrHaganVolatilityFunctionProvider.DEFAULT;
+  private static final SabrVolatilityFormula SABR_FORMULA = SabrVolatilityFormula.hagan();
   private static final SabrSwaptionCalibrator SABR_CALIBRATION = SabrSwaptionCalibrator.DEFAULT;
 
   private static final Period EXPIRY_PERIOD = Period.ofYears(5);
@@ -143,13 +144,19 @@ public class SabrSwaptionCalibratorSmileTest {
       BitSet fixed,
       double shift,
       double tolerance) {
-    LeastSquareResultsWithTransform rComputed = SABR_CALIBRATION
+    Pair<LeastSquareResultsWithTransform, DoubleArray> rComputed = SABR_CALIBRATION
         .calibrateShiftedFromNormalVolatilities(BDA, CALIBRATION_TIME, ACT_365F, EXPIRY_PERIOD, FORWARD,
             moneyness, ValueType.SIMPLE_MONEYNESS, normalVol, startParameters, fixed, shift);
-    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getModelParameters().toArrayUnsafe());
+    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getFirst().getModelParameters().toArrayUnsafe());
     for (int i = 0; i < moneyness.size(); i++) {
-      double ivComputed = SABR_FORMULA
-          .getVolatility(FORWARD + shift, FORWARD + moneyness.get(i) + shift, TIME_EXPIRY, sabrComputed);
+      double ivComputed = SABR_FORMULA.volatility(
+          FORWARD + shift, 
+          FORWARD + moneyness.get(i) + shift, 
+          TIME_EXPIRY, 
+          sabrComputed.getAlpha(),
+          sabrComputed.getBeta(),
+          sabrComputed.getRho(),
+          sabrComputed.getNu());
       double priceComputed = BlackFormulaRepository.price(FORWARD + shift, FORWARD + moneyness.get(i) + shift,
           TIME_EXPIRY, ivComputed, true);
       double priceNormal = NormalFormulaRepository.price(FORWARD, FORWARD + moneyness.get(i),
@@ -165,13 +172,19 @@ public class SabrSwaptionCalibratorSmileTest {
       BitSet fixed,
       double shift,
       double tolerance) {
-    LeastSquareResultsWithTransform rComputed = SABR_CALIBRATION
+    Pair<LeastSquareResultsWithTransform, DoubleArray> rComputed = SABR_CALIBRATION
         .calibrateShiftedFromBlackVolatilities(BDA, CALIBRATION_TIME, ACT_365F, EXPIRY_PERIOD, FORWARD,
             moneyness, ValueType.SIMPLE_MONEYNESS, blackVol, 0.0, startParameters, fixed, shift);
-    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getModelParameters().toArrayUnsafe());
+    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getFirst().getModelParameters().toArrayUnsafe());
     for (int i = 0; i < moneyness.size(); i++) {
-      double ivComputed = SABR_FORMULA
-          .getVolatility(FORWARD + shift, FORWARD + moneyness.get(i) + shift, TIME_EXPIRY, sabrComputed);
+      double ivComputed = SABR_FORMULA.volatility(
+          FORWARD + shift,
+          FORWARD + moneyness.get(i) + shift,
+          TIME_EXPIRY,
+          sabrComputed.getAlpha(),
+          sabrComputed.getBeta(),
+          sabrComputed.getRho(),
+          sabrComputed.getNu());
       double priceComputed = BlackFormulaRepository.price(FORWARD + shift, FORWARD + moneyness.get(i) + shift,
           TIME_EXPIRY, ivComputed, true);
       double priceBlack = BlackFormulaRepository.price(FORWARD, FORWARD + moneyness.get(i),
@@ -194,13 +207,19 @@ public class SabrSwaptionCalibratorSmileTest {
           .price(FORWARD, FORWARD + moneyness.get(i), TIME_EXPIRY, blackVol.get(i), true);
       // Prices generated from Black implied volatilities
     }
-    LeastSquareResultsWithTransform rComputed = SABR_CALIBRATION
+    Pair<LeastSquareResultsWithTransform, DoubleArray> rComputed = SABR_CALIBRATION
         .calibrateShiftedFromPrices(BDA, CALIBRATION_TIME, ACT_365F, EXPIRY_PERIOD, FORWARD,
             moneyness, ValueType.SIMPLE_MONEYNESS, DoubleArray.ofUnsafe(prices), startParameters, fixed, shift);
-    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getModelParameters().toArrayUnsafe());
+    SabrFormulaData sabrComputed = SabrFormulaData.of(rComputed.getFirst().getModelParameters().toArrayUnsafe());
     for (int i = 0; i < moneyness.size(); i++) {
-      double ivComputed = SABR_FORMULA
-          .getVolatility(FORWARD + shift, FORWARD + moneyness.get(i) + shift, TIME_EXPIRY, sabrComputed);
+      double ivComputed = SABR_FORMULA.volatility(
+          FORWARD + shift,
+          FORWARD + moneyness.get(i) + shift,
+          TIME_EXPIRY,
+          sabrComputed.getAlpha(),
+          sabrComputed.getBeta(),
+          sabrComputed.getRho(),
+          sabrComputed.getNu());
       double priceComputed = BlackFormulaRepository.price(FORWARD + shift, FORWARD + moneyness.get(i) + shift,
           TIME_EXPIRY, ivComputed, true);
       assertEquals(priceComputed, prices[i], tolerance);

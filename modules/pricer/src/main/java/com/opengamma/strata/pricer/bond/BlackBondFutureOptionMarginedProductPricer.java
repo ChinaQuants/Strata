@@ -6,10 +6,8 @@
 package com.opengamma.strata.pricer.bond;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.market.sensitivity.BondFutureOptionSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.impl.option.BlackFormulaRepository;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 import com.opengamma.strata.product.bond.ResolvedBondFuture;
 import com.opengamma.strata.product.bond.ResolvedBondFutureOption;
 import com.opengamma.strata.product.common.FutureOptionPremiumStyle;
@@ -98,7 +96,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
         "Underlying future security ID should be the same as security ID of data");
     double strike = futureOption.getStrikePrice();
     ResolvedBondFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(
+    double volatility = volatilityProvider.volatility(
         futureOption.getExpiry(), future.getLastTradeDate(), strike, futurePrice);
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double price = BlackFormulaRepository.price(
@@ -165,7 +163,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
         "Underlying future security ID should be the same as security ID of data");
     double strike = futureOption.getStrikePrice();
     ResolvedBondFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double delta = BlackFormulaRepository.delta(
@@ -221,7 +219,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
         "Underlying future security ID should be the same as security ID of data");
     double strike = futureOption.getStrikePrice();
     ResolvedBondFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double gamma = BlackFormulaRepository.gamma(futurePrice, strike, timeToExpiry, volatility);
@@ -276,7 +274,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
         "Underlying future security ID should be the same as security ID of data");
     double strike = futureOption.getStrikePrice();
     ResolvedBondFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double theta = BlackFormulaRepository.driftlessTheta(futurePrice, strike, timeToExpiry, volatility);
@@ -387,7 +385,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
         "Underlying future security ID should be the same as security ID of data");
     double strike = futureOption.getStrikePrice();
     ResolvedBondFuture future = futureOption.getUnderlyingFuture();
-    double volatility = volatilityProvider.getVolatility(futureOption.getExpiry(),
+    double volatility = volatilityProvider.volatility(futureOption.getExpiry(),
         future.getLastTradeDate(), strike, futurePrice);
     double timeToExpiry = volatilityProvider.relativeTime(futureOption.getExpiry());
     double vega = BlackFormulaRepository.vega(futurePrice, strike, timeToExpiry, volatility);

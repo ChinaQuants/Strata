@@ -22,20 +22,18 @@ import java.util.function.Function;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.BuySell;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ImmutableMarketData;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
@@ -43,17 +41,19 @@ import com.opengamma.strata.market.curve.CurveParameterSize;
 import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.curve.JacobianCalibrationMatrix;
-import com.opengamma.strata.market.curve.meta.TenorCurveNodeMetadata;
-import com.opengamma.strata.market.id.QuoteId;
 import com.opengamma.strata.market.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
-import com.opengamma.strata.pricer.calibration.CurveCalibrator;
+import com.opengamma.strata.market.observable.QuoteId;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.TenorParameterMetadata;
+import com.opengamma.strata.pricer.curve.CalibrationMeasures;
+import com.opengamma.strata.pricer.curve.CurveCalibrator;
 import com.opengamma.strata.pricer.deposit.DiscountingIborFixingDepositProductPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.product.ResolvedTrade;
+import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.deposit.ResolvedIborFixingDepositTrade;
 import com.opengamma.strata.product.deposit.type.IborFixingDepositConvention;
 import com.opengamma.strata.product.swap.ResolvedSwapTrade;
@@ -77,8 +77,7 @@ public class CurveSensitivityUtilsJacobianTest {
   private static final String QUOTES_FILE = "quotes-20151120-eur.csv";
   private static final Map<QuoteId, Double> MQ_INPUT = 
       QuotesCsvLoader.load(VALUATION_DATE, ImmutableList.of(ResourceLocator.of(QUOTES_PATH + QUOTES_FILE)));
-  private static final ImmutableMarketData MARKET_QUOTES_INPUT = 
-      ImmutableMarketData.builder(VALUATION_DATE).addValuesById(MQ_INPUT).build();
+  private static final ImmutableMarketData MARKET_QUOTES_INPUT = ImmutableMarketData.of(VALUATION_DATE, MQ_INPUT);
   
   // Group input based on IRS for EURIBOR6M  
   public static final CurveName EUR_SINGLE_NAME = CurveName.of("EUR-ALLIRS");
@@ -107,9 +106,9 @@ public class CurveSensitivityUtilsJacobianTest {
     Tenor[] tenors = new Tenor[] {Tenor.TENOR_1D, Tenor.TENOR_1M, Tenor.TENOR_3M, Tenor.TENOR_6M,
         Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_3Y, Tenor.TENOR_4Y, Tenor.TENOR_5Y, 
         Tenor.TENOR_7Y, Tenor.TENOR_10Y, Tenor.TENOR_15Y, Tenor.TENOR_20Y, Tenor.TENOR_30Y};
-    List<TenorCurveNodeMetadata> metadataList = new ArrayList<>();
+    List<TenorParameterMetadata> metadataList = new ArrayList<>();
     for(int looptenor=0; looptenor< tenors.length; looptenor++) {
-      metadataList.add(TenorCurveNodeMetadata.of(tenors[looptenor]));
+      metadataList.add(TenorParameterMetadata.of(tenors[looptenor]));
     }
     DoubleArray rate_eur = 
         DoubleArray.of(0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.0150, 0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.0140);
@@ -161,13 +160,14 @@ public class CurveSensitivityUtilsJacobianTest {
       trades.add(t);
     }
     /* Par rate sensitivity */
-    Function<ResolvedTrade, CurveCurrencyParameterSensitivities> sensitivityFunction =
-        (t) -> MULTICURVE_EUR_SINGLE_CALIBRATED.curveParameterSensitivity(
+    Function<ResolvedTrade, CurrencyParameterSensitivities> sensitivityFunction =
+        (t) -> MULTICURVE_EUR_SINGLE_CALIBRATED.parameterSensitivity(
                 PRICER_SWAP_PRODUCT.parRateSensitivity(((ResolvedSwapTrade) t).getProduct(), MULTICURVE_EUR_SINGLE_CALIBRATED).build());
     DoubleMatrix jiComputed = 
         CurveSensitivityUtils.jacobianFromMarketQuoteSensitivities(LIST_CURVE_NAMES_1, trades, sensitivityFunction);
     DoubleMatrix jiExpected =
-        MULTICURVE_EUR_SINGLE_CALIBRATED.findCurve(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
+        MULTICURVE_EUR_SINGLE_CALIBRATED.findData(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get()
+            .getJacobianMatrix();
     /* Comparison */
     assertEquals(jiComputed.rowCount() , jiExpected.rowCount());
     assertEquals(jiComputed.columnCount() , jiExpected.columnCount());
@@ -197,9 +197,9 @@ public class CurveSensitivityUtilsJacobianTest {
       nodeDates.add(t.getProduct().getEndDate());
       trades.add(t);
     }
-    Function<ResolvedTrade, CurveCurrencyParameterSensitivities> sensitivityFunction =
+    Function<ResolvedTrade, CurrencyParameterSensitivities> sensitivityFunction =
         (t) -> CurveSensitivityUtils.linearRebucketing(
-            MULTICURVE_EUR_SINGLE_INPUT.curveParameterSensitivity(
+            MULTICURVE_EUR_SINGLE_INPUT.parameterSensitivity(
                 PRICER_SWAP_PRODUCT.parRateSensitivity(((ResolvedSwapTrade) t).getProduct(), MULTICURVE_EUR_SINGLE_INPUT).build()),
             nodeDates, VALUATION_DATE);
 
@@ -208,8 +208,7 @@ public class CurveSensitivityUtilsJacobianTest {
     for (int looptenor = 0; looptenor < TENORS_STD_1.length; looptenor++) {
       mqCmp.put(QuoteId.of(StandardId.of(OG_TICKER, TICKERS_STD_1[looptenor])), marketQuotes[looptenor]);
     }
-    ImmutableMarketData marketQuotesObject =
-        ImmutableMarketData.builder(VALUATION_DATE).addValuesById(mqCmp).build();
+    ImmutableMarketData marketQuotesObject = ImmutableMarketData.of(VALUATION_DATE, mqCmp);
     RatesProvider multicurveCmp =
         CALIBRATOR.calibrate(GROUPS_IN_1, VALUATION_DATE, marketQuotesObject, REF_DATA, TS_EMPTY);
 
@@ -217,7 +216,7 @@ public class CurveSensitivityUtilsJacobianTest {
     DoubleMatrix jiComputed =
         CurveSensitivityUtils.jacobianFromMarketQuoteSensitivities(LIST_CURVE_NAMES_1, trades, sensitivityFunction);
     DoubleMatrix jiExpected = multicurveCmp
-        .findCurve(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
+        .findData(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
     assertEquals(jiComputed.rowCount(), jiExpected.rowCount());
     assertEquals(jiComputed.columnCount(), jiExpected.columnCount());
     for (int i = 0; i < jiComputed.rowCount(); i++) {
@@ -255,7 +254,7 @@ public class CurveSensitivityUtilsJacobianTest {
    */
   public void direct_two_curves() {
     JacobianCalibrationMatrix jiObject = 
-        MULTICURVE_EUR_2_CALIBRATED.findCurve(EUR_DSCON_OIS).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get();
+        MULTICURVE_EUR_2_CALIBRATED.findData(EUR_DSCON_OIS).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get();
     ImmutableList<CurveParameterSize> order = jiObject.getOrder(); // To obtain the order of the curves in the jacobian
 
     /* Create trades */
@@ -295,8 +294,8 @@ public class CurveSensitivityUtilsJacobianTest {
       trades.addAll(tradesDsc);
     }
     /* Par rate sensitivity */
-    Function<ResolvedTrade, CurveCurrencyParameterSensitivities> sensitivityFunction =
-        (t) -> MULTICURVE_EUR_2_CALIBRATED.curveParameterSensitivity(
+    Function<ResolvedTrade, CurrencyParameterSensitivities> sensitivityFunction =
+        (t) -> MULTICURVE_EUR_2_CALIBRATED.parameterSensitivity(
             (t instanceof ResolvedSwapTrade) ?
                 PRICER_SWAP_PRODUCT.parRateSensitivity(
                     ((ResolvedSwapTrade) t).getProduct(), MULTICURVE_EUR_2_CALIBRATED).build() :
@@ -305,9 +304,11 @@ public class CurveSensitivityUtilsJacobianTest {
     DoubleMatrix jiComputed =
         CurveSensitivityUtils.jacobianFromMarketQuoteSensitivities(order, trades, sensitivityFunction);
     DoubleMatrix jiExpectedDsc =
-        MULTICURVE_EUR_2_CALIBRATED.findCurve(EUR_DSCON_OIS).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
+        MULTICURVE_EUR_2_CALIBRATED.findData(EUR_DSCON_OIS).get()
+            .getMetadata().getInfo(CurveInfoType.JACOBIAN).getJacobianMatrix();
     DoubleMatrix jiExpectedE3 =
-        MULTICURVE_EUR_2_CALIBRATED.findCurve(EUR_EURIBOR6M_IRS).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
+        MULTICURVE_EUR_2_CALIBRATED.findData(EUR_EURIBOR6M_IRS).get()
+            .getMetadata().getInfo(CurveInfoType.JACOBIAN).getJacobianMatrix();
     /* Comparison */
     assertEquals(jiComputed.rowCount(), jiExpectedDsc.rowCount() + jiExpectedE3.rowCount());
     assertEquals(jiComputed.columnCount(), jiExpectedDsc.columnCount());

@@ -29,13 +29,12 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.rate.InflationEndInterpolatedRateObservation;
-import com.opengamma.strata.product.rate.InflationEndMonthRateObservation;
-import com.opengamma.strata.product.rate.RateObservation;
-import com.opengamma.strata.product.swap.NotionalPaymentPeriod;
+import com.opengamma.strata.product.rate.InflationEndInterpolatedRateComputation;
+import com.opengamma.strata.product.rate.InflationEndMonthRateComputation;
+import com.opengamma.strata.product.rate.RateComputation;
+import com.opengamma.strata.product.swap.PaymentPeriod;
 
 /**
  * A coupon or nominal payment of capital indexed bonds.
@@ -46,7 +45,7 @@ import com.opengamma.strata.product.swap.NotionalPaymentPeriod;
  */
 @BeanDefinition
 public final class CapitalIndexedBondPaymentPeriod
-    implements NotionalPaymentPeriod, ImmutableBean, Serializable {
+    implements PaymentPeriod, ImmutableBean, Serializable {
 
   /**
    * The primary currency of the payment period.
@@ -118,14 +117,14 @@ public final class CapitalIndexedBondPaymentPeriod
   @PropertyDefinition(validate = "notNull")
   private final LocalDate detachmentDate;
   /**
-   * The rate to be observed.
+   * The rate to be computed.
    * <p>
    * The value of the period is based on this rate.
-   * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateObservation}
-   * or {@link InflationEndMonthRateObservation}.
+   * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateComputation}
+   * or {@link InflationEndMonthRateComputation}.
    */
   @PropertyDefinition(validate = "notNull")
-  private final RateObservation rateObservation;
+  private final RateComputation rateComputation;
 
   //-------------------------------------------------------------------------
   @ImmutableConstructor
@@ -138,7 +137,7 @@ public final class CapitalIndexedBondPaymentPeriod
       LocalDate unadjustedStartDate,
       LocalDate unadjustedEndDate,
       LocalDate detachmentDate,
-      RateObservation rateObservation) {
+      RateComputation rateComputation) {
     this.currency = ArgChecker.notNull(currency, "currency");
     this.notional = ArgChecker.notZero(notional, 0d, "notional");
     this.realCoupon = ArgChecker.notNegative(realCoupon, "realCoupon");
@@ -147,14 +146,14 @@ public final class CapitalIndexedBondPaymentPeriod
     this.unadjustedStartDate = firstNonNull(unadjustedStartDate, startDate);
     this.unadjustedEndDate = firstNonNull(unadjustedEndDate, endDate);
     this.detachmentDate = firstNonNull(detachmentDate, endDate);
-    this.rateObservation = ArgChecker.notNull(rateObservation, "rateObservation");
+    this.rateComputation = ArgChecker.notNull(rateComputation, "rateComputation");
     ArgChecker.inOrderNotEqual(startDate, endDate, "startDate", "endDate");
     ArgChecker.inOrderNotEqual(
         this.unadjustedStartDate, this.unadjustedEndDate, "unadjustedStartDate", "unadjustedEndDate");
     ArgChecker.inOrderOrEqual(this.detachmentDate, this.endDate, "detachmentDate", "endDate");
-    ArgChecker.isTrue(rateObservation instanceof InflationEndInterpolatedRateObservation ||
-        rateObservation instanceof InflationEndMonthRateObservation,
-        "rateObservation must be inflation rate observation");
+    ArgChecker.isTrue(rateComputation instanceof InflationEndInterpolatedRateComputation ||
+        rateComputation instanceof InflationEndMonthRateComputation,
+        "rateComputation must be inflation rate observation");
   }
 
   //-------------------------------------------------------------------------
@@ -177,13 +176,13 @@ public final class CapitalIndexedBondPaymentPeriod
         unadjustedStartDate,
         unadjustedEndDate,
         endDate,
-        rateObservation);
+        rateComputation);
   }
 
   //-------------------------------------------------------------------------
   @Override
   public void collectIndices(ImmutableSet.Builder<Index> builder) {
-    rateObservation.collectIndices(builder);
+    rateComputation.collectIndices(builder);
   }
 
   @Override
@@ -194,11 +193,6 @@ public final class CapitalIndexedBondPaymentPeriod
   @Override
   public LocalDate getPaymentDate() {
     return getEndDate();
-  }
-
-  @Override
-  public CurrencyAmount getNotionalAmount() {
-    return CurrencyAmount.of(currency, notional);
   }
 
   /**
@@ -371,15 +365,15 @@ public final class CapitalIndexedBondPaymentPeriod
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the rate to be observed.
+   * Gets the rate to be computed.
    * <p>
    * The value of the period is based on this rate.
-   * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateObservation}
-   * or {@link InflationEndMonthRateObservation}.
+   * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateComputation}
+   * or {@link InflationEndMonthRateComputation}.
    * @return the value of the property, not null
    */
-  public RateObservation getRateObservation() {
-    return rateObservation;
+  public RateComputation getRateComputation() {
+    return rateComputation;
   }
 
   //-----------------------------------------------------------------------
@@ -406,7 +400,7 @@ public final class CapitalIndexedBondPaymentPeriod
           JodaBeanUtils.equal(unadjustedStartDate, other.unadjustedStartDate) &&
           JodaBeanUtils.equal(unadjustedEndDate, other.unadjustedEndDate) &&
           JodaBeanUtils.equal(detachmentDate, other.detachmentDate) &&
-          JodaBeanUtils.equal(rateObservation, other.rateObservation);
+          JodaBeanUtils.equal(rateComputation, other.rateComputation);
     }
     return false;
   }
@@ -422,7 +416,7 @@ public final class CapitalIndexedBondPaymentPeriod
     hash = hash * 31 + JodaBeanUtils.hashCode(unadjustedStartDate);
     hash = hash * 31 + JodaBeanUtils.hashCode(unadjustedEndDate);
     hash = hash * 31 + JodaBeanUtils.hashCode(detachmentDate);
-    hash = hash * 31 + JodaBeanUtils.hashCode(rateObservation);
+    hash = hash * 31 + JodaBeanUtils.hashCode(rateComputation);
     return hash;
   }
 
@@ -438,7 +432,7 @@ public final class CapitalIndexedBondPaymentPeriod
     buf.append("unadjustedStartDate").append('=').append(unadjustedStartDate).append(',').append(' ');
     buf.append("unadjustedEndDate").append('=').append(unadjustedEndDate).append(',').append(' ');
     buf.append("detachmentDate").append('=').append(detachmentDate).append(',').append(' ');
-    buf.append("rateObservation").append('=').append(JodaBeanUtils.toString(rateObservation));
+    buf.append("rateComputation").append('=').append(JodaBeanUtils.toString(rateComputation));
     buf.append('}');
     return buf.toString();
   }
@@ -494,10 +488,10 @@ public final class CapitalIndexedBondPaymentPeriod
     private final MetaProperty<LocalDate> detachmentDate = DirectMetaProperty.ofImmutable(
         this, "detachmentDate", CapitalIndexedBondPaymentPeriod.class, LocalDate.class);
     /**
-     * The meta-property for the {@code rateObservation} property.
+     * The meta-property for the {@code rateComputation} property.
      */
-    private final MetaProperty<RateObservation> rateObservation = DirectMetaProperty.ofImmutable(
-        this, "rateObservation", CapitalIndexedBondPaymentPeriod.class, RateObservation.class);
+    private final MetaProperty<RateComputation> rateComputation = DirectMetaProperty.ofImmutable(
+        this, "rateComputation", CapitalIndexedBondPaymentPeriod.class, RateComputation.class);
     /**
      * The meta-properties.
      */
@@ -511,7 +505,7 @@ public final class CapitalIndexedBondPaymentPeriod
         "unadjustedStartDate",
         "unadjustedEndDate",
         "detachmentDate",
-        "rateObservation");
+        "rateComputation");
 
     /**
      * Restricted constructor.
@@ -538,8 +532,8 @@ public final class CapitalIndexedBondPaymentPeriod
           return unadjustedEndDate;
         case -878940481:  // detachmentDate
           return detachmentDate;
-        case 535324460:  // rateObservation
-          return rateObservation;
+        case 625350855:  // rateComputation
+          return rateComputation;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -625,11 +619,11 @@ public final class CapitalIndexedBondPaymentPeriod
     }
 
     /**
-     * The meta-property for the {@code rateObservation} property.
+     * The meta-property for the {@code rateComputation} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<RateObservation> rateObservation() {
-      return rateObservation;
+    public MetaProperty<RateComputation> rateComputation() {
+      return rateComputation;
     }
 
     //-----------------------------------------------------------------------
@@ -652,8 +646,8 @@ public final class CapitalIndexedBondPaymentPeriod
           return ((CapitalIndexedBondPaymentPeriod) bean).getUnadjustedEndDate();
         case -878940481:  // detachmentDate
           return ((CapitalIndexedBondPaymentPeriod) bean).getDetachmentDate();
-        case 535324460:  // rateObservation
-          return ((CapitalIndexedBondPaymentPeriod) bean).getRateObservation();
+        case 625350855:  // rateComputation
+          return ((CapitalIndexedBondPaymentPeriod) bean).getRateComputation();
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -683,7 +677,7 @@ public final class CapitalIndexedBondPaymentPeriod
     private LocalDate unadjustedStartDate;
     private LocalDate unadjustedEndDate;
     private LocalDate detachmentDate;
-    private RateObservation rateObservation;
+    private RateComputation rateComputation;
 
     /**
      * Restricted constructor.
@@ -704,7 +698,7 @@ public final class CapitalIndexedBondPaymentPeriod
       this.unadjustedStartDate = beanToCopy.getUnadjustedStartDate();
       this.unadjustedEndDate = beanToCopy.getUnadjustedEndDate();
       this.detachmentDate = beanToCopy.getDetachmentDate();
-      this.rateObservation = beanToCopy.getRateObservation();
+      this.rateComputation = beanToCopy.getRateComputation();
     }
 
     //-----------------------------------------------------------------------
@@ -727,8 +721,8 @@ public final class CapitalIndexedBondPaymentPeriod
           return unadjustedEndDate;
         case -878940481:  // detachmentDate
           return detachmentDate;
-        case 535324460:  // rateObservation
-          return rateObservation;
+        case 625350855:  // rateComputation
+          return rateComputation;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -761,8 +755,8 @@ public final class CapitalIndexedBondPaymentPeriod
         case -878940481:  // detachmentDate
           this.detachmentDate = (LocalDate) newValue;
           break;
-        case 535324460:  // rateObservation
-          this.rateObservation = (RateObservation) newValue;
+        case 625350855:  // rateComputation
+          this.rateComputation = (RateComputation) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -805,7 +799,7 @@ public final class CapitalIndexedBondPaymentPeriod
           unadjustedStartDate,
           unadjustedEndDate,
           detachmentDate,
-          rateObservation);
+          rateComputation);
     }
 
     //-----------------------------------------------------------------------
@@ -925,17 +919,17 @@ public final class CapitalIndexedBondPaymentPeriod
     }
 
     /**
-     * Sets the rate to be observed.
+     * Sets the rate to be computed.
      * <p>
      * The value of the period is based on this rate.
-     * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateObservation}
-     * or {@link InflationEndMonthRateObservation}.
-     * @param rateObservation  the new value, not null
+     * This must be an inflation rate observation, specifically {@link InflationEndInterpolatedRateComputation}
+     * or {@link InflationEndMonthRateComputation}.
+     * @param rateComputation  the new value, not null
      * @return this, for chaining, not null
      */
-    public Builder rateObservation(RateObservation rateObservation) {
-      JodaBeanUtils.notNull(rateObservation, "rateObservation");
-      this.rateObservation = rateObservation;
+    public Builder rateComputation(RateComputation rateComputation) {
+      JodaBeanUtils.notNull(rateComputation, "rateComputation");
+      this.rateComputation = rateComputation;
       return this;
     }
 
@@ -952,7 +946,7 @@ public final class CapitalIndexedBondPaymentPeriod
       buf.append("unadjustedStartDate").append('=').append(JodaBeanUtils.toString(unadjustedStartDate)).append(',').append(' ');
       buf.append("unadjustedEndDate").append('=').append(JodaBeanUtils.toString(unadjustedEndDate)).append(',').append(' ');
       buf.append("detachmentDate").append('=').append(JodaBeanUtils.toString(detachmentDate)).append(',').append(' ');
-      buf.append("rateObservation").append('=').append(JodaBeanUtils.toString(rateObservation));
+      buf.append("rateComputation").append('=').append(JodaBeanUtils.toString(rateComputation));
       buf.append('}');
       return buf.toString();
     }

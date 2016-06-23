@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.product.swap;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
@@ -19,6 +17,8 @@ import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static com.opengamma.strata.product.swap.SwapLegType.IBOR;
 import static org.testng.Assert.assertEquals;
@@ -29,13 +29,13 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.index.FxIndexObservation;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 
 /**
  * Test.
@@ -51,23 +51,23 @@ public class RatePeriodSwapLegTest {
   private static final LocalDate DATE_2014_10_01 = date(2014, 10, 1);
   private static final LocalDate DATE_2014_12_30 = date(2014, 12, 30);
   private static final LocalDate DATE_2014_01_02 = date(2014, 1, 2);
-  private static final IborRateObservation GBPLIBOR3M_2014_06_28 =
-      IborRateObservation.of(GBP_LIBOR_3M, DATE_2014_06_28, REF_DATA);
-  private static final IborRateObservation GBPLIBOR3M_2014_09_28 =
-      IborRateObservation.of(GBP_LIBOR_3M, DATE_2014_09_28, REF_DATA);
+  private static final IborRateComputation GBPLIBOR3M_2014_06_28 =
+      IborRateComputation.of(GBP_LIBOR_3M, DATE_2014_06_28, REF_DATA);
+  private static final IborRateComputation GBPLIBOR3M_2014_09_28 =
+      IborRateComputation.of(GBP_LIBOR_3M, DATE_2014_09_28, REF_DATA);
   private static final NotionalExchange NOTIONAL_EXCHANGE =
       NotionalExchange.of(DATE_2014_10_01, CurrencyAmount.of(GBP, 2000d));
   private static final RateAccrualPeriod RAP1 = RateAccrualPeriod.builder()
       .startDate(DATE_2014_06_30)
       .endDate(DATE_2014_09_30)
       .yearFraction(0.25d)
-      .rateObservation(GBPLIBOR3M_2014_06_28)
+      .rateComputation(GBPLIBOR3M_2014_06_28)
       .build();
   private static final RateAccrualPeriod RAP2 = RateAccrualPeriod.builder()
       .startDate(DATE_2014_09_30)
       .endDate(DATE_2014_12_30)
       .yearFraction(0.25d)
-      .rateObservation(GBPLIBOR3M_2014_09_28)
+      .rateComputation(GBPLIBOR3M_2014_09_28)
       .build();
   private static final RatePaymentPeriod RPP1 = RatePaymentPeriod.builder()
       .paymentDate(DATE_2014_10_01)
@@ -212,14 +212,12 @@ public class RatePeriodSwapLegTest {
         .build();
     FxResetNotionalExchange ne1a = FxResetNotionalExchange.builder()
         .paymentDate(DATE_2014_06_30)
-        .referenceCurrency(USD)
-        .notional(-8000d)
+        .notionalAmount(CurrencyAmount.of(USD, -8000d))
         .observation(FxIndexObservation.of(GBP_USD_WM, DATE_2014_06_28, REF_DATA))
         .build();
     FxResetNotionalExchange ne1b = FxResetNotionalExchange.builder()
         .paymentDate(DATE_2014_10_01)
-        .referenceCurrency(USD)
-        .notional(8000d)
+        .notionalAmount(CurrencyAmount.of(USD, 8000d))
         .observation(FxIndexObservation.of(GBP_USD_WM, DATE_2014_06_28, REF_DATA))
         .build();
     NotionalExchange ne2a = NotionalExchange.of(DATE_2014_10_01, CurrencyAmount.of(GBP, -6000d));

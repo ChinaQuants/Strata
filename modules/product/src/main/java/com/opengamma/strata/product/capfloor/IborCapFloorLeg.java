@@ -29,21 +29,21 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.IborIndexObservation;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.common.PayReceive;
+import com.opengamma.strata.product.rate.IborRateComputation;
 import com.opengamma.strata.product.swap.FixingRelativeTo;
 import com.opengamma.strata.product.swap.IborRateCalculation;
 
@@ -212,7 +212,7 @@ public final class IborCapFloorLeg
           .unadjustedEndDate(period.getUnadjustedEndDate())
           .startDate(period.getStartDate())
           .endDate(period.getEndDate())
-          .iborRate(IborRateObservation.of(obsFn.apply(fixingDate)))
+          .iborRate(IborRateComputation.of(obsFn.apply(fixingDate)))
           .paymentDate(paymentDate)
           .notional(signedNotional)
           .currency(currency)

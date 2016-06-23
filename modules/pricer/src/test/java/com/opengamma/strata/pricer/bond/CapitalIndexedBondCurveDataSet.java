@@ -16,10 +16,10 @@ import static com.opengamma.strata.basics.index.PriceIndices.US_CPI_U;
 import java.time.LocalDate;
 
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.FxMatrix;
 import com.opengamma.strata.basics.index.PriceIndex;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeriesBuilder;
@@ -30,15 +30,11 @@ import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolator;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
-import com.opengamma.strata.market.value.BondGroup;
-import com.opengamma.strata.market.value.LegalEntityGroup;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.IssuerCurveDiscountFactors;
-import com.opengamma.strata.market.view.PriceIndexValues;
-import com.opengamma.strata.market.view.SimplePriceIndexValues;
-import com.opengamma.strata.market.view.ZeroRateDiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.ZeroRateDiscountFactors;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
+import com.opengamma.strata.pricer.rate.PriceIndexValues;
+import com.opengamma.strata.pricer.rate.SimplePriceIndexValues;
 
 /**
  * The data set for testing capital indexed bonds. 

@@ -7,18 +7,16 @@ package com.opengamma.strata.pricer.bond;
 
 import java.time.LocalDate;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.value.CompoundedRateType;
-import com.opengamma.strata.market.view.IssuerCurveDiscountFactors;
-import com.opengamma.strata.market.view.RepoCurveDiscountFactors;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
+import com.opengamma.strata.pricer.CompoundedRateType;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.bond.CapitalIndexedBondPaymentPeriod;
 import com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention;
@@ -138,7 +136,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
    * @param refData  the reference data used to calculate the settlement date
    * @return the present value sensitivity of the bond trade
    */
-  public PointSensitivityBuilder presentValueSensitivity(
+  public PointSensitivities presentValueSensitivity(
       ResolvedCapitalIndexedBondTrade trade,
       RatesProvider ratesProvider,
       LegalEntityDiscountingProvider issuerDiscountFactorsProvider,
@@ -149,7 +147,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
     PointSensitivityBuilder productSensi = productPricer.presentValueSensitivity(trade.getProduct(),
         ratesProvider, issuerDiscountFactorsProvider, settlementDate);
     return presentValueSensitivityFromProductPresentValueSensitivity(
-        trade, ratesProvider, issuerDiscountFactorsProvider, productSensi);
+        trade, ratesProvider, issuerDiscountFactorsProvider, productSensi).build();
   }
 
   /**
@@ -169,7 +167,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
    * @param periodsPerYear  the number of periods per year
    * @return the present value sensitivity of the bond trade
    */
-  public PointSensitivityBuilder presentValueSensitivityWithZSpread(
+  public PointSensitivities presentValueSensitivityWithZSpread(
       ResolvedCapitalIndexedBondTrade trade,
       RatesProvider ratesProvider,
       LegalEntityDiscountingProvider issuerDiscountFactorsProvider,
@@ -183,7 +181,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
     PointSensitivityBuilder productSensi = productPricer.presentValueSensitivityWithZSpread(trade.getProduct(),
         ratesProvider, issuerDiscountFactorsProvider, settlementDate, zSpread, compoundedRateType, periodsPerYear);
     return presentValueSensitivityFromProductPresentValueSensitivity(
-        trade, ratesProvider, issuerDiscountFactorsProvider, productSensi);
+        trade, ratesProvider, issuerDiscountFactorsProvider, productSensi).build();
   }
 
   //-------------------------------------------------------------------------
@@ -320,7 +318,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
    * @param cleanRealPrice  the clean real price
    * @return the present value sensitivity of the settlement
    */
-  public PointSensitivityBuilder presentValueSensitivityFromCleanPrice(
+  public PointSensitivities presentValueSensitivityFromCleanPrice(
       ResolvedCapitalIndexedBondTrade trade,
       RatesProvider ratesProvider,
       LegalEntityDiscountingProvider issuerDiscountFactorsProvider,
@@ -343,7 +341,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
                 .getAmount()));
     if (standardSettlementDate.isEqual(tradeSettlementDate)) {
       return presentValueSensitivityFromProductPresentValueSensitivity(
-          trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard);
+          trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard).build();
     }
     // check coupon payment between two settlement dates
     IssuerCurveDiscountFactors issuerDiscountFactors =
@@ -357,7 +355,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
           issuerDiscountFactors, standardSettlementDate, tradeSettlementDate));
     }
     return presentValueSensitivityFromProductPresentValueSensitivity(
-        trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard.combinedWith(pvSensiDiff));
+        trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard.combinedWith(pvSensiDiff)).build();
   }
 
   /**
@@ -377,7 +375,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
    * @param cleanRealPrice  the clean real price
    * @return the present value sensitivity of the settlement
    */
-  public PointSensitivityBuilder presentValueSensitivityFromCleanPriceWithZSpread(
+  public PointSensitivities presentValueSensitivityFromCleanPriceWithZSpread(
       ResolvedCapitalIndexedBondTrade trade,
       RatesProvider ratesProvider,
       LegalEntityDiscountingProvider issuerDiscountFactorsProvider,
@@ -403,7 +401,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
                 .getAmount()));
     if (standardSettlementDate.isEqual(tradeSettlementDate)) {
       return presentValueSensitivityFromProductPresentValueSensitivity(
-          trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard);
+          trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard).build();
     }
     // check coupon payment between two settlement dates
     IssuerCurveDiscountFactors issuerDiscountFactors =
@@ -432,7 +430,7 @@ public class DiscountingCapitalIndexedBondTradePricer {
           periodsPerYear));
     }
     return presentValueSensitivityFromProductPresentValueSensitivity(
-        trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard.combinedWith(pvSensiDiff));
+        trade, ratesProvider, issuerDiscountFactorsProvider, pvSensiStandard.combinedWith(pvSensiDiff)).build();
   }
 
   //-------------------------------------------------------------------------

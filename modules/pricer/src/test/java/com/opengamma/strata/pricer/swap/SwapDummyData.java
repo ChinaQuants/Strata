@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.pricer.swap;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
@@ -14,13 +12,15 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.basics.index.PriceIndices.GB_RPI;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.MONTHLY;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static com.opengamma.strata.product.swap.SwapLegType.IBOR;
 
 import java.time.Period;
 
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -28,13 +28,13 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.FxIndexObservation;
 import com.opengamma.strata.basics.index.FxIndices;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.FixedRateObservation;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.common.PayReceive;
+import com.opengamma.strata.product.rate.FixedRateComputation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 import com.opengamma.strata.product.swap.CompoundingMethod;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
 import com.opengamma.strata.product.swap.FxReset;
@@ -88,30 +88,28 @@ public final class SwapDummyData {
    */
   public static final FxResetNotionalExchange FX_RESET_NOTIONAL_EXCHANGE_REC_USD = FxResetNotionalExchange.builder()
       .paymentDate(date(2014, 7, 1))
-      .referenceCurrency(Currency.USD)
-      .notional(NOTIONAL)
+      .notionalAmount(CurrencyAmount.of(Currency.USD, NOTIONAL))
       .observation(FxIndexObservation.of(FxIndices.GBP_USD_WM, date(2014, 7, 1), REF_DATA))
       .build();
 
   public static final FxResetNotionalExchange FX_RESET_NOTIONAL_EXCHANGE_PAY_GBP = FxResetNotionalExchange.builder()
       .paymentDate(date(2014, 7, 1))
-      .referenceCurrency(Currency.GBP)
-      .notional(-NOTIONAL)
+      .notionalAmount(CurrencyAmount.of(Currency.GBP, -NOTIONAL))
       .observation(FxIndexObservation.of(FxIndices.GBP_USD_WM, date(2014, 7, 1), REF_DATA))
       .build();
 
   /**
-   * IborRateObservation.
+   * IborRateComputation.
    */
-  public static final IborRateObservation IBOR_RATE_OBSERVATION =
-      IborRateObservation.of(GBP_LIBOR_3M, date(2014, 6, 30), REF_DATA);
+  public static final IborRateComputation IBOR_RATE_COMP =
+      IborRateComputation.of(GBP_LIBOR_3M, date(2014, 6, 30), REF_DATA);
   /**
    * RateAccuralPeriod (ibor).
    */
   public static final RateAccrualPeriod IBOR_RATE_ACCRUAL_PERIOD = RateAccrualPeriod.builder()
       .startDate(date(2014, 7, 2))
       .endDate(date(2014, 10, 2))
-      .rateObservation(IBOR_RATE_OBSERVATION)
+      .rateComputation(IBOR_RATE_COMP)
       .yearFraction(0.25d)
       .build();
   /**
@@ -120,7 +118,7 @@ public final class SwapDummyData {
   public static final RateAccrualPeriod IBOR_RATE_ACCRUAL_PERIOD_2 = RateAccrualPeriod.builder()
       .startDate(date(2014, 10, 2))
       .endDate(date(2015, 1, 2))
-      .rateObservation(IborRateObservation.of(GBP_LIBOR_3M, date(2014, 9, 30), REF_DATA))
+      .rateComputation(IborRateComputation.of(GBP_LIBOR_3M, date(2014, 9, 30), REF_DATA))
       .yearFraction(0.25d)
       .build();
   /**
@@ -182,16 +180,16 @@ public final class SwapDummyData {
       .resolve(REF_DATA);
 
   /**
-   * FixedRateObservation.
+   * FixedRateComputation.
    */
-  public static final FixedRateObservation FIXED_RATE_OBSERVATION = FixedRateObservation.of(0.0123d);
+  public static final FixedRateComputation FIXED_RATE_COMP = FixedRateComputation.of(0.0123d);
   /**
    * RateAccuralPeriod (fixed).
    */
   public static final RateAccrualPeriod FIXED_RATE_ACCRUAL_PERIOD = RateAccrualPeriod.builder()
       .startDate(date(2014, 7, 2))
       .endDate(date(2014, 10, 2))
-      .rateObservation(FIXED_RATE_OBSERVATION)
+      .rateComputation(FIXED_RATE_COMP)
       .yearFraction(0.25d)
       .build();
   /**
@@ -200,7 +198,7 @@ public final class SwapDummyData {
   public static final RateAccrualPeriod FIXED_RATE_ACCRUAL_PERIOD_2 = RateAccrualPeriod.builder()
       .startDate(date(2014, 10, 2))
       .endDate(date(2015, 1, 2))
-      .rateObservation(FIXED_RATE_OBSERVATION)
+      .rateComputation(FIXED_RATE_COMP)
       .yearFraction(0.25d)
       .build();
   /**

@@ -5,10 +5,6 @@
  */
 package com.opengamma.strata.pricer.swaption;
 
-import static com.opengamma.strata.basics.LongShort.LONG;
-import static com.opengamma.strata.basics.LongShort.SHORT;
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 import static com.opengamma.strata.basics.date.DayCounts.THIRTY_U_360;
@@ -17,6 +13,10 @@ import static com.opengamma.strata.basics.schedule.Frequency.P12M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.dateUtc;
+import static com.opengamma.strata.product.common.LongShort.LONG;
+import static com.opengamma.strata.product.common.LongShort.SHORT;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -25,7 +25,7 @@ import java.time.ZonedDateTime;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.LongShort;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
@@ -33,27 +33,27 @@ import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution;
 import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistribution;
-import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
 import com.opengamma.strata.pricer.index.HullWhiteIborFutureDataSet;
+import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParameters;
 import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.pricer.swap.PaymentEventPricer;
+import com.opengamma.strata.product.common.LongShort;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
 import com.opengamma.strata.product.swap.IborRateCalculation;
 import com.opengamma.strata.product.swap.NotionalSchedule;
@@ -234,7 +234,7 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   public void test_presentValue() {
     CurrencyAmount computedRec = PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
     CurrencyAmount computedPay = PRICER.presentValue(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
-    PaymentEventPricer<PaymentEvent> paymentEventPricer = PaymentEventPricer.instance();
+    PaymentEventPricer<PaymentEvent> paymentEventPricer = PaymentEventPricer.standard();
     ResolvedSwapLeg cashFlowEquiv = CashFlowEquivalentCalculator.cashFlowEquivalentSwap(RSWAP_REC, RATE_PROVIDER);
     LocalDate expiryDate = MATURITY.toLocalDate();
     int nPayments = cashFlowEquiv.getPaymentEvents().size();
@@ -295,13 +295,13 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
     MultiCurrencyAmount computedRec = PRICER.currencyExposure(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
     MultiCurrencyAmount computedPay = PRICER.currencyExposure(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivity(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
     MultiCurrencyAmount expectedRec = RATE_PROVIDER.currencyExposure(pointRec.build())
         .plus(PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER));
     assertEquals(computedRec.size(), 1);
     assertEquals(computedRec.getAmount(EUR).getAmount(), expectedRec.getAmount(EUR).getAmount(), NOTIONAL * TOL);
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivity(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityRates(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
     MultiCurrencyAmount expectedPay = RATE_PROVIDER.currencyExposure(pointPay.build())
         .plus(PRICER.presentValue(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER));
     assertEquals(computedPay.size(), 1);
@@ -314,13 +314,13 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
     MultiCurrencyAmount computedPay = PRICER.currencyExposure(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivity(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
     MultiCurrencyAmount expectedRec = RATE_PROVIDER.currencyExposure(pointRec.build())
         .plus(PRICER.presentValue(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY));
     assertEquals(computedRec.size(), 1);
     assertEquals(computedRec.getAmount(EUR).getAmount(), expectedRec.getAmount(EUR).getAmount(), NOTIONAL * TOL);
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivity(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
+        PRICER.presentValueSensitivityRates(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
     MultiCurrencyAmount expectedPay = RATE_PROVIDER.currencyExposure(pointPay.build())
         .plus(PRICER.presentValue(SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY));
     assertEquals(computedPay.size(), 1);
@@ -341,28 +341,28 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivity() {
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivity(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
-    CurveCurrencyParameterSensitivities computedRec = RATE_PROVIDER.curveParameterSensitivity(pointRec.build());
-    CurveCurrencyParameterSensitivities expectedRec =
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
+    CurrencyParameterSensitivities computedRec = RATE_PROVIDER.parameterSensitivity(pointRec.build());
+    CurrencyParameterSensitivities expectedRec =
         FD_CAL.sensitivity(RATE_PROVIDER, (p) -> PRICER.presentValue(SWAPTION_REC_LONG, (p), HW_PROVIDER));
     assertTrue(computedRec.equalWithTolerance(expectedRec, NOTIONAL * FD_TOL * 1000d));
     PointSensitivityBuilder pointPay =
-        PRICER.presentValueSensitivity(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
-    CurveCurrencyParameterSensitivities computedPay = RATE_PROVIDER.curveParameterSensitivity(pointPay.build());
-    CurveCurrencyParameterSensitivities expectedPay =
+        PRICER.presentValueSensitivityRates(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
+    CurrencyParameterSensitivities computedPay = RATE_PROVIDER.parameterSensitivity(pointPay.build());
+    CurrencyParameterSensitivities expectedPay =
         FD_CAL.sensitivity(RATE_PROVIDER, (p) -> PRICER.presentValue(SWAPTION_PAY_SHORT, (p), HW_PROVIDER));
     assertTrue(computedPay.equalWithTolerance(expectedPay, NOTIONAL * FD_TOL * 1000d));
   }
 
   public void test_presentValueSensitivity_atMaturity() {
     PointSensitivityBuilder pointRec =
-        PRICER.presentValueSensitivity(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
-    CurveCurrencyParameterSensitivities computedRec =
-        RATES_PROVIDER_AT_MATURITY.curveParameterSensitivity(pointRec.build());
-    CurveCurrencyParameterSensitivities expectedRec = FD_CAL.sensitivity(
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
+    CurrencyParameterSensitivities computedRec =
+        RATES_PROVIDER_AT_MATURITY.parameterSensitivity(pointRec.build());
+    CurrencyParameterSensitivities expectedRec = FD_CAL.sensitivity(
         RATES_PROVIDER_AT_MATURITY, (p) -> PRICER.presentValue(SWAPTION_REC_LONG, (p), HW_PROVIDER_AT_MATURITY));
     assertTrue(computedRec.equalWithTolerance(expectedRec, NOTIONAL * FD_TOL * 1000d));
-    PointSensitivities pointPay = PRICER.presentValueSensitivity(SWAPTION_PAY_SHORT,
+    PointSensitivities pointPay = PRICER.presentValueSensitivityRates(SWAPTION_PAY_SHORT,
         RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY).build();
     for (PointSensitivity sensi : pointPay.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
@@ -370,12 +370,12 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   }
 
   public void test_presentValueSensitivity_afterMaturity() {
-    PointSensitivities pointRec = PRICER.presentValueSensitivity(
+    PointSensitivities pointRec = PRICER.presentValueSensitivityRates(
         SWAPTION_REC_LONG, RATES_PROVIDER_AFTER_MATURITY, HW_PROVIDER_AFTER_MATURITY).build();
     for (PointSensitivity sensi : pointRec.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
     }
-    PointSensitivities pointPay = PRICER.presentValueSensitivity(
+    PointSensitivities pointPay = PRICER.presentValueSensitivityRates(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AFTER_MATURITY, HW_PROVIDER_AFTER_MATURITY).build();
     for (PointSensitivity sensi : pointPay.getSensitivities()) {
       assertEquals(Math.abs(sensi.getSensitivity()), 0d);
@@ -383,18 +383,18 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   }
 
   public void test_presentValueSensitivity_parity() {
-    CurveCurrencyParameterSensitivities pvSensiRecLong = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivity(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiRecShort = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivity(SWAPTION_REC_SHORT, RATE_PROVIDER, HW_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiPayLong = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivity(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER).build());
-    CurveCurrencyParameterSensitivities pvSensiPayShort = RATE_PROVIDER.curveParameterSensitivity(
-        PRICER.presentValueSensitivity(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiRecLong = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiRecShort = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRates(SWAPTION_REC_SHORT, RATE_PROVIDER, HW_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiPayLong = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRates(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER).build());
+    CurrencyParameterSensitivities pvSensiPayShort = RATE_PROVIDER.parameterSensitivity(
+        PRICER.presentValueSensitivityRates(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER).build());
     assertTrue(pvSensiRecLong.equalWithTolerance(pvSensiRecShort.multipliedBy(-1d), NOTIONAL * TOL));
     assertTrue(pvSensiPayLong.equalWithTolerance(pvSensiPayShort.multipliedBy(-1d), NOTIONAL * TOL));
     PointSensitivities expectedPoint = SWAP_PRICER.presentValueSensitivity(RSWAP_PAY, RATE_PROVIDER).build();
-    CurveCurrencyParameterSensitivities expected = RATE_PROVIDER.curveParameterSensitivity(expectedPoint);
+    CurrencyParameterSensitivities expected = RATE_PROVIDER.parameterSensitivity(expectedPoint);
     assertTrue(expected.equalWithTolerance(pvSensiPayLong.combinedWith(pvSensiRecLong.multipliedBy(-1d)), NOTIONAL * TOL));
     assertTrue(expected.equalWithTolerance(pvSensiRecShort.combinedWith(pvSensiPayShort.multipliedBy(-1d)), NOTIONAL * TOL));
   }
@@ -402,9 +402,9 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivityHullWhiteParameter() {
     DoubleArray computedRec =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray computedPay =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray vols = HW_PROVIDER.getParameters().getVolatility();
     int size = vols.size();
     double[] expectedRec = new double[size];
@@ -434,32 +434,32 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   }
 
   public void test_presentValueSensitivityHullWhiteParameter_atMaturity() {
-    DoubleArray pvSensiRec = PRICER.presentValueSensitivityHullWhiteParameter(
+    DoubleArray pvSensiRec = PRICER.presentValueSensitivityModelParamsHullWhite(
         SWAPTION_REC_LONG, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
     assertTrue(pvSensiRec.equalZeroWithTolerance(NOTIONAL * TOL));
-    DoubleArray pvSensiPay = PRICER.presentValueSensitivityHullWhiteParameter(
+    DoubleArray pvSensiPay = PRICER.presentValueSensitivityModelParamsHullWhite(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AT_MATURITY, HW_PROVIDER_AT_MATURITY);
     assertTrue(pvSensiPay.equalZeroWithTolerance(NOTIONAL * TOL));
   }
 
   public void test_presentValueSensitivityHullWhiteParameter_afterMaturity() {
-    DoubleArray pvSensiRec = PRICER.presentValueSensitivityHullWhiteParameter(
+    DoubleArray pvSensiRec = PRICER.presentValueSensitivityModelParamsHullWhite(
         SWAPTION_REC_LONG, RATES_PROVIDER_AFTER_MATURITY, HW_PROVIDER_AFTER_MATURITY);
     assertTrue(pvSensiRec.equalZeroWithTolerance(NOTIONAL * TOL));
-    DoubleArray pvSensiPay = PRICER.presentValueSensitivityHullWhiteParameter(
+    DoubleArray pvSensiPay = PRICER.presentValueSensitivityModelParamsHullWhite(
         SWAPTION_PAY_SHORT, RATES_PROVIDER_AFTER_MATURITY, HW_PROVIDER_AFTER_MATURITY);
     assertTrue(pvSensiPay.equalZeroWithTolerance(NOTIONAL * TOL));
   }
 
   public void test_presentValueSensitivityHullWhiteParameter_parity() {
     DoubleArray pvSensiRecLong =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_REC_LONG, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray pvSensiRecShort =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_REC_SHORT, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_REC_SHORT, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray pvSensiPayLong =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray pvSensiPayShort =
-        PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
+        PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_PAY_SHORT, RATE_PROVIDER, HW_PROVIDER);
     assertTrue(pvSensiRecLong.equalWithTolerance(pvSensiRecShort.multipliedBy(-1d), NOTIONAL * TOL));
     assertTrue(pvSensiPayLong.equalWithTolerance(pvSensiPayShort.multipliedBy(-1d), NOTIONAL * TOL));
     assertTrue(pvSensiPayLong.equalWithTolerance(pvSensiRecLong, NOTIONAL * TOL));
@@ -473,8 +473,8 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   }
 
   public void regression_curveSensitivity() {
-    PointSensitivities point = PRICER.presentValueSensitivity(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER).build();
-    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point);
+    PointSensitivities point = PRICER.presentValueSensitivityRates(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER).build();
+    CurrencyParameterSensitivities computed = RATE_PROVIDER.parameterSensitivity(point);
     double[] dscExp = new double[] {0.0, 0.0, 0.0, 0.0, -1.4127023229222856E7, -1.744958350376594E7};
     double[] fwdExp = new double[] {0.0, 0.0, 0.0, 0.0, -2.0295973516660026E8, 4.12336887967829E8};
     assertTrue(DoubleArrayMath.fuzzyEquals(computed.getSensitivity(HullWhiteIborFutureDataSet.DSC_NAME, EUR)
@@ -484,7 +484,7 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
   }
 
   public void regression_hullWhiteSensitivity() {
-    DoubleArray computed = PRICER.presentValueSensitivityHullWhiteParameter(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
+    DoubleArray computed = PRICER.presentValueSensitivityModelParamsHullWhite(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
     double[] expected = new double[] {
         2.9365484063149095E7, 3.262667329294093E7, 7.226220286364576E7, 2.4446925038968167E8, 120476.73820821749};
     assertTrue(DoubleArrayMath.fuzzyEquals(computed.toArray(), expected, NOTIONAL * TOL));
