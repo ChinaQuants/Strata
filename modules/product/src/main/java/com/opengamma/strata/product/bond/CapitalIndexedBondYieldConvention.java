@@ -13,13 +13,13 @@ import org.joda.convert.ToString;
 import com.opengamma.strata.collect.ArgChecker;
 
 /**
- * A convention defining accrued interest calculation type for inflation bond securities. 
+ * A convention defining accrued interest calculation type for inflation bond securities.
  * <p>
  * Yield of a bond security is a conventional number representing the internal rate of
  * return of standardized cash flows.
  * When calculating accrued interest, it is necessary to use a formula specific to each 
  * yield convention. Accordingly, the computation of price, convexity and duration from 
- * the yield should be based on this yield convention. 
+ * the yield should be based on this yield convention.
  * <p>
  * "Inflation Instruments: Swap Zero-coupon, Year-on-year and Bonds."
  */
@@ -33,22 +33,22 @@ public enum CapitalIndexedBondYieldConvention {
   /**
    * The UK real yield convention. Used for inflation linked GILTS.
    */
-  INDEX_LINKED_FLOAT("Index-Linked-Float"),
+  GB_IL_FLOAT("GB-I/L-Float"),
 
   /**
    * The UK real yield convention. Used for UK inflation linked corporate bond.
    */
-  UK_IL_BOND("UK-I/L-Bond"),
+  GB_IL_BOND("GB-I/L-Bond"),
 
   /**
    * The Japan simple yield convention for inflation index bond.
    */
-  JAPAN_IL_SIMPLE("Japan-I/L-Simple"),
+  JP_IL_SIMPLE("JP-I/L-Simple"),
 
   /**
    * The Japan compound yield convention for inflation index bond.
    */
-  JAPAN_IL_COMPOUND("Japan-I/L-Compound");
+  JP_IL_COMPOUND("JP-I/L-Compound");
 
   // name
   private final String name;

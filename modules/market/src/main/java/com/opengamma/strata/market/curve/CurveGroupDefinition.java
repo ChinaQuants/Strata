@@ -23,6 +23,7 @@ import org.joda.beans.BeanBuilder;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.ImmutableConstructor;
+import org.joda.beans.ImmutablePreBuild;
 import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
@@ -36,9 +37,9 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.opengamma.strata.basics.market.MarketData;
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.product.ResolvedTrade;
 
@@ -46,18 +47,9 @@ import com.opengamma.strata.product.ResolvedTrade;
  * Provides the definition of how to calibrate a group of curves.
  * <p>
  * A curve group contains one or more entries, each of which contains the definition of a curve
- * and a set of market data keys specifying how the curve is to be used.
- * <p>
- * A curve can be used for multiple purposes and therefore the curve itself contains
- * no information about how it is used.
- * <p>
- * In the simple case a curve is only used for a single purpose. For example, if a curve is
- * used for discounting it will be associated with one key of type {@code DiscountCurveKey}.
- * <p>
- * A single curve can also be used as both a discounting curve and a forward curve.
- * In that case its key set might contain a {@code DiscountCurveKey} and a {@code IborIndexCurveKey}.
- * <p>
- * Every curve must be associated with at least once key.
+ * and a set of currencies and indices specifying how the curve is to be used.
+ * The currencies are used to specify that the curve is to be used as a discount curve.
+ * The indices are used to specify that the curve is to be used as a forward curve.
  */
 @BeanDefinition(builderScope = "private")
 public final class CurveGroupDefinition
@@ -82,6 +74,17 @@ public final class CurveGroupDefinition
   @PropertyDefinition(validate = "notNull")
   private final ImmutableList<NodalCurveDefinition> curveDefinitions;
   /**
+   * The flag indicating if the Jacobian matrices should be computed and stored in metadata or not.
+   */
+  @PropertyDefinition
+  private final boolean computeJacobian;
+  /**
+   * The flag indicating if present value sensitivity to market quotes should be computed and stored in metadata or not.
+   */
+  @PropertyDefinition
+  private final boolean computePvSensitivityToMarketQuote;
+
+  /**
    * Entries for the curves, keyed by the curve name.
    */
   private final ImmutableMap<CurveName, CurveGroupEntry> entriesByName;
@@ -102,6 +105,8 @@ public final class CurveGroupDefinition
 
   /**
    * Returns a curve group definition with the specified name and containing the specified entries.
+   * <p>
+   * The Jacobian matrices are computed. The Present Value sensitivity to Market quotes are not computed.
    *
    * @param name  the name of the curve group
    * @param entries  entries describing the curves in the group
@@ -113,7 +118,7 @@ public final class CurveGroupDefinition
       Collection<CurveGroupEntry> entries,
       Collection<NodalCurveDefinition> curveDefinitions) {
 
-    return new CurveGroupDefinition(name, entries, curveDefinitions);
+    return new CurveGroupDefinition(name, entries, curveDefinitions, true, false);
   }
 
   /**
@@ -127,24 +132,54 @@ public final class CurveGroupDefinition
   CurveGroupDefinition(
       CurveGroupName name,
       Collection<CurveGroupEntry> entries,
-      Collection<NodalCurveDefinition> curveDefinitions) {
+      Collection<NodalCurveDefinition> curveDefinitions,
+      boolean computeJacobian,
+      boolean computePvSensitivityToMarketQuote) {
 
     this.name = ArgChecker.notNull(name, "name");
     this.entries = ImmutableList.copyOf(entries);
     this.curveDefinitions = ImmutableList.copyOf(curveDefinitions);
     entriesByName = entries.stream().collect(toImmutableMap(entry -> entry.getCurveName(), entry -> entry));
     curveDefinitionsByName = curveDefinitions.stream().collect(toImmutableMap(def -> def.getName(), def -> def));
+    this.computeJacobian = computeJacobian;
+    this.computePvSensitivityToMarketQuote = computePvSensitivityToMarketQuote;
     validate();
   }
 
   @ImmutableValidator
   private void validate() {
     Set<CurveName> missingEntries = Sets.difference(curveDefinitionsByName.keySet(), entriesByName.keySet());
-
     if (!missingEntries.isEmpty()) {
       throw new IllegalArgumentException("An entry must be provided for every curve definition but the following " +
           "curves have a definition but no entry: " + missingEntries);
     }
+  }
+
+  @ImmutablePreBuild
+  private static void preBuild(Builder builder) {
+    if (builder.computePvSensitivityToMarketQuote) {
+      builder.computeJacobian = true;
+    }
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Returns a filtered version of this definition with no invalid nodes.
+   * <p>
+   * A curve is formed of a number of nodes, each of which has an associated date.
+   * To be valid, the curve node dates must be in order from earliest to latest.
+   * This method applies rules to remove invalid nodes.
+   * 
+   * @param valuationDate  the valuation date
+   * @param refData  the reference data
+   * @return the resolved definition, that should be used in preference to this one
+   * @throws IllegalArgumentException if the curve nodes are invalid
+   */
+  public CurveGroupDefinition filtered(LocalDate valuationDate, ReferenceData refData) {
+    List<NodalCurveDefinition> filtered = curveDefinitions.stream()
+        .map(ncd -> ncd.filtered(valuationDate, refData))
+        .collect(toImmutableList());
+    return new CurveGroupDefinition(name, entries, filtered, computeJacobian, computePvSensitivityToMarketQuote);
   }
 
   //-------------------------------------------------------------------------
@@ -193,8 +228,8 @@ public final class CurveGroupDefinition
    * Gets the total number of parameters in the group.
    * <p>
    * This returns the total number of parameters in the group, which equals the number of nodes.
-   * The result of {@link #resolvedTrades(LocalDate, MarketData, ReferenceData)}, and
-   * {@link #initialGuesses(LocalDate, MarketData)} will be of this size.
+   * The result of {@link #resolvedTrades(MarketData, ReferenceData)}, and
+   * {@link #initialGuesses(MarketData)} will be of this size.
    * 
    * @return the number of parameters
    */
@@ -207,20 +242,17 @@ public final class CurveGroupDefinition
    * <p>
    * This uses the observed market data to build the trade that each node represents.
    * The result combines the list of trades from each curve in order.
+   * Each trade is created with a quantity of 1.
+   * The valuation date is defined by the market data.
    *
-   * @param valuationDate  the valuation date used when calibrating the curve
-   * @param marketData  the market data required to build a trade for the instrument
+   * @param marketData  the market data required to build a trade for the instrument, including the valuation date
    * @param refData  the reference data, used to resolve the trades
    * @return the list of all trades
    */
-  public ImmutableList<ResolvedTrade> resolvedTrades(
-      LocalDate valuationDate,
-      MarketData marketData,
-      ReferenceData refData) {
-
+  public ImmutableList<ResolvedTrade> resolvedTrades(MarketData marketData, ReferenceData refData) {
     return curveDefinitionsByName.values().stream()
         .flatMap(curveDef -> curveDef.getNodes().stream())
-        .map(node -> node.resolvedTrade(valuationDate, marketData, refData))
+        .map(node -> node.resolvedTrade(1d, marketData, refData))
         .collect(toImmutableList());
   }
 
@@ -228,17 +260,17 @@ public final class CurveGroupDefinition
    * Gets the list of all initial guesses.
    * <p>
    * This returns a list that combines the list of initial guesses from each curve in order.
+   * The valuation date is defined by the market data.
    * 
-   * @param valuationDate  the valuation date used when calibrating the curve
-   * @param marketData  the market data required to build a trade for the instrument
+   * @param marketData  the market data required to build a trade for the instrument, including the valuation date
    * @return the list of all initial guesses
    */
-  public ImmutableList<Double> initialGuesses(LocalDate valuationDate, MarketData marketData) {
+  public ImmutableList<Double> initialGuesses(MarketData marketData) {
     ImmutableList.Builder<Double> result = ImmutableList.builder();
     for (NodalCurveDefinition defn : curveDefinitions) {
       ValueType valueType = defn.getYValueType();
       for (CurveNode node : defn.getNodes()) {
-        result.add(node.initialGuess(valuationDate, marketData, valueType));
+        result.add(node.initialGuess(marketData, valueType));
       }
     }
     return result.build();
@@ -256,7 +288,7 @@ public final class CurveGroupDefinition
     Set<CurveName> curveNames = entries.stream().map(entry -> entry.getCurveName()).collect(toSet());
     List<NodalCurveDefinition> filteredDefinitions =
         curveDefinitions.stream().filter(def -> curveNames.contains(def.getName())).collect(toImmutableList());
-    return new CurveGroupDefinition(name, entries, filteredDefinitions);
+    return new CurveGroupDefinition(name, entries, filteredDefinitions, computeJacobian, computePvSensitivityToMarketQuote);
   }
 
   /**
@@ -266,7 +298,16 @@ public final class CurveGroupDefinition
    * @return a copy of this curve group definition with a different name
    */
   public CurveGroupDefinition withName(CurveGroupName name) {
-    return new CurveGroupDefinition(name, entries, curveDefinitions);
+    return new CurveGroupDefinition(name, entries, curveDefinitions, computeJacobian, computePvSensitivityToMarketQuote);
+  }
+
+  public CurveGroupDefinitionBuilder toBuilder() {
+    return new CurveGroupDefinitionBuilder(
+        name,
+        entriesByName,
+        curveDefinitionsByName,
+        computeJacobian,
+        computePvSensitivityToMarketQuote);
   }
 
   //------------------------- AUTOGENERATED START -------------------------
@@ -334,6 +375,24 @@ public final class CurveGroupDefinition
   }
 
   //-----------------------------------------------------------------------
+  /**
+   * Gets the flag indicating if the Jacobian matrices should be computed and stored in metadata or not.
+   * @return the value of the property
+   */
+  public boolean isComputeJacobian() {
+    return computeJacobian;
+  }
+
+  //-----------------------------------------------------------------------
+  /**
+   * Gets the flag indicating if present value sensitivity to market quotes should be computed and stored in metadata or not.
+   * @return the value of the property
+   */
+  public boolean isComputePvSensitivityToMarketQuote() {
+    return computePvSensitivityToMarketQuote;
+  }
+
+  //-----------------------------------------------------------------------
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
@@ -343,7 +402,9 @@ public final class CurveGroupDefinition
       CurveGroupDefinition other = (CurveGroupDefinition) obj;
       return JodaBeanUtils.equal(name, other.name) &&
           JodaBeanUtils.equal(entries, other.entries) &&
-          JodaBeanUtils.equal(curveDefinitions, other.curveDefinitions);
+          JodaBeanUtils.equal(curveDefinitions, other.curveDefinitions) &&
+          (computeJacobian == other.computeJacobian) &&
+          (computePvSensitivityToMarketQuote == other.computePvSensitivityToMarketQuote);
     }
     return false;
   }
@@ -354,16 +415,20 @@ public final class CurveGroupDefinition
     hash = hash * 31 + JodaBeanUtils.hashCode(name);
     hash = hash * 31 + JodaBeanUtils.hashCode(entries);
     hash = hash * 31 + JodaBeanUtils.hashCode(curveDefinitions);
+    hash = hash * 31 + JodaBeanUtils.hashCode(computeJacobian);
+    hash = hash * 31 + JodaBeanUtils.hashCode(computePvSensitivityToMarketQuote);
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(128);
+    StringBuilder buf = new StringBuilder(192);
     buf.append("CurveGroupDefinition{");
     buf.append("name").append('=').append(name).append(',').append(' ');
     buf.append("entries").append('=').append(entries).append(',').append(' ');
-    buf.append("curveDefinitions").append('=').append(JodaBeanUtils.toString(curveDefinitions));
+    buf.append("curveDefinitions").append('=').append(curveDefinitions).append(',').append(' ');
+    buf.append("computeJacobian").append('=').append(computeJacobian).append(',').append(' ');
+    buf.append("computePvSensitivityToMarketQuote").append('=').append(JodaBeanUtils.toString(computePvSensitivityToMarketQuote));
     buf.append('}');
     return buf.toString();
   }
@@ -396,13 +461,25 @@ public final class CurveGroupDefinition
     private final MetaProperty<ImmutableList<NodalCurveDefinition>> curveDefinitions = DirectMetaProperty.ofImmutable(
         this, "curveDefinitions", CurveGroupDefinition.class, (Class) ImmutableList.class);
     /**
+     * The meta-property for the {@code computeJacobian} property.
+     */
+    private final MetaProperty<Boolean> computeJacobian = DirectMetaProperty.ofImmutable(
+        this, "computeJacobian", CurveGroupDefinition.class, Boolean.TYPE);
+    /**
+     * The meta-property for the {@code computePvSensitivityToMarketQuote} property.
+     */
+    private final MetaProperty<Boolean> computePvSensitivityToMarketQuote = DirectMetaProperty.ofImmutable(
+        this, "computePvSensitivityToMarketQuote", CurveGroupDefinition.class, Boolean.TYPE);
+    /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
         this, null,
         "name",
         "entries",
-        "curveDefinitions");
+        "curveDefinitions",
+        "computeJacobian",
+        "computePvSensitivityToMarketQuote");
 
     /**
      * Restricted constructor.
@@ -419,6 +496,10 @@ public final class CurveGroupDefinition
           return entries;
         case -336166639:  // curveDefinitions
           return curveDefinitions;
+        case -1730091410:  // computeJacobian
+          return computeJacobian;
+        case -2061625469:  // computePvSensitivityToMarketQuote
+          return computePvSensitivityToMarketQuote;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -463,6 +544,22 @@ public final class CurveGroupDefinition
       return curveDefinitions;
     }
 
+    /**
+     * The meta-property for the {@code computeJacobian} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<Boolean> computeJacobian() {
+      return computeJacobian;
+    }
+
+    /**
+     * The meta-property for the {@code computePvSensitivityToMarketQuote} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<Boolean> computePvSensitivityToMarketQuote() {
+      return computePvSensitivityToMarketQuote;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
@@ -473,6 +570,10 @@ public final class CurveGroupDefinition
           return ((CurveGroupDefinition) bean).getEntries();
         case -336166639:  // curveDefinitions
           return ((CurveGroupDefinition) bean).getCurveDefinitions();
+        case -1730091410:  // computeJacobian
+          return ((CurveGroupDefinition) bean).isComputeJacobian();
+        case -2061625469:  // computePvSensitivityToMarketQuote
+          return ((CurveGroupDefinition) bean).isComputePvSensitivityToMarketQuote();
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -497,6 +598,8 @@ public final class CurveGroupDefinition
     private CurveGroupName name;
     private List<CurveGroupEntry> entries = ImmutableList.of();
     private List<NodalCurveDefinition> curveDefinitions = ImmutableList.of();
+    private boolean computeJacobian;
+    private boolean computePvSensitivityToMarketQuote;
 
     /**
      * Restricted constructor.
@@ -514,6 +617,10 @@ public final class CurveGroupDefinition
           return entries;
         case -336166639:  // curveDefinitions
           return curveDefinitions;
+        case -1730091410:  // computeJacobian
+          return computeJacobian;
+        case -2061625469:  // computePvSensitivityToMarketQuote
+          return computePvSensitivityToMarketQuote;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -531,6 +638,12 @@ public final class CurveGroupDefinition
           break;
         case -336166639:  // curveDefinitions
           this.curveDefinitions = (List<NodalCurveDefinition>) newValue;
+          break;
+        case -1730091410:  // computeJacobian
+          this.computeJacobian = (Boolean) newValue;
+          break;
+        case -2061625469:  // computePvSensitivityToMarketQuote
+          this.computePvSensitivityToMarketQuote = (Boolean) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -564,20 +677,25 @@ public final class CurveGroupDefinition
 
     @Override
     public CurveGroupDefinition build() {
+      preBuild(this);
       return new CurveGroupDefinition(
           name,
           entries,
-          curveDefinitions);
+          curveDefinitions,
+          computeJacobian,
+          computePvSensitivityToMarketQuote);
     }
 
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(128);
+      StringBuilder buf = new StringBuilder(192);
       buf.append("CurveGroupDefinition.Builder{");
       buf.append("name").append('=').append(JodaBeanUtils.toString(name)).append(',').append(' ');
       buf.append("entries").append('=').append(JodaBeanUtils.toString(entries)).append(',').append(' ');
-      buf.append("curveDefinitions").append('=').append(JodaBeanUtils.toString(curveDefinitions));
+      buf.append("curveDefinitions").append('=').append(JodaBeanUtils.toString(curveDefinitions)).append(',').append(' ');
+      buf.append("computeJacobian").append('=').append(JodaBeanUtils.toString(computeJacobian)).append(',').append(' ');
+      buf.append("computePvSensitivityToMarketQuote").append('=').append(JodaBeanUtils.toString(computePvSensitivityToMarketQuote));
       buf.append('}');
       return buf.toString();
     }

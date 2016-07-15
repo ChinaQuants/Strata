@@ -7,21 +7,18 @@ package com.opengamma.strata.pricer.bond;
 
 import java.time.LocalDate;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.RepoCurveZeroRateSensitivity;
-import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
-import com.opengamma.strata.market.value.CompoundedRateType;
-import com.opengamma.strata.market.view.IssuerCurveDiscountFactors;
-import com.opengamma.strata.market.view.RepoCurveDiscountFactors;
+import com.opengamma.strata.pricer.CompoundedRateType;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
-import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
+import com.opengamma.strata.pricer.ZeroRateSensitivity;
 import com.opengamma.strata.product.bond.FixedCouponBondPaymentPeriod;
 import com.opengamma.strata.product.bond.ResolvedFixedCouponBond;
 import com.opengamma.strata.product.bond.ResolvedFixedCouponBondTrade;
@@ -30,6 +27,10 @@ import com.opengamma.strata.product.bond.ResolvedFixedCouponBondTrade;
  * Pricer for for rate fixed coupon bond trades.
  * <p>
  * This function provides the ability to price a {@link ResolvedFixedCouponBondTrade}.
+ * 
+ * <h4>Price</h4>
+ * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+ * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
 public class DiscountingFixedCouponBondTradePricer {
 
@@ -70,7 +71,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * The present value of the trade is the value on the valuation date.
    * The result is expressed using the payment currency of the bond.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
@@ -91,7 +92,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * The z-spread is a parallel shift applied to continuously compounded rates or periodic
    * compounded rates of the discounting curve.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
@@ -129,7 +130,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * The present value of the trade is the value on the valuation date.
    * The result is expressed using the payment currency of the bond.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
@@ -176,7 +177,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * The z-spread is a parallel shift applied to continuously compounded rates or periodic
    * compounded rates of the discounting curve.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
@@ -240,20 +241,20 @@ public class DiscountingFixedCouponBondTradePricer {
    * The present value sensitivity of the trade is the sensitivity of the present value to
    * the underlying curves.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
    * @return the present value curve sensitivity of the trade
    */
-  public PointSensitivityBuilder presentValueSensitivity(
+  public PointSensitivities presentValueSensitivity(
       ResolvedFixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider) {
 
     LocalDate settlementDate = trade.getSettlementDate();
     PointSensitivityBuilder sensiProduct = productPricer.presentValueSensitivity(
         trade.getProduct(), provider, settlementDate);
-    return presentValueSensitivityFromProductPresentValueSensitivity(trade, provider, sensiProduct);
+    return presentValueSensitivityFromProductPresentValueSensitivity(trade, provider, sensiProduct).build();
   }
 
   /**
@@ -265,7 +266,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * The z-spread is a parallel shift applied to continuously compounded rates or periodic
    * compounded rates of the discounting curve.
    * <p>
-   * Coupon payments of the underlying product are considered based on the settlement date of the trade. 
+   * Coupon payments of the underlying product are considered based on the settlement date of the trade.
    * 
    * @param trade  the trade
    * @param provider  the rates provider
@@ -274,7 +275,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * @param periodsPerYear  the number of periods per year
    * @return the present value curve sensitivity of the trade
    */
-  public PointSensitivityBuilder presentValueSensitivityWithZSpread(
+  public PointSensitivities presentValueSensitivityWithZSpread(
       ResolvedFixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
@@ -284,7 +285,7 @@ public class DiscountingFixedCouponBondTradePricer {
     LocalDate settlementDate = trade.getSettlementDate();
     PointSensitivityBuilder sensiProduct = productPricer.presentValueSensitivityWithZSpread(
         trade.getProduct(), provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
-    return presentValueSensitivityFromProductPresentValueSensitivity(trade, provider, sensiProduct);
+    return presentValueSensitivityFromProductPresentValueSensitivity(trade, provider, sensiProduct).build();
   }
 
   private PointSensitivityBuilder presentValueSensitivityFromProductPresentValueSensitivity(

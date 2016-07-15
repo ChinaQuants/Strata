@@ -5,13 +5,13 @@
  */
 package com.opengamma.strata.report;
 
-import static com.opengamma.strata.basics.BuySell.BUY;
-import static com.opengamma.strata.basics.BuySell.SELL;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.BuySell.BUY;
+import static com.opengamma.strata.product.common.BuySell.SELL;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -19,13 +19,13 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.AdjustableDate;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.config.Measures;
-import com.opengamma.strata.calc.runner.Results;
+import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.collect.result.Result;
+import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.fra.Fra;
 import com.opengamma.strata.product.fra.FraTrade;
@@ -78,12 +78,12 @@ public class ReportCalculationResultsTest {
 
   //-------------------------------------------------------------------------
   static ReportCalculationResults sut() {
-    Results results = Results.of(1, 1, ImmutableList.of(Result.success(PV)));
+    Results results = Results.of(ImmutableList.of(COLUMN.toHeader()), ImmutableList.of(Result.success(PV)));
     return ReportCalculationResults.of(VAL_DATE, ImmutableList.of(TRADE), ImmutableList.of(COLUMN), results);
   }
 
   static ReportCalculationResults sut2() {
-    Results results = Results.of(1, 1, ImmutableList.of(Result.success(Double.valueOf(25))));
+    Results results = Results.of(ImmutableList.of(COLUMN.toHeader()), ImmutableList.of(Result.success(Double.valueOf(25))));
     return ReportCalculationResults.of(VAL_DATE2, ImmutableList.of(TRADE2), ImmutableList.of(COLUMN2), results);
   }
 

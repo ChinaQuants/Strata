@@ -5,34 +5,33 @@
  */
 package com.opengamma.strata.pricer.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSabrSensitivities;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
-import com.opengamma.strata.pricer.impl.cms.SabrExtrapolationReplicationCmsPeriodPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapLegPricer;
 import com.opengamma.strata.pricer.swaption.SabrParametersSwaptionVolatilities;
@@ -140,24 +139,24 @@ public class SabrExtrapolationReplicationCmsTradePricerTest {
   }
 
   public void test_presentValueSensitivity() {
-    PointSensitivityBuilder pt1 = TRADE_PRICER.presentValueSensitivity(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt2 = TRADE_PRICER.presentValueSensitivity(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder ptProd1 = PRODUCT_PRICER.presentValueSensitivity(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder ptProd2 = PRODUCT_PRICER.presentValueSensitivity(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt1 = TRADE_PRICER.presentValueSensitivityRates(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt2 = TRADE_PRICER.presentValueSensitivityRates(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder ptProd1 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder ptProd2 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
     PointSensitivityBuilder ptPrem = PREMIUM_PRICER.presentValueSensitivity(PREMIUM, RATES_PROVIDER);
-    assertEquals(pt1, ptProd1.combinedWith(ptPrem));
-    assertEquals(pt2, ptProd2);
+    assertEquals(pt1, ptProd1.combinedWith(ptPrem).build());
+    assertEquals(pt2, ptProd2.build());
   }
 
   public void test_presentValueSensitivitySabrParameter() {
-    SwaptionSabrSensitivities pt1 =
-        TRADE_PRICER.presentValueSensitivitySabrParameter(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities pt2 =
-        TRADE_PRICER.presentValueSensitivitySabrParameter(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities ptProd1 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities ptProd2 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt1 =
+        TRADE_PRICER.presentValueSensitivityModelParamsSabr(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt2 =
+        TRADE_PRICER.presentValueSensitivityModelParamsSabr(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities ptProd1 =
+        PRODUCT_PRICER.presentValueSensitivityModelParamsSabr(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES).build();
+    PointSensitivities ptProd2 =
+        PRODUCT_PRICER.presentValueSensitivityModelParamsSabr(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES).build();
     assertEquals(pt1, ptProd1);
     assertEquals(pt2, ptProd2);
   }
@@ -175,11 +174,11 @@ public class SabrExtrapolationReplicationCmsTradePricerTest {
     MultiCurrencyAmount computed1 = TRADE_PRICER.currencyExposure(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount computed2 = TRADE_PRICER.currencyExposure(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount pv1 = TRADE_PRICER.presentValue(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt1 = TRADE_PRICER.presentValueSensitivity(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
-    MultiCurrencyAmount expected1 = RATES_PROVIDER.currencyExposure(pt1.build()).plus(pv1);
+    PointSensitivities pt1 = TRADE_PRICER.presentValueSensitivityRates(CMS_TRADE_PREMIUM, RATES_PROVIDER, VOLATILITIES);
+    MultiCurrencyAmount expected1 = RATES_PROVIDER.currencyExposure(pt1).plus(pv1);
     MultiCurrencyAmount pv2 = TRADE_PRICER.presentValue(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt2 = TRADE_PRICER.presentValueSensitivity(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
-    MultiCurrencyAmount expected2 = RATES_PROVIDER.currencyExposure(pt2.build()).plus(pv2);
+    PointSensitivities pt2 = TRADE_PRICER.presentValueSensitivityRates(CMS_TRADE, RATES_PROVIDER, VOLATILITIES);
+    MultiCurrencyAmount expected2 = RATES_PROVIDER.currencyExposure(pt2).plus(pv2);
     assertEquals(computed1.getAmount(EUR).getAmount(), expected1.getAmount(EUR).getAmount(), NOTIONAL_VALUE * TOL);
     assertEquals(computed2.getAmount(EUR).getAmount(), expected2.getAmount(EUR).getAmount(), NOTIONAL_VALUE * TOL);
   }

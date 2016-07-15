@@ -5,32 +5,33 @@
  */
 package com.opengamma.strata.pricer.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.market.explain.ExplainKey;
+import com.opengamma.strata.market.explain.ExplainMap;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSabrSensitivities;
-import com.opengamma.strata.pricer.impl.cms.SabrExtrapolationReplicationCmsPeriodPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapLegPricer;
 import com.opengamma.strata.pricer.swaption.SabrParametersSwaptionVolatilities;
@@ -124,22 +125,22 @@ public class SabrExtrapolationReplicationCmsProductPricerTest {
   }
 
   public void test_presentValueSensitivity() {
-    PointSensitivityBuilder pt1 = PRODUCT_PRICER.presentValueSensitivity(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt2 = PRODUCT_PRICER.presentValueSensitivity(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder pt1 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder pt2 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
     PointSensitivityBuilder ptCms =
-        CMS_LEG_PRICER.presentValueSensitivity(CMS_LEG, RATES_PROVIDER, VOLATILITIES);
+        CMS_LEG_PRICER.presentValueSensitivityRates(CMS_LEG, RATES_PROVIDER, VOLATILITIES);
     PointSensitivityBuilder ptPay = SWAP_LEG_PRICER.presentValueSensitivity(PAY_LEG, RATES_PROVIDER);
     assertEquals(pt1, ptCms);
     assertEquals(pt2, ptCms.combinedWith(ptPay));
   }
 
   public void test_presentValueSensitivitySabrParameter() {
-    SwaptionSabrSensitivities pt1 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities pt2 =
-        PRODUCT_PRICER.presentValueSensitivitySabrParameter(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities ptCms =
-        CMS_LEG_PRICER.presentValueSensitivitySabrParameter(CMS_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivities pt1 =
+        PRODUCT_PRICER.presentValueSensitivityModelParamsSabr(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES).build();
+    PointSensitivities pt2 =
+        PRODUCT_PRICER.presentValueSensitivityModelParamsSabr(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES).build();
+    PointSensitivities ptCms =
+        CMS_LEG_PRICER.presentValueSensitivityModelParamsSabr(CMS_LEG, RATES_PROVIDER, VOLATILITIES).build();
     assertEquals(pt1, ptCms);
     assertEquals(pt2, ptCms);
   }
@@ -156,10 +157,10 @@ public class SabrExtrapolationReplicationCmsProductPricerTest {
     MultiCurrencyAmount computed1 = PRODUCT_PRICER.currencyExposure(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount computed2 = PRODUCT_PRICER.currencyExposure(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount pv1 = PRODUCT_PRICER.presentValue(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt1 = PRODUCT_PRICER.presentValueSensitivity(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder pt1 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount expected1 = RATES_PROVIDER.currencyExposure(pt1.build()).plus(pv1);
     MultiCurrencyAmount pv2 = PRODUCT_PRICER.presentValue(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
-    PointSensitivityBuilder pt2 = PRODUCT_PRICER.presentValueSensitivity(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder pt2 = PRODUCT_PRICER.presentValueSensitivityRates(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
     MultiCurrencyAmount expected2 = RATES_PROVIDER.currencyExposure(pt2.build()).plus(pv2);
     assertEquals(computed1.getAmount(EUR).getAmount(), expected1.getAmount(EUR).getAmount(), NOTIONAL_VALUE * TOL);
     assertEquals(computed2.getAmount(EUR).getAmount(), expected2.getAmount(EUR).getAmount(), NOTIONAL_VALUE * TOL);
@@ -179,6 +180,19 @@ public class SabrExtrapolationReplicationCmsProductPricerTest {
     CurrencyAmount ccPay = SWAP_LEG_PRICER.currentCash(PAY_LEG, RATES_PROVIDER_ON_PAY);
     assertEquals(cc1, MultiCurrencyAmount.of(ccCms));
     assertEquals(cc2, MultiCurrencyAmount.of(ccCms).plus(ccPay));
+  }
+
+  public void test_pvExplain() {
+    ExplainMap explain1 = PRODUCT_PRICER.explainPresentValue(CMS_ONE_LEG, RATES_PROVIDER, VOLATILITIES);
+    assertEquals(explain1.get(ExplainKey.ENTRY_TYPE).get(), "CmsSwap");
+    assertEquals(explain1.get(ExplainKey.LEGS).get().size(), 1);
+    ExplainMap explain2 = PRODUCT_PRICER.explainPresentValue(CMS_TWO_LEGS, RATES_PROVIDER, VOLATILITIES);
+    assertEquals(explain2.get(ExplainKey.ENTRY_TYPE).get(), "CmsSwap");
+    assertEquals(explain2.get(ExplainKey.LEGS).get().size(), 2);
+    ExplainMap explainCms = CMS_LEG_PRICER.explainPresentValue(CMS_LEG, RATES_PROVIDER, VOLATILITIES);
+    ExplainMap explainOther = SWAP_LEG_PRICER.explainPresentValue(CMS_TWO_LEGS.getPayLeg().get(), RATES_PROVIDER);
+    assertEquals(explain2.get(ExplainKey.LEGS).get().get(0), explainCms);
+    assertEquals(explain2.get(ExplainKey.LEGS).get().get(1), explainOther);
   }
 
 }

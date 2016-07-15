@@ -25,12 +25,12 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.BuySell;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.date.Tenor;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.ReferenceDataNotFoundException;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.TradeTemplate;
+import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
@@ -120,7 +120,7 @@ public final class ThreeLegBasisSwapTemplate
    * <p>
    * The notional is unsigned, with buy/sell determining the direction of the trade.
    * If buying the swap, the rate of the floating flat leg is received from the counterparty,
-   * with the rate of the floating spread leg and the spread of the fixed leg being paid. 
+   * with the rate of the floating spread leg and the spread of the fixed leg being paid.
    * If selling the swap, the opposite occurs.
    * 
    * @param tradeDate  the date of the trade

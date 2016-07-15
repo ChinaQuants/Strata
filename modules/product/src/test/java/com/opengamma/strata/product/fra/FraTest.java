@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.product.fra;
 
-import static com.opengamma.strata.basics.BuySell.BUY;
-import static com.opengamma.strata.basics.BuySell.SELL;
 import static com.opengamma.strata.basics.currency.Currency.AUD;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.NZD;
@@ -24,6 +22,8 @@ import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.BuySell.BUY;
+import static com.opengamma.strata.product.common.BuySell.SELL;
 import static com.opengamma.strata.product.fra.FraDiscountingMethod.AFMA;
 import static com.opengamma.strata.product.fra.FraDiscountingMethod.ISDA;
 import static org.testng.Assert.assertEquals;
@@ -34,14 +34,14 @@ import java.util.Optional;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.TenorAdjustment;
 import com.opengamma.strata.basics.index.ImmutableIborIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.product.rate.IborInterpolatedRateObservation;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.IborInterpolatedRateComputation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 
 /**
  * Test.
@@ -199,7 +199,7 @@ public class FraTest {
     assertEquals(test.getEndDate(), date(2015, 9, 15));
     assertEquals(test.getPaymentDate(), date(2015, 6, 22));
     assertEquals(test.getFixedRate(), 0.25d, 0d);
-    assertEquals(test.getFloatingRate(), IborRateObservation.of(GBP_LIBOR_3M, date(2015, 6, 11), REF_DATA));
+    assertEquals(test.getFloatingRate(), IborRateComputation.of(GBP_LIBOR_3M, date(2015, 6, 11), REF_DATA));
     assertEquals(test.getYearFraction(), ACT_365F.yearFraction(date(2015, 6, 15), date(2015, 9, 15)), 0d);
     assertEquals(test.getDiscounting(), ISDA);
   }
@@ -224,7 +224,7 @@ public class FraTest {
     assertEquals(test.getPaymentDate(), date(2015, 6, 12));
     assertEquals(test.getFixedRate(), 0.25d, 0d);
     assertEquals(test.getFloatingRate(),
-        IborInterpolatedRateObservation.of(GBP_LIBOR_2M, GBP_LIBOR_3M, date(2015, 6, 10), REF_DATA));
+        IborInterpolatedRateComputation.of(GBP_LIBOR_2M, GBP_LIBOR_3M, date(2015, 6, 10), REF_DATA));
     assertEquals(test.getYearFraction(), ACT_365F.yearFraction(date(2015, 6, 12), date(2015, 9, 7)), 0d);
     assertEquals(test.getDiscounting(), ISDA);
   }

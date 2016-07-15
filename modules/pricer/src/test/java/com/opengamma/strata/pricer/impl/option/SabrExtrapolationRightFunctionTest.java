@@ -10,11 +10,11 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.PutCall;
 import com.opengamma.strata.basics.value.ValueDerivatives;
-import com.opengamma.strata.pricer.impl.volatility.smile.function.SabrFormulaData;
-import com.opengamma.strata.pricer.impl.volatility.smile.function.SabrHaganVolatilityFunctionProvider;
-import com.opengamma.strata.pricer.impl.volatility.smile.function.VolatilityFunctionProvider;
+import com.opengamma.strata.pricer.impl.volatility.smile.SabrFormulaData;
+import com.opengamma.strata.pricer.impl.volatility.smile.SabrHaganVolatilityFunctionProvider;
+import com.opengamma.strata.pricer.impl.volatility.smile.VolatilityFunctionProvider;
+import com.opengamma.strata.product.common.PutCall;
 
 /**
  * Test {@link SabrExtrapolationRightFunction}.
@@ -55,11 +55,11 @@ public class SabrExtrapolationRightFunctionTest {
     double strikeIn = 0.08;
     double strikeAt = CUT_OFF_STRIKE;
     double strikeOut = 0.12;
-    double volatilityIn = SABR_FUNCTION.getVolatility(FORWARD, strikeIn, TIME_TO_EXPIRY, SABR_DATA);
+    double volatilityIn = SABR_FUNCTION.volatility(FORWARD, strikeIn, TIME_TO_EXPIRY, SABR_DATA);
     double priceExpectedIn = BlackFormulaRepository.price(FORWARD, strikeIn, TIME_TO_EXPIRY, volatilityIn, true);
     double priceIn = SABR_EXTRAPOLATION.price(strikeIn, PutCall.CALL);
     assertEquals(priceExpectedIn, priceIn, TOLERANCE_PRICE);
-    double volatilityAt = SABR_FUNCTION.getVolatility(FORWARD, strikeAt, TIME_TO_EXPIRY, SABR_DATA);
+    double volatilityAt = SABR_FUNCTION.volatility(FORWARD, strikeAt, TIME_TO_EXPIRY, SABR_DATA);
     double priceExpectedAt = BlackFormulaRepository.price(FORWARD, strikeAt, TIME_TO_EXPIRY, volatilityAt, true);
     double priceAt = SABR_EXTRAPOLATION.price(strikeAt, PutCall.CALL);
     assertEquals(priceExpectedAt, priceAt, TOLERANCE_PRICE);
@@ -79,11 +79,11 @@ public class SabrExtrapolationRightFunctionTest {
     for (int loopexp = 0; loopexp < timeToExpiry.length; loopexp++) {
       SabrExtrapolationRightFunction sabrExtra =
           SabrExtrapolationRightFunction.of(FORWARD, timeToExpiry[loopexp], SABR_DATA, CUT_OFF_STRIKE, MU);
-      double volatilityIn = SABR_FUNCTION.getVolatility(FORWARD, strikeIn, timeToExpiry[loopexp], SABR_DATA);
+      double volatilityIn = SABR_FUNCTION.volatility(FORWARD, strikeIn, timeToExpiry[loopexp], SABR_DATA);
       double priceExpectedIn = BlackFormulaRepository.price(FORWARD, strikeIn, timeToExpiry[loopexp], volatilityIn, true);
       double priceIn = sabrExtra.price(strikeIn, PutCall.CALL);
       assertEquals(priceExpectedIn, priceIn, TOLERANCE_PRICE);
-      double volatilityAt = SABR_FUNCTION.getVolatility(FORWARD, strikeAt, timeToExpiry[loopexp], SABR_DATA);
+      double volatilityAt = SABR_FUNCTION.volatility(FORWARD, strikeAt, timeToExpiry[loopexp], SABR_DATA);
       double priceExpectedAt = BlackFormulaRepository.price(FORWARD, strikeAt, timeToExpiry[loopexp], volatilityAt, true);
       double priceAt = sabrExtra.price(strikeAt, PutCall.CALL);
       assertEquals(priceExpectedAt, priceAt, TOLERANCE_PRICE);
@@ -640,7 +640,7 @@ public class SabrExtrapolationRightFunctionTest {
   }
 
   /**
-   * Extrapolator is not calibrated in this case, then the gap may be produced at the cutoff. 
+   * Extrapolator is not calibrated in this case, then the gap may be produced at the cutoff.
    */
   @Test
   public void smallExpiryTest() {

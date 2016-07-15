@@ -17,11 +17,9 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.sensitivity.FxForwardSensitivity;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.product.fx.ResolvedFxSingle;
@@ -78,7 +76,7 @@ public class DiscountingFxSingleProductPricerTest {
   }
 
   public void test_forwardFxRate() {
-    // forward rate is computed by discounting for any RatesProvider input. 
+    // forward rate is computed by discounting for any RatesProvider input.
     FxRate computed = PRICER.forwardFxRate(FWD, PROVIDER);
     double df1 = PROVIDER.discountFactor(USD, PAYMENT_DATE);
     double df2 = PROVIDER.discountFactor(KRW, PAYMENT_DATE);
@@ -102,11 +100,11 @@ public class DiscountingFxSingleProductPricerTest {
 
   public void test_presentValueSensitivity() {
     PointSensitivities point = PRICER.presentValueSensitivity(FWD, PROVIDER);
-    CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expectedUsd = CAL_FD.sensitivity(
-        (ImmutableRatesProvider) PROVIDER, (p) -> PRICER.presentValue(FWD, (p)).getAmount(USD));
-    CurveCurrencyParameterSensitivities expectedKrw = CAL_FD.sensitivity(
-        (ImmutableRatesProvider) PROVIDER, (p) -> PRICER.presentValue(FWD, (p)).getAmount(KRW));
+    CurrencyParameterSensitivities computed = PROVIDER.parameterSensitivity(point);
+    CurrencyParameterSensitivities expectedUsd =
+        CAL_FD.sensitivity(PROVIDER, (p) -> PRICER.presentValue(FWD, (p)).getAmount(USD));
+    CurrencyParameterSensitivities expectedKrw =
+        CAL_FD.sensitivity(PROVIDER, (p) -> PRICER.presentValue(FWD, (p)).getAmount(KRW));
     assertTrue(computed.equalWithTolerance(expectedUsd.combinedWith(expectedKrw), NOMINAL_USD * FX_RATE * EPS_FD));
   }
 

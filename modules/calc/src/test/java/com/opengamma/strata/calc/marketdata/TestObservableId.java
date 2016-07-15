@@ -5,30 +5,54 @@
  */
 package com.opengamma.strata.calc.marketdata;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-import com.opengamma.strata.basics.market.FieldName;
-import com.opengamma.strata.basics.market.MarketDataFeed;
-import com.opengamma.strata.basics.market.ObservableId;
-import com.opengamma.strata.basics.market.ObservableKey;
-import com.opengamma.strata.basics.market.StandardId;
+import com.opengamma.strata.basics.StandardId;
+import com.opengamma.strata.data.FieldName;
+import com.opengamma.strata.data.ObservableId;
+import com.opengamma.strata.data.ObservableSource;
 
 /**
  * An observable ID implementation used in tests.
  */
-public class TestObservableId implements ObservableId {
+public class TestObservableId
+    implements ObservableId, Serializable {
 
-  private final String id;
-  private final MarketDataFeed marketDataFeed;
+  private static final long serialVersionUID = 1L;
 
-  public TestObservableId(String id, MarketDataFeed marketDataFeed) {
+  private final StandardId id;
+
+  private final ObservableSource observableSource;
+
+  public static TestObservableId of(String id) {
+    return new TestObservableId(id, ObservableSource.NONE);
+  }
+
+  public static TestObservableId of(String id, ObservableSource obsSource) {
+    return new TestObservableId(id, obsSource);
+  }
+
+  public static TestObservableId of(StandardId id) {
+    return new TestObservableId(id, ObservableSource.NONE);
+  }
+
+  public static TestObservableId of(StandardId id, ObservableSource obsSource) {
+    return new TestObservableId(id, obsSource);
+  }
+
+  TestObservableId(String id, ObservableSource obsSource) {
+    this(StandardId.of("test", id), obsSource);
+  }
+
+  TestObservableId(StandardId id, ObservableSource obsSource) {
+    this.observableSource = obsSource;
     this.id = id;
-    this.marketDataFeed = marketDataFeed;
   }
 
   @Override
   public StandardId getStandardId() {
-    return StandardId.of("test", id);
+    return id;
   }
 
   @Override
@@ -37,30 +61,35 @@ public class TestObservableId implements ObservableId {
   }
 
   @Override
-  public MarketDataFeed getMarketDataFeed() {
-    return marketDataFeed;
+  public ObservableSource getObservableSource() {
+    return observableSource;
   }
 
   @Override
-  public ObservableKey toMarketDataKey() {
-    return new TestObservableKey(id);
+  public ObservableId withObservableSource(ObservableSource obsSource) {
+    return new TestObservableId(id, obsSource);
   }
 
+  //-------------------------------------------------------------------------
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
+  public boolean equals(Object obj) {
+    if (this == obj) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    TestObservableId that = (TestObservableId) o;
-    return Objects.equals(id, that.id) &&
-        Objects.equals(marketDataFeed, that.marketDataFeed);
+    TestObservableId that = (TestObservableId) obj;
+    return Objects.equals(id, that.id);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, marketDataFeed);
+    return Objects.hash(id);
+  }
+
+  @Override
+  public String toString() {
+    return "TestObservableId [id=" + id + ", observableSource=" + observableSource + "]";
   }
 }

@@ -25,28 +25,28 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecuritizedProduct;
+import com.opengamma.strata.product.SecurityId;
 
 /**
  * A fixed coupon bond.
  * <p>
- * A fixed coupon bond is a financial instrument that represents a stream of fixed payments. 
+ * A fixed coupon bond is a financial instrument that represents a stream of fixed payments.
  * The payments consist two types: periodic coupon payments and nominal payment.
- * The periodic payments are made {@code n} times a year with a fixed coupon rate at individual coupon dates.   
+ * The periodic payments are made {@code n} times a year with a fixed coupon rate at individual coupon dates.
  * The nominal payment is the unique payment at the final coupon date.
  * <p>
  * The periodic coupon payment schedule is defined using {@link PeriodicSchedule}. 
@@ -56,6 +56,10 @@ import com.opengamma.strata.product.SecuritizedProduct;
  * The accrual factor between two dates is computed {@code dayCount}. 
  * The legal entity of this fixed coupon bond is identified by {@link StandardId}.
  * The enum, {@link FixedCouponBondYieldConvention}, specifies the yield computation convention.
+ * 
+ * <h4>Price</h4>
+ * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+ * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
 @BeanDefinition(constructorScope = "package")
 public final class FixedCouponBond
@@ -132,7 +136,7 @@ public final class FixedCouponBond
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment settlementDateOffset;
   /**
-   * Ex-coupon period. 
+   * Ex-coupon period.
    * <p>
    * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
    * owner of the bond on the payment date but to the owner of the bond on the detachment date.

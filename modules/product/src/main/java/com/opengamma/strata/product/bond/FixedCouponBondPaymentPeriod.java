@@ -29,22 +29,20 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.swap.NotionalPaymentPeriod;
 
 /**
  * A period over which a fixed coupon is paid.
  * <p>
  * A single payment period within a fixed coupon bond, {@link ResolvedFixedCouponBond}.
  * The payments of the fixed coupon bond consist periodic coupon payments and nominal payment.
- * This class represents a single payment of the periodic payments. 
+ * This class represents a single payment of the periodic payments.
  */
 @BeanDefinition
 public final class FixedCouponBondPaymentPeriod
-    implements NotionalPaymentPeriod, ImmutableBean, Serializable {
+    implements BondPaymentPeriod, ImmutableBean, Serializable {
 
   /**
    * The primary currency of the payment period.
@@ -101,7 +99,7 @@ public final class FixedCouponBondPaymentPeriod
    * <p>
    * Some bonds trade ex-coupon before the coupon payment.
    * The coupon is paid not to the owner of the bond on the payment date but to the
-   * owner of the bond on the detachment date. 
+   * owner of the bond on the detachment date.
    * <p>
    * When building, this will default to the end date if not specified.
    */
@@ -169,11 +167,6 @@ public final class FixedCouponBondPaymentPeriod
   @Override
   public LocalDate getPaymentDate() {
     return getEndDate();
-  }
-
-  @Override
-  public CurrencyAmount getNotionalAmount() {
-    return CurrencyAmount.of(currency, notional);
   }
 
   /**

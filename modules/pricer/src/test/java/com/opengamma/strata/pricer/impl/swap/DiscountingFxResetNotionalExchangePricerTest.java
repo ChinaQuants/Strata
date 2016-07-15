@@ -25,29 +25,29 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.google.common.math.DoubleMath;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.FxMatrix;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.index.FxIndexObservation;
 import com.opengamma.strata.basics.index.FxIndices;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.curve.Curve;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.explain.ExplainKey;
 import com.opengamma.strata.market.explain.ExplainMap;
 import com.opengamma.strata.market.explain.ExplainMapBuilder;
-import com.opengamma.strata.market.interpolator.CurveInterpolator;
-import com.opengamma.strata.market.interpolator.CurveInterpolators;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.FxIndexRates;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.ZeroRateSensitivity;
+import com.opengamma.strata.pricer.fx.FxIndexRates;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.SimpleRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
@@ -107,9 +107,9 @@ public class DiscountingFxResetNotionalExchangePricerTest {
       DiscountingFxResetNotionalExchangePricer test = new DiscountingFxResetNotionalExchangePricer();
 
       PointSensitivityBuilder pointSensitivityComputed = test.presentValueSensitivity(expanded[i], prov);
-      CurveCurrencyParameterSensitivities parameterSensitivityComputed = prov.curveParameterSensitivity(
+      CurrencyParameterSensitivities parameterSensitivityComputed = prov.parameterSensitivity(
           pointSensitivityComputed.build());
-      CurveCurrencyParameterSensitivities parameterSensitivityExpected = FD_CALCULATOR.sensitivity(
+      CurrencyParameterSensitivities parameterSensitivityExpected = FD_CALCULATOR.sensitivity(
           prov, (p) -> CurrencyAmount.of(fxReset.getCurrency(), test.presentValue(fxReset, (p))));
       assertTrue(parameterSensitivityComputed.equalWithTolerance(
           parameterSensitivityExpected, Math.abs(expanded[i].getNotional()) * EPS_FD * 10.0));
@@ -139,9 +139,9 @@ public class DiscountingFxResetNotionalExchangePricerTest {
       DiscountingFxResetNotionalExchangePricer test = new DiscountingFxResetNotionalExchangePricer();
 
       PointSensitivityBuilder pointSensitivityComputed = test.forecastValueSensitivity(expanded[i], prov);
-      CurveCurrencyParameterSensitivities parameterSensitivityComputed = prov.curveParameterSensitivity(
+      CurrencyParameterSensitivities parameterSensitivityComputed = prov.parameterSensitivity(
           pointSensitivityComputed.build());
-      CurveCurrencyParameterSensitivities parameterSensitivityExpected = FD_CALCULATOR.sensitivity(
+      CurrencyParameterSensitivities parameterSensitivityExpected = FD_CALCULATOR.sensitivity(
           prov, (p) -> CurrencyAmount.of(fxReset.getCurrency(), test.forecastValue(fxReset, (p))));
       assertTrue(parameterSensitivityComputed.equalWithTolerance(
           parameterSensitivityExpected, Math.abs(expanded[i].getNotional()) * EPS_FD * 10.0));
@@ -239,18 +239,10 @@ public class DiscountingFxResetNotionalExchangePricerTest {
     LocalDate valuationDate = date(2014, 6, 30);
     LocalDate paymentDate = date(2014, 7, 1);
     LocalDate fixingDate = date(2014, 6, 27);
-    FxResetNotionalExchange resetNotionalUSD = FxResetNotionalExchange.builder()
-        .paymentDate(paymentDate)
-        .referenceCurrency(USD)
-        .notional(NOTIONAL)
-        .observation(FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA))
-        .build();
-    FxResetNotionalExchange resetNotionalGBP = FxResetNotionalExchange.builder()
-        .paymentDate(paymentDate)
-        .referenceCurrency(GBP)
-        .notional(-NOTIONAL)
-        .observation(FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA))
-        .build();
+    FxResetNotionalExchange resetNotionalUSD = FxResetNotionalExchange.of(
+        CurrencyAmount.of(USD, NOTIONAL), paymentDate, FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA));
+    FxResetNotionalExchange resetNotionalGBP = FxResetNotionalExchange.of(
+        CurrencyAmount.of(GBP, -NOTIONAL), paymentDate, FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA));
     LocalDateDoubleTimeSeries ts = LocalDateDoubleTimeSeries.of(LocalDate.of(2014, 6, 27), 1.65);
     ImmutableRatesProvider prov = ImmutableRatesProvider.builder(valuationDate)
         .fxRateProvider(FX_MATRIX)
@@ -294,18 +286,10 @@ public class DiscountingFxResetNotionalExchangePricerTest {
     LocalDate valuationDate = date(2014, 6, 27);
     LocalDate paymentDate = date(2014, 7, 1);
     LocalDate fixingDate = date(2014, 6, 27);
-    FxResetNotionalExchange resetNotionalUSD = FxResetNotionalExchange.builder()
-        .paymentDate(paymentDate)
-        .referenceCurrency(USD)
-        .notional(NOTIONAL)
-        .observation(FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA))
-        .build();
-    FxResetNotionalExchange resetNotionalGBP = FxResetNotionalExchange.builder()
-        .paymentDate(paymentDate)
-        .referenceCurrency(GBP)
-        .notional(-NOTIONAL)
-        .observation(FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA))
-        .build();
+    FxResetNotionalExchange resetNotionalUSD = FxResetNotionalExchange.of(
+        CurrencyAmount.of(USD, NOTIONAL), paymentDate, FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA));
+    FxResetNotionalExchange resetNotionalGBP = FxResetNotionalExchange.of(
+        CurrencyAmount.of(GBP, -NOTIONAL), paymentDate, FxIndexObservation.of(GBP_USD_WM, fixingDate, REF_DATA));
     ImmutableRatesProvider prov = ImmutableRatesProvider.builder(valuationDate)
         .fxRateProvider(FX_MATRIX)
         .discountCurve(GBP, DISCOUNT_CURVE_GBP)
@@ -372,12 +356,12 @@ public class DiscountingFxResetNotionalExchangePricerTest {
   // creates a simple provider
   private SimpleRatesProvider createProvider(FxResetNotionalExchange ne) {
     LocalDate paymentDate = ne.getPaymentDate();
-    double paymentTime = ACT_360.relativeYearFraction(VAL_DATE, ne.getPaymentDate());
+    double paymentTime = ACT_360.relativeYearFraction(VAL_DATE, paymentDate);
     Currency currency = ne.getCurrency();
 
     DiscountFactors mockDf = mock(DiscountFactors.class);
     when(mockDf.discountFactor(paymentDate)).thenReturn(DISCOUNT_FACTOR);
-    ZeroRateSensitivity sens = ZeroRateSensitivity.of(currency, paymentDate, -DISCOUNT_FACTOR * paymentTime);
+    ZeroRateSensitivity sens = ZeroRateSensitivity.of(currency, paymentTime, -DISCOUNT_FACTOR * paymentTime);
     when(mockDf.zeroRatePointSensitivity(paymentDate)).thenReturn(sens);
     FxIndexRates mockFxRates = mock(FxIndexRates.class);
     when(mockFxRates.rate(ne.getObservation(), ne.getReferenceCurrency())).thenReturn(FX_RATE);

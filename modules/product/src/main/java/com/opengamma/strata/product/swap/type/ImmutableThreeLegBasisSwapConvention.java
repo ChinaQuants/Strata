@@ -25,11 +25,11 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.PayReceive;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.BuySell;
+import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapLeg;
 import com.opengamma.strata.product.swap.SwapTrade;
@@ -43,8 +43,8 @@ import com.opengamma.strata.product.swap.SwapTrade;
  * The market price is for the difference (spread) between the values of the two floating legs.
  * This convention has three legs, the "spread leg", the "spread floating leg" and the "flat floating leg". 
  * The "spread leg" represented by the fixed leg will be added to the "spread floating leg" 
- * which is typically the leg with the shorter underlying tenor. 
- * Thus the "spread leg" and "spread floating leg" will have the same pay/receive direction. 
+ * which is typically the leg with the shorter underlying tenor.
+ * Thus the "spread leg" and "spread floating leg" will have the same pay/receive direction.
  * <p>
  * The convention is defined by four key dates.
  * <ul>

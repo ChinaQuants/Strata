@@ -8,7 +8,7 @@ package com.opengamma.strata.loader.csv;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static org.testng.Assert.assertEquals;
 
-import java.util.List;
+import java.util.Map;
 
 import org.testng.annotations.Test;
 
@@ -40,13 +40,13 @@ public class RatesCalibrationCsvLoaderTest {
 
   //-------------------------------------------------------------------------
   public void test_parsing() {
-    List<CurveGroupDefinition> test = RatesCalibrationCsvLoader.load(
+    Map<CurveGroupName, CurveGroupDefinition> test = RatesCalibrationCsvLoader.load(
         ResourceLocator.of(GROUPS_1),
         ResourceLocator.of(SETTINGS_1),
         ResourceLocator.of(CALIBRATION_1));
     assertEquals(test.size(), 1);
 
-    assertDefinition(test.get(0));
+    assertDefinition(test.get(CurveGroupName.of("Default")));
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class,
@@ -94,13 +94,13 @@ public class RatesCalibrationCsvLoaderTest {
     assertEquals(entry0.getIndices(), ImmutableSet.of());
     assertEquals(defn0.getName(), CurveName.of("USD-Disc"));
     assertEquals(defn0.getYValueType(), ValueType.ZERO_RATE);
-    assertEquals(defn0.getParameterCount(), 15);
+    assertEquals(defn0.getParameterCount(), 17);
 
     assertEquals(entry1.getDiscountCurrencies(), ImmutableSet.of());
     assertEquals(entry1.getIndices(), ImmutableSet.of(IborIndices.USD_LIBOR_3M));
     assertEquals(defn1.getName(), CurveName.of("USD-3ML"));
     assertEquals(defn1.getYValueType(), ValueType.ZERO_RATE);
-    assertEquals(defn1.getParameterCount(), 25);
+    assertEquals(defn1.getParameterCount(), 27);
   }
 
   //-------------------------------------------------------------------------

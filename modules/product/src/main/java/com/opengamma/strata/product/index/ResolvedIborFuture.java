@@ -25,14 +25,14 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.value.Rounding;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.ResolvedProduct;
 import com.opengamma.strata.product.SecurityId;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 
 /**
  * A futures contract based on an Ibor index, resolved for pricing.
@@ -44,6 +44,14 @@ import com.opengamma.strata.product.rate.IborRateObservation;
  * A {@code ResolvedIborFuture} is bound to data that changes over time, such as holiday calendars.
  * If the data changes, such as the addition of a new holiday, the resolved form will not be updated.
  * Care must be taken when placing the resolved form in a cache or persistence layer.
+ * 
+ * <h4>Price</h4>
+ * The price of an Ibor future is based on the interest rate of the underlying index.
+ * It is defined as {@code (100 - percentRate)}.
+ * <p>
+ * Strata uses <i>decimal prices</i> for Ibor futures in the trade model, pricers and market data.
+ * The decimal price is based on the decimal rate equivalent to the percentage.
+ * For example, a price of 99.32 implies an interest rate of 0.68% which is represented in Strata by 0.9932.
  */
 @BeanDefinition(constructorScope = "package")
 public final class ResolvedIborFuture
@@ -87,7 +95,7 @@ public final class ResolvedIborFuture
    * It will be a well known market index such as 'USD-LIBOR-3M'.
    */
   @PropertyDefinition(validate = "notNull")
-  private final IborRateObservation iborRate;
+  private final IborRateComputation iborRate;
   /**
    * The definition of how to round the futures price, defaulted to no rounding.
    * <p>
@@ -181,7 +189,7 @@ public final class ResolvedIborFuture
       Currency currency,
       double notional,
       double accrualFactor,
-      IborRateObservation iborRate,
+      IborRateComputation iborRate,
       Rounding rounding) {
     JodaBeanUtils.notNull(securityId, "securityId");
     JodaBeanUtils.notNull(currency, "currency");
@@ -267,7 +275,7 @@ public final class ResolvedIborFuture
    * It will be a well known market index such as 'USD-LIBOR-3M'.
    * @return the value of the property, not null
    */
-  public IborRateObservation getIborRate() {
+  public IborRateComputation getIborRate() {
     return iborRate;
   }
 
@@ -370,8 +378,8 @@ public final class ResolvedIborFuture
     /**
      * The meta-property for the {@code iborRate} property.
      */
-    private final MetaProperty<IborRateObservation> iborRate = DirectMetaProperty.ofImmutable(
-        this, "iborRate", ResolvedIborFuture.class, IborRateObservation.class);
+    private final MetaProperty<IborRateComputation> iborRate = DirectMetaProperty.ofImmutable(
+        this, "iborRate", ResolvedIborFuture.class, IborRateComputation.class);
     /**
      * The meta-property for the {@code rounding} property.
      */
@@ -466,7 +474,7 @@ public final class ResolvedIborFuture
      * The meta-property for the {@code iborRate} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<IborRateObservation> iborRate() {
+    public MetaProperty<IborRateComputation> iborRate() {
       return iborRate;
     }
 
@@ -519,7 +527,7 @@ public final class ResolvedIborFuture
     private Currency currency;
     private double notional;
     private double accrualFactor;
-    private IborRateObservation iborRate;
+    private IborRateComputation iborRate;
     private Rounding rounding;
 
     /**
@@ -579,7 +587,7 @@ public final class ResolvedIborFuture
           this.accrualFactor = (Double) newValue;
           break;
         case -1621804100:  // iborRate
-          this.iborRate = (IborRateObservation) newValue;
+          this.iborRate = (IborRateComputation) newValue;
           break;
         case -142444:  // rounding
           this.rounding = (Rounding) newValue;
@@ -690,7 +698,7 @@ public final class ResolvedIborFuture
      * @param iborRate  the new value, not null
      * @return this, for chaining, not null
      */
-    public Builder iborRate(IborRateObservation iborRate) {
+    public Builder iborRate(IborRateComputation iborRate) {
       JodaBeanUtils.notNull(iborRate, "iborRate");
       this.iborRate = iborRate;
       return this;

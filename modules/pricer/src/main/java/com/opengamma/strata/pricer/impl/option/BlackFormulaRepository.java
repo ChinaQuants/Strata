@@ -307,40 +307,6 @@ public final class BlackFormulaRepository {
 
   //-------------------------------------------------------------------------
   /**
-   * Computes the present value of a single option.
-   * 
-   * @param data  the option data
-   * @param lognormalVol  the Black volatility
-   * @return the option present value
-   */
-  public static double price(SimpleOptionData data, double lognormalVol) {
-    ArgChecker.notNull(data, "data");
-    boolean isCall = data.getPutCall().isCall();
-    double price = price(data.getForward(), data.getStrike(), data.getTimeToExpiry(), lognormalVol, isCall);
-    return data.getDiscountFactor() * price;
-  }
-
-  //-------------------------------------------------------------------------
-  /**
-   * Computes the present value of a strip of options all with the same Black volatility.
-   * 
-   * @param data  the array of option data
-   * @param lognormalVol  the Black volatility
-   * @return the option strip present value
-   */
-  public static double price(SimpleOptionData[] data, double lognormalVol) {
-    ArgChecker.noNulls(data, "data");
-    double sum = 0;
-    for (int i = 0; i < data.length; i++) {
-      SimpleOptionData temp = data[i];
-      sum += temp.getDiscountFactor() *
-          price(temp.getForward(), temp.getStrike(), temp.getTimeToExpiry(), lognormalVol, temp.getPutCall().isCall());
-    }
-    return sum;
-  }
-
-  //-------------------------------------------------------------------------
-  /**
    * Computes the forward driftless delta.
    * 
    * @param forward  the forward value of the underlying
@@ -915,7 +881,7 @@ public final class BlackFormulaRepository {
    * Computes the forward vega.
    * <p>
    * This is the sensitivity of the option's forward price wrt the implied volatility (which
-   * is just the the spot vega divided by the the numeraire).
+   * is just the spot vega divided by the numeraire).
    * 
    * @param forward  the forward value of the underlying
    * @param strike  the strike
@@ -958,11 +924,6 @@ public final class BlackFormulaRepository {
 
     double nVal = NORMAL.getPDF(d1);
     return nVal == 0d ? 0d : forward * rootT * nVal;
-  }
-
-  public static double vega(SimpleOptionData data, double lognormalVol) {
-    ArgChecker.notNull(data, "null data");
-    return data.getDiscountFactor() * vega(data.getForward(), data.getStrike(), data.getTimeToExpiry(), lognormalVol);
   }
 
   //-------------------------------------------------------------------------
@@ -1181,10 +1142,45 @@ public final class BlackFormulaRepository {
 
     double intrinsicPrice = Math.max(0., (isCall ? 1 : -1) * (forward - strike));
 
-    double targetPrice = price - intrinsicPrice; // Math.max(0., price - intrinsicPrice) should not used for least
-    // chi square
+    double targetPrice = price - intrinsicPrice;
+    // Math.max(0., price - intrinsicPrice) should not used for least chi square
     double sigmaGuess = 0.3;
     return impliedVolatility(targetPrice, forward, strike, timeToExpiry, sigmaGuess);
+  }
+
+  /**
+   * Computes the log-normal implied volatility and its derivative with respect to price.
+   * 
+   * @param price The forward price, which is the market price divided by the numeraire,
+   *  for example the zero bond p(0,T) for the T-forward measure
+   * @param forward  the forward value of the underlying
+   * @param strike  the strike
+   * @param timeToExpiry  the time to expiry
+   * @param isCall  true for call, false for put
+   * @return log-normal (Black) implied volatility and tis derivative w.r.t. the price
+   */
+  public static ValueDerivatives impliedVolatilityAdjoint(
+      double price,
+      double forward,
+      double strike,
+      double timeToExpiry,
+      boolean isCall) {
+
+    ArgChecker.isTrue(price >= 0d, "negative/NaN price; have {}", price);
+    ArgChecker.isTrue(forward > 0d, "negative/NaN forward; have {}", forward);
+    ArgChecker.isTrue(strike >= 0d, "negative/NaN strike; have {}", strike);
+    ArgChecker.isTrue(timeToExpiry >= 0d, "negative/NaN timeToExpiry; have {}", timeToExpiry);
+
+    ArgChecker.isFalse(Double.isInfinite(forward), "forward is Infinity");
+    ArgChecker.isFalse(Double.isInfinite(strike), "strike is Infinity");
+    ArgChecker.isFalse(Double.isInfinite(timeToExpiry), "timeToExpiry is Infinity");
+
+    double intrinsicPrice = Math.max(0., (isCall ? 1 : -1) * (forward - strike));
+
+    double targetPrice = price - intrinsicPrice;
+    // Math.max(0., price - intrinsicPrice) should not used for least chi square
+    double sigmaGuess = 0.3;
+    return impliedVolatilityAdjoint(targetPrice, forward, strike, timeToExpiry, sigmaGuess);
   }
 
   //-------------------------------------------------------------------------
@@ -1251,70 +1247,32 @@ public final class BlackFormulaRepository {
     return solver.impliedVolatility(otmPrice, volGuess);
   }
 
-  //-------------------------------------------------------------------------
   /**
-   * Computes the implied volatility.
+   * Computes the log-normal (Black) implied volatility of an out-the-money European option starting 
+   * from an initial guess and the derivative of the volatility w.r.t. the price.
    * 
-   * @param data  the option data
-   * @param price  the (market) price of the option
-   * @return the implied volatility
-   */
-  public static double impliedVolatility(SimpleOptionData data, double price) {
-    ArgChecker.notNull(data, "null data");
-    return impliedVolatility(price / data.getDiscountFactor(), data.getForward(), data.getStrike(),
-        data.getTimeToExpiry(), data.getPutCall().isCall());
-  }
-
-  //-------------------------------------------------------------------------
-  /**
-   * Computes the single volatility for a portfolio of European options such that the sum
-   * of Black prices of the options (with that volatility) equals the (market) price of the portfolio.
-   * This is the implied volatility of the portfolio. A concrete example is a cap (floor) which
-   * can be viewed as a portfolio of caplets (floorlets).
+   * @param otmPrice The forward price, which is the market price divided by the numeraire,
+   *  for example the zero bond p(0,T) for the T-forward measure
+   *  This MUST be an OTM price, i.e. a call price for strike >= forward and a put price otherwise.
    * 
-   * @param data  the array of option data
-   * @param price  the (market) price of the portfolio
-   * @return the implied volatility of the portfolio
+   * @param forward  the forward value of the underlying
+   * @param strike  the strike
+   * @param timeToExpiry  the time to expiry
+   * @param volGuess  a guess of the implied volatility
+   * @return log-normal (Black) implied volatility and derivative with respect to the price
    */
-  public static double impliedVolatility(SimpleOptionData[] data, double price) {
-    ArgChecker.notEmpty(data, "no option data given");
-    double intrinsicPrice = 0d;
-    for (SimpleOptionData option : data) {
-      intrinsicPrice += Math.max(0, (option.getPutCall().isCall() ? 1 : -1) * option.getDiscountFactor() *
-          (option.getForward() - option.getStrike()));
-    }
-    ArgChecker.isTrue(price >= intrinsicPrice, "option price ({}) less than intrinsic value ({})", price, intrinsicPrice);
-
-    if (Double.doubleToLongBits(price) == Double.doubleToLongBits(intrinsicPrice)) {
-      return 0d;
-    }
-
-    double sigma = 0.3;
-
-    Function<Double, Double> priceFunc = new Function<Double, Double>() {
-      @Override
-      public Double apply(Double x) {
-        double modelPrice = 0d;
-        for (SimpleOptionData option : data) {
-          modelPrice += price(option, x);
-        }
-        return modelPrice;
-      }
-    };
-
-    Function<Double, Double> vegaFunc = new Function<Double, Double>() {
-      @Override
-      public Double apply(Double x) {
-        double vega = 0d;
-        for (SimpleOptionData option : data) {
-          vega += vega(option, x);
-        }
-        return vega;
-      }
-    };
-
-    GenericImpliedVolatiltySolver solver = new GenericImpliedVolatiltySolver(priceFunc, vegaFunc);
-    return solver.impliedVolatility(price, sigma);
+  public static ValueDerivatives impliedVolatilityAdjoint(
+      double otmPrice,
+      double forward,
+      double strike,
+      double timeToExpiry,
+      double volGuess) {
+    double impliedVolatility = impliedVolatility(otmPrice, forward, strike, timeToExpiry, volGuess);
+    boolean isCall = strike >= forward;
+    ValueDerivatives price = priceAdjoint(forward, strike, timeToExpiry, impliedVolatility, isCall);
+    double dpricedvol = price.getDerivative(3);
+    double dvoldprice = 1.0d / dpricedvol;
+    return ValueDerivatives.of(impliedVolatility, DoubleArray.of(dvoldprice));
   }
 
   //-------------------------------------------------------------------------
@@ -1380,7 +1338,7 @@ public final class BlackFormulaRepository {
   }
 
   /**
-   * Compute the normal implied volatility from a normal volatility using an approximate initial guess and a root-finder.
+   * Compute the log-normal implied volatility from a normal volatility using an approximate initial guess and a root-finder.
    * <p>
    * The forward and the strike must be positive.
    * <p>
@@ -1413,7 +1371,45 @@ public final class BlackFormulaRepository {
   }
 
   /**
-   * Compute the normal implied volatility from a normal volatility using an approximate explicit formula. 
+   * Compute the log-normal implied volatility from a normal volatility using an approximate initial guess and a 
+   * root-finder and compute the derivative of the log-normal volatility with respect to the input normal volatility.
+   * <p>
+   * The forward and the strike must be positive.
+   * <p>
+   * Reference: Hagan, P. S. Volatility conversion calculator. Technical report, Bloomberg.
+   * 
+   * @param forward  the forward rate/price
+   * @param strike  the option strike
+   * @param timeToExpiry  the option time to expiration
+   * @param normalVolatility  the normal implied volatility
+   * @return the Black implied volatility and its derivative
+   */
+  public static ValueDerivatives impliedVolatilityFromNormalApproximatedAdjoint(
+      final double forward,
+      final double strike,
+      final double timeToExpiry,
+      final double normalVolatility) {
+    ArgChecker.isTrue(strike > 0, "strike must be strictly positive");
+    ArgChecker.isTrue(forward > 0, "strike must be strictly positive");
+    // initial guess
+    double guess = impliedVolatilityFromNormalApproximated2(forward, strike, timeToExpiry, normalVolatility);
+    // Newton-Raphson method
+    final Function<Double, Double> func = new Function<Double, Double>() {
+      @Override
+      public Double apply(Double volatility) {
+        return NormalFormulaRepository
+            .impliedVolatilityFromBlackApproximated(forward, strike, timeToExpiry, volatility) - normalVolatility;
+      }
+    };
+    double impliedVolatilityBlack = ROOT_FINDER.getRoot(func, guess);
+    double derivativeInverse = NormalFormulaRepository
+        .impliedVolatilityFromBlackApproximatedAdjoint(forward, strike, timeToExpiry, impliedVolatilityBlack).getDerivative(0);
+    double derivative = 1.0 / derivativeInverse;
+    return ValueDerivatives.of(impliedVolatilityBlack, DoubleArray.of(derivative));
+  }
+
+  /**
+   * Compute the normal implied volatility from a normal volatility using an approximate explicit formula.
    * <p>
    * The formula is usually not good enough to be used as such, but provide a good initial guess for a 
    * root-finding procedure. Use {@link BlackFormulaRepository#impliedVolatilityFromNormalApproximated} for

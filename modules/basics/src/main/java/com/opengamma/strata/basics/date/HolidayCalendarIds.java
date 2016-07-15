@@ -5,7 +5,7 @@
  */
 package com.opengamma.strata.basics.date;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 
 /**
  * Identifiers for common holiday calendars.
@@ -116,6 +116,25 @@ public final class HolidayCalendarIds {
    * This constant references the calendar for Tokyo bank holidays.
    */
   public static final HolidayCalendarId JPTO = HolidayCalendarId.of("JPTO");
+
+  /**
+   * An identifier for the holiday calendar of Sydney, Australia, with code 'AUSY'.
+   * <p>
+   * This constant references the calendar for Sydney bank holidays.
+   */
+  public static final HolidayCalendarId AUSY = HolidayCalendarId.of("AUSY");
+  /**
+   * An identifier for the holiday calendar of Toronto, Canada, with code 'CATO'.
+   * <p>
+   * This constant references the calendar for Toronto bank holidays.
+   */
+  public static final HolidayCalendarId CATO = HolidayCalendarId.of("CATO");
+  /**
+   * An identifier for the holiday calendar of Oslo, Norway, with code 'NOOS'.
+   * <p>
+   * This constant references the calendar for Oslo bank holidays.
+   */
+  public static final HolidayCalendarId NOOS = HolidayCalendarId.of("NOOS");
 
   //-------------------------------------------------------------------------
   /**

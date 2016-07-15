@@ -5,10 +5,12 @@
  */
 package com.opengamma.strata.basics.index;
 
+import static com.opengamma.strata.basics.currency.Currency.AUD;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
+import static com.opengamma.strata.basics.date.HolidayCalendarIds.AUSY;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.USNY;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
@@ -23,8 +25,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
-import com.opengamma.strata.basics.market.ReferenceData;
 
 /**
  * Test Overnight Index.
@@ -36,8 +38,9 @@ public class OvernightIndexTest {
 
   public void test_gbpSonia() {
     OvernightIndex test = OvernightIndex.of("GBP-SONIA");
-    assertEquals(test.getCurrency(), GBP);
     assertEquals(test.getName(), "GBP-SONIA");
+    assertEquals(test.getCurrency(), GBP);
+    assertEquals(test.isActive(), true);
     assertEquals(test.getFixingCalendar(), GBLO);
     assertEquals(test.getPublicationDateOffset(), 0);
     assertEquals(test.getEffectiveDateOffset(), 0);
@@ -98,6 +101,18 @@ public class OvernightIndexTest {
     assertEquals(test.calculateMaturityFromEffective(date(2014, 10, 12), REF_DATA), date(2014, 10, 15));
   }
 
+  public void test_AudAonia() {
+    OvernightIndex test = OvernightIndex.of("AUD-AONIA");
+    assertEquals(test.getName(), "AUD-AONIA");
+    assertEquals(test.getCurrency(), AUD);
+    assertEquals(test.isActive(), true);
+    assertEquals(test.getFixingCalendar(), AUSY);
+    assertEquals(test.getPublicationDateOffset(), 0);
+    assertEquals(test.getEffectiveDateOffset(), 0);
+    assertEquals(test.getDayCount(), ACT_365F);
+    assertEquals(test.toString(), "AUD-AONIA");
+  }
+
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
   static Object[][] data_name() {
@@ -107,6 +122,7 @@ public class OvernightIndexTest {
         {OvernightIndices.EUR_EONIA, "EUR-EONIA"},
         {OvernightIndices.JPY_TONAR, "JPY-TONAR"},
         {OvernightIndices.USD_FED_FUND, "USD-FED-FUND"},
+        {OvernightIndices.AUD_AONIA, "AUD-AONIA"},
     };
   }
 

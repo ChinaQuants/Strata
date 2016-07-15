@@ -5,10 +5,10 @@
  */
 package com.opengamma.strata.pricer.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -18,10 +18,10 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
@@ -30,12 +30,14 @@ import com.opengamma.strata.basics.value.ValueAdjustment;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.explain.ExplainKey;
+import com.opengamma.strata.market.explain.ExplainMap;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSabrSensitivities;
-import com.opengamma.strata.pricer.impl.cms.SabrExtrapolationReplicationCmsPeriodPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
+import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.pricer.swaption.SabrParametersSwaptionVolatilities;
 import com.opengamma.strata.pricer.swaption.SwaptionSabrRateVolatilityDataSet;
 import com.opengamma.strata.product.cms.CmsLeg;
@@ -144,6 +146,8 @@ public class SabrExtrapolationReplicationCmsLegPricerTest {
       new SabrExtrapolationReplicationCmsLegPricer(PERIOD_PRICER);
   private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL =
       new RatesFiniteDifferenceSensitivityCalculator(EPS);
+  private static final DiscountingSwapProductPricer PRICER_SWAP =
+      DiscountingSwapProductPricer.DEFAULT;
 
   //-------------------------------------------------------------------------
   public void test_presentValue() {
@@ -178,65 +182,58 @@ public class SabrExtrapolationReplicationCmsLegPricerTest {
 
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivity() {
-    PointSensitivityBuilder point = LEG_PRICER.presentValueSensitivity(FLOOR_LEG, RATES_PROVIDER, VOLATILITIES);
-    CurveCurrencyParameterSensitivities computed = RATES_PROVIDER.curveParameterSensitivity(point.build());
-    CurveCurrencyParameterSensitivities expected =
+    PointSensitivityBuilder point = LEG_PRICER.presentValueSensitivityRates(FLOOR_LEG, RATES_PROVIDER, VOLATILITIES);
+    CurrencyParameterSensitivities computed = RATES_PROVIDER.parameterSensitivity(point.build());
+    CurrencyParameterSensitivities expected =
         FD_CAL.sensitivity(RATES_PROVIDER, p -> LEG_PRICER.presentValue(FLOOR_LEG, p, VOLATILITIES));
     assertTrue(computed.equalWithTolerance(expected, EPS * NOTIONAL_VALUE_0 * 80d));
   }
 
   public void test_presentValueSensitivity_afterPay() {
     PointSensitivityBuilder point =
-        LEG_PRICER.presentValueSensitivity(COUPON_LEG, RATES_PROVIDER_AFTER_PERIOD, VOLATILITIES_AFTER_PERIOD);
-    CurveCurrencyParameterSensitivities computed = RATES_PROVIDER_AFTER_PERIOD.curveParameterSensitivity(point.build());
-    CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(
+        LEG_PRICER.presentValueSensitivityRates(COUPON_LEG, RATES_PROVIDER_AFTER_PERIOD, VOLATILITIES_AFTER_PERIOD);
+    CurrencyParameterSensitivities computed = RATES_PROVIDER_AFTER_PERIOD.parameterSensitivity(point.build());
+    CurrencyParameterSensitivities expected = FD_CAL.sensitivity(
         RATES_PROVIDER_AFTER_PERIOD, p -> LEG_PRICER.presentValue(COUPON_LEG, p, VOLATILITIES_AFTER_PERIOD));
     assertTrue(computed.equalWithTolerance(expected, EPS * NOTIONAL_VALUE_0 * 10d));
   }
 
   public void test_presentValueSensitivity_ended() {
-    PointSensitivityBuilder computed = LEG_PRICER.presentValueSensitivity(CAP_LEG, RATES_PROVIDER_ENDED, VOLATILITIES_ENDED);
+    PointSensitivityBuilder computed = LEG_PRICER.presentValueSensitivityRates(CAP_LEG, RATES_PROVIDER_ENDED, VOLATILITIES_ENDED);
     assertEquals(computed, PointSensitivityBuilder.none());
   }
 
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivitySabrParameter() {
-    SwaptionSabrSensitivities computed =
-        LEG_PRICER.presentValueSensitivitySabrParameter(FLOOR_LEG, RATES_PROVIDER, VOLATILITIES);
-    SwaptionSabrSensitivities expected = SwaptionSabrSensitivities.empty();
+    PointSensitivityBuilder computed =
+        LEG_PRICER.presentValueSensitivityModelParamsSabr(FLOOR_LEG, RATES_PROVIDER, VOLATILITIES);
+    PointSensitivityBuilder expected = PointSensitivityBuilder.none();
     List<CmsPeriod> cms = FLOOR_LEG.getCmsPeriods();
     int size = cms.size();
     for (int i = 0; i < size; ++i) {
-      expected = expected.add(
-          PERIOD_PRICER.presentValueSensitivitySabrParameter(cms.get(i), RATES_PROVIDER, VOLATILITIES));
+      expected = expected.combinedWith(
+          PERIOD_PRICER.presentValueSensitivityModelParamsSabr(cms.get(i), RATES_PROVIDER, VOLATILITIES));
     }
     assertEquals(computed, expected);
   }
 
   public void test_presentValueSensitivitySabrParameter_afterPay() {
-    SwaptionSabrSensitivities computed =
-        LEG_PRICER.presentValueSensitivitySabrParameter(FLOOR_LEG, RATES_PROVIDER_AFTER_PERIOD, VOLATILITIES_AFTER_PERIOD);
-    SwaptionSabrSensitivities expected = SwaptionSabrSensitivities.empty();
+    PointSensitivityBuilder computed =
+        LEG_PRICER.presentValueSensitivityModelParamsSabr(FLOOR_LEG, RATES_PROVIDER_AFTER_PERIOD, VOLATILITIES_AFTER_PERIOD);
+    PointSensitivityBuilder expected = PointSensitivityBuilder.none();
     List<CmsPeriod> cms = FLOOR_LEG.getCmsPeriods();
     int size = cms.size();
     for (int i = 0; i < size; ++i) {
-      expected = expected.add(PERIOD_PRICER.presentValueSensitivitySabrParameter(
+      expected = expected.combinedWith(PERIOD_PRICER.presentValueSensitivityModelParamsSabr(
           cms.get(i), RATES_PROVIDER_AFTER_PERIOD, VOLATILITIES_AFTER_PERIOD));
     }
     assertEquals(computed, expected);
   }
 
   public void test_presentValueSensitivitySabrParameter_ended() {
-    SwaptionSabrSensitivities computed =
-        LEG_PRICER.presentValueSensitivitySabrParameter(CAP_LEG, RATES_PROVIDER_ENDED, VOLATILITIES_ENDED);
-    List<CmsPeriod> cms = CAP_LEG.getCmsPeriods();
-    int size = cms.size();
-    for (int i = 0; i < size; ++i) {
-      assertEquals(computed.getSensitivities().get(i).getAlphaSensitivity(), 0d);
-      assertEquals(computed.getSensitivities().get(i).getBetaSensitivity(), 0d);
-      assertEquals(computed.getSensitivities().get(i).getRhoSensitivity(), 0d);
-      assertEquals(computed.getSensitivities().get(i).getNuSensitivity(), 0d);
-    }
+    PointSensitivities computed =
+        LEG_PRICER.presentValueSensitivityModelParamsSabr(CAP_LEG, RATES_PROVIDER_ENDED, VOLATILITIES_ENDED).build();
+    assertEquals(computed, PointSensitivities.empty());
   }
 
   //-------------------------------------------------------------------------
@@ -288,6 +285,36 @@ public class SabrExtrapolationReplicationCmsLegPricerTest {
     CurrencyAmount computed = LEG_PRICER.currentCash(leg, RATES_PROVIDER_ON_PAY, VOLATILITIES_ON_PAY);
     assertEquals(computed.getAmount(),
         NOTIONAL_VALUE_1 * (OBS_INDEX - CAP_VALUE + FLOOR_VALUE_1 - OBS_INDEX) * 367d / 360d, NOTIONAL_VALUE_0 * TOL);
+  }
+  
+  //-------------------------------------------------------------------------
+  public void test_explainPresentValue() {
+    ExplainMap explain = LEG_PRICER.explainPresentValue(CAP_LEG, RATES_PROVIDER, VOLATILITIES);
+    assertEquals(explain.get(ExplainKey.ENTRY_TYPE).get(), "CmsLeg");
+    assertEquals(explain.get(ExplainKey.PAY_RECEIVE).get().toString(), "Receive");
+    assertEquals(explain.get(ExplainKey.PAYMENT_CURRENCY).get().getCode(), "EUR");
+    assertEquals(explain.get(ExplainKey.START_DATE).get(), LocalDate.of(2015, 10, 21));
+    assertEquals(explain.get(ExplainKey.END_DATE).get(), LocalDate.of(2020, 10, 21));
+    assertEquals(explain.get(ExplainKey.INDEX).get().toString(), "EUR-EURIBOR-1100-5Y");
+    assertEquals(explain.get(ExplainKey.PRESENT_VALUE).get().getAmount(), 39728.51321029542);
+    
+    List<ExplainMap> paymentPeriods = explain.get(ExplainKey.PAYMENT_PERIODS).get();
+    assertEquals(paymentPeriods.size(), 5);
+    //Test First Period
+    ExplainMap cmsPeriod0 = paymentPeriods.get(0);
+    assertEquals(cmsPeriod0.get(ExplainKey.ENTRY_TYPE).get(), "CmsCapletPeriod");
+    assertEquals(cmsPeriod0.get(ExplainKey.STRIKE_VALUE).get(), 0.0125d);
+    assertEquals(cmsPeriod0.get(ExplainKey.NOTIONAL).get().getAmount(), 1000000d);
+    assertEquals(cmsPeriod0.get(ExplainKey.PAYMENT_DATE).get(), LocalDate.of(2016, 10, 21));
+    assertEquals(cmsPeriod0.get(ExplainKey.DISCOUNT_FACTOR).get(), 0.9820085531995826d);
+    assertEquals(cmsPeriod0.get(ExplainKey.START_DATE).get(), LocalDate.of(2015, 10, 21));
+    assertEquals(cmsPeriod0.get(ExplainKey.END_DATE).get(), LocalDate.of(2016, 10, 21));
+    assertEquals(cmsPeriod0.get(ExplainKey.FIXING_DATE).get(), LocalDate.of(2015, 10, 19));
+    assertEquals(cmsPeriod0.get(ExplainKey.ACCRUAL_YEAR_FRACTION).get(), 1.0166666666666666d);
+    double forwardSwapRate = PRICER_SWAP.parRate(CAP_LEG.getCmsPeriods().get(0).getUnderlyingSwap(), RATES_PROVIDER);
+    assertEquals(cmsPeriod0.get(ExplainKey.FORWARD_RATE).get(), forwardSwapRate);
+    CurrencyAmount pv = PERIOD_PRICER.presentValue(CAP_LEG.getCmsPeriods().get(0), RATES_PROVIDER, VOLATILITIES);
+    assertEquals(cmsPeriod0.get(ExplainKey.PRESENT_VALUE).get(), pv);
   }
 
 }

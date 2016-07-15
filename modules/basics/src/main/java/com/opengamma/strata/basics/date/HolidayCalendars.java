@@ -6,7 +6,7 @@
 package com.opengamma.strata.basics.date;
 
 import com.google.common.base.Splitter;
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.named.ExtendedEnum;
 
 /**
@@ -61,7 +61,7 @@ public final class HolidayCalendars {
    * Obtains an instance from the set of standard holiday calendars.
    * <p>
    * The unique name identifies the calendar in the <i>standard</i> source of calendars.
-   * The standard source is loaded at startup based on the the {@code HolidayCalendar.ini} file.
+   * The standard source is loaded at startup based on the {@code HolidayCalendar.ini} file.
    * <p>
    * Applications should generally avoid using this method.
    * Instead, applications should refer to holidays using {@link HolidayCalendarId},

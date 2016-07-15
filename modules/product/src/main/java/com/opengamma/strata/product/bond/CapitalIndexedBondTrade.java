@@ -24,21 +24,23 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Payment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.ResolvableTrade;
 import com.opengamma.strata.product.SecuritizedProductTrade;
 import com.opengamma.strata.product.TradeInfo;
-import com.opengamma.strata.product.rate.RateObservation;
-import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.product.swap.PaymentPeriod;
+import com.opengamma.strata.product.rate.RateComputation;
 
 /**
  * A trade representing a capital indexed bond.
  * <p>
  * A trade in an underlying {@link CapitalIndexedBond}.
+ * 
+ * <h4>Price</h4>
+ * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+ * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
 @BeanDefinition(constructorScope = "package")
 public final class CapitalIndexedBondTrade
@@ -70,6 +72,9 @@ public final class CapitalIndexedBondTrade
    * The <i>clean</i> price at which the bond was traded.
    * <p>
    * The "clean" price excludes any accrued interest.
+   * <p>
+   * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+   * For example, a price of 99.32% is represented in Strata by 0.9932.
    */
   @PropertyDefinition(validate = "ArgChecker.notNegative", overrideGet = true)
   private final double price;
@@ -91,9 +96,9 @@ public final class CapitalIndexedBondTrade
     if (settlementDate.isBefore(resolvedProduct.getStartDate())) {
       throw new IllegalArgumentException("Settlement date must not be before bond starts");
     }
-    PaymentPeriod settlement;
-    if (product.getYieldConvention().equals(CapitalIndexedBondYieldConvention.INDEX_LINKED_FLOAT)) {
-      settlement = KnownAmountPaymentPeriod.of(
+    BondPaymentPeriod settlement;
+    if (product.getYieldConvention().equals(CapitalIndexedBondYieldConvention.GB_IL_FLOAT)) {
+      settlement = KnownAmountBondPaymentPeriod.of(
           Payment.of(product.getCurrency(),
               -product.getNotional() * quantity * (price + accruedInterest), settlementDate),
           SchedulePeriod.of(
@@ -102,12 +107,12 @@ public final class CapitalIndexedBondTrade
               product.getAccrualSchedule().getStartDate(),
               settlementDate));
     } else {
-      RateObservation rateObservation = product.getRateCalculation().createRateObservation(settlementDate);
+      RateComputation rateComputation = product.getRateCalculation().createRateComputation(settlementDate);
       settlement = CapitalIndexedBondPaymentPeriod.builder()
           .startDate(resolvedProduct.getStartDate())
           .unadjustedStartDate(product.getAccrualSchedule().getStartDate())
           .endDate(settlementDate)
-          .rateObservation(rateObservation)
+          .rateComputation(rateComputation)
           .currency(product.getCurrency())
           .notional(-product.getNotional() * quantity * (price + accruedInterest))
           .realCoupon(1d)
@@ -240,6 +245,9 @@ public final class CapitalIndexedBondTrade
    * Gets the <i>clean</i> price at which the bond was traded.
    * <p>
    * The "clean" price excludes any accrued interest.
+   * <p>
+   * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+   * For example, a price of 99.32% is represented in Strata by 0.9932.
    * @return the value of the property
    */
   @Override
@@ -572,6 +580,9 @@ public final class CapitalIndexedBondTrade
      * Sets the <i>clean</i> price at which the bond was traded.
      * <p>
      * The "clean" price excludes any accrued interest.
+     * <p>
+     * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+     * For example, a price of 99.32% is represented in Strata by 0.9932.
      * @param price  the new value
      * @return this, for chaining, not null
      */

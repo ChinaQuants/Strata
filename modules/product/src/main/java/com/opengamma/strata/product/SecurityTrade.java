@@ -23,7 +23,7 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 
 /**
  * A trade representing the purchase or sale of a security,
@@ -38,7 +38,7 @@ import com.opengamma.strata.basics.market.ReferenceData;
  */
 @BeanDefinition(constructorScope = "package")
 public final class SecurityTrade
-    implements FinanceTrade, SecurityQuantity, ImmutableBean, Serializable {
+    implements Trade, SecurityQuantity, ImmutableBean, Serializable {
 
   /**
    * The additional trade information, defaulted to an empty instance.
@@ -102,7 +102,7 @@ public final class SecurityTrade
    * @param refData  the reference data used to 
    * @return an equivalent trade with the security resolved
    */
-  public FinanceTrade resolveSecurity(ReferenceData refData) {
+  public Trade resolveSecurity(ReferenceData refData) {
     Security security = refData.getValue(securityId);
     return security.createTrade(info, quantity, price, refData);
   }

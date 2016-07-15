@@ -25,7 +25,7 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.ResolvedProduct;
 import com.opengamma.strata.product.swap.ResolvedSwapLeg;
@@ -48,22 +48,22 @@ public final class ResolvedIborCapFloor
   /**
    * The Ibor cap/floor leg of the product.
    * <p>
-   * This is associated with periodic payments based on Ibor rate. 
-   * The payments are Ibor caplets or Ibor floorlets. 
+   * This is associated with periodic payments based on Ibor rate.
+   * The payments are Ibor caplets or Ibor floorlets.
    */
   @PropertyDefinition(validate = "notNull")
   private final ResolvedIborCapFloorLeg capFloorLeg;
   /**
-   * The optional pay leg of the product. 
+   * The optional pay leg of the product.
    * <p>
-   * These periodic payments are not made for typical cap/floor products. Instead the premium is paid upfront. 
+   * These periodic payments are not made for typical cap/floor products. Instead the premium is paid upfront.
    */
   @PropertyDefinition(get = "optional")
   private final ResolvedSwapLeg payLeg;
 
   //-------------------------------------------------------------------------
   /**
-   * Obtains an instance from a cap/floor leg with no pay leg. 
+   * Obtains an instance from a cap/floor leg with no pay leg.
    * <p>
    * The pay leg is absent in the resulting cap/floor.
    * 
@@ -76,7 +76,7 @@ public final class ResolvedIborCapFloor
   }
 
   /**
-   * Obtains an instance from a cap/floor leg and a pay leg. 
+   * Obtains an instance from a cap/floor leg and a pay leg.
    * 
    * @param capFloorLeg  the cap/floor leg
    * @param payLeg  the pay leg

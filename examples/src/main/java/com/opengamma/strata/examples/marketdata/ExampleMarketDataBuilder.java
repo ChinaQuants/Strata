@@ -28,36 +28,25 @@ import com.google.common.collect.Maps;
 import com.google.common.io.CharSource;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.FxRate;
-import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.index.OvernightIndex;
-import com.opengamma.strata.basics.index.PriceIndex;
-import com.opengamma.strata.basics.market.FxRateId;
-import com.opengamma.strata.basics.market.ObservableId;
-import com.opengamma.strata.calc.config.MarketDataRules;
-import com.opengamma.strata.calc.marketdata.MarketEnvironment;
-import com.opengamma.strata.calc.marketdata.MarketEnvironmentBuilder;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.FxRateId;
+import com.opengamma.strata.data.ImmutableMarketData;
+import com.opengamma.strata.data.ImmutableMarketDataBuilder;
+import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitIndexCreditCurveDataParser;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitSingleNameCreditCurveDataParser;
 import com.opengamma.strata.examples.marketdata.credit.markit.MarkitYieldCurveDataParser;
-import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.loader.csv.FixingSeriesCsvLoader;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCurvesCsvLoader;
 import com.opengamma.strata.market.curve.CurveGroup;
-import com.opengamma.strata.market.curve.CurveGroupName;
-import com.opengamma.strata.market.curve.IsdaYieldCurveInputs;
-import com.opengamma.strata.market.id.CurveGroupId;
-import com.opengamma.strata.market.id.CurveId;
-import com.opengamma.strata.market.id.DiscountCurveId;
-import com.opengamma.strata.market.id.IborIndexCurveId;
-import com.opengamma.strata.market.id.IsdaYieldCurveInputsId;
-import com.opengamma.strata.market.id.OvernightIndexCurveId;
-import com.opengamma.strata.market.id.PriceIndexCurveId;
-import com.opengamma.strata.market.id.QuoteId;
+import com.opengamma.strata.market.curve.CurveId;
+import com.opengamma.strata.market.observable.QuoteId;
+import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
+import com.opengamma.strata.pricer.credit.IsdaYieldCurveInputs;
+import com.opengamma.strata.pricer.credit.IsdaYieldCurveInputsId;
 
 /**
  * Builds a market data snapshot from user-editable files in a prescribed directory structure.
@@ -188,8 +177,8 @@ public abstract class ExampleMarketDataBuilder {
    * @param marketDataDate  the date of the market data
    * @return the snapshot
    */
-  public MarketEnvironment buildSnapshot(LocalDate marketDataDate) {
-    MarketEnvironmentBuilder builder = MarketEnvironment.builder(marketDataDate);
+  public ImmutableMarketData buildSnapshot(LocalDate marketDataDate) {
+    ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(marketDataDate);
     loadFixingSeries(builder);
     loadRatesCurves(builder, marketDataDate);
     loadQuotes(builder, marketDataDate);
@@ -199,16 +188,14 @@ public abstract class ExampleMarketDataBuilder {
   }
 
   /**
-   * Gets the market data rules to use with this environment.
+   * Gets the rates market lookup to use with this environment.
    * 
-   * @return the market data rules
+   * @param marketDataDate  the date of the market data
+   * @return the rates lookup
    */
-  public MarketDataRules rules() {
-    // TODO - should be loaded from a CSV file - format to be defined
-    return MarketDataRules.anyTarget(
-        MarketDataMappingsBuilder.create()
-            .curveGroup(CurveGroupName.of("Default"))
-            .build());
+  public RatesMarketDataLookup ratesLookup(LocalDate marketDataDate) {
+    SortedMap<LocalDate, CurveGroup> curves = loadAllRatesCurves();
+    return RatesMarketDataLookup.of(curves.get(marketDataDate));
   }
 
   /**
@@ -239,7 +226,7 @@ public abstract class ExampleMarketDataBuilder {
   }
 
   //-------------------------------------------------------------------------
-  private void loadFixingSeries(MarketEnvironmentBuilder builder) {
+  private void loadFixingSeries(ImmutableMarketDataBuilder builder) {
     if (!subdirectoryExists(HISTORICAL_FIXINGS_DIR)) {
       log.debug("No historical fixings directory found");
       return;
@@ -247,13 +234,13 @@ public abstract class ExampleMarketDataBuilder {
     try {
       Collection<ResourceLocator> fixingSeriesResources = getAllResources(HISTORICAL_FIXINGS_DIR);
       Map<ObservableId, LocalDateDoubleTimeSeries> fixingSeries = FixingSeriesCsvLoader.load(fixingSeriesResources);
-      builder.addTimeSeries(fixingSeries);
+      builder.addTimeSeriesMap(fixingSeries);
     } catch (Exception e) {
       log.error("Error loading fixing series", e);
     }
   }
 
-  private void loadRatesCurves(MarketEnvironmentBuilder builder, LocalDate marketDataDate) {
+  private void loadRatesCurves(ImmutableMarketDataBuilder builder, LocalDate marketDataDate) {
     if (!subdirectoryExists(CURVES_DIR)) {
       log.debug("No rates curves directory found");
       return;
@@ -276,14 +263,12 @@ public abstract class ExampleMarketDataBuilder {
           RatesCurvesCsvLoader.load(marketDataDate, curveGroupsResource, curveSettingsResource, curvesResources);
 
       for (CurveGroup group : ratesCurves) {
-        // add entry for each group
-        builder.addValue(CurveGroupId.of(group.getName()), group);
-        // add entry for higher level discount curve ID, needed for the examples to work without market data building
+        // add entry for higher level discount curve name
         group.getDiscountCurves().forEach(
-            (ccy, curve) -> builder.addValue(DiscountCurveId.of(ccy, group.getName()), curve));
-        // add entry for higher level forward curve ID, needed for the examples to work without market data building
+            (ccy, curve) -> builder.addValue(CurveId.of(group.getName(), curve.getName()), curve));
+        // add entry for higher level forward curve name
         group.getForwardCurves().forEach(
-            (idx, curve) -> builder.addValue(createCurveId(idx, group.getName()), curve));
+            (idx, curve) -> builder.addValue(CurveId.of(group.getName(), curve.getName()), curve));
       }
 
     } catch (Exception e) {
@@ -291,20 +276,8 @@ public abstract class ExampleMarketDataBuilder {
     }
   }
 
-  // creates a forward curve id
-  private static CurveId createCurveId(Index index, CurveGroupName curveGroup) {
-    if (index instanceof IborIndex) {
-      return IborIndexCurveId.of((IborIndex) index, curveGroup);
-    } else if (index instanceof OvernightIndex) {
-      return OvernightIndexCurveId.of((OvernightIndex) index, curveGroup);
-    } else if (index instanceof PriceIndex) {
-      return PriceIndexCurveId.of((PriceIndex) index, curveGroup);
-    }
-    throw new IllegalArgumentException("Unexpected index type " + index.getClass().getName());
-  }
-
   // load quotes
-  private void loadQuotes(MarketEnvironmentBuilder builder, LocalDate marketDataDate) {
+  private void loadQuotes(ImmutableMarketDataBuilder builder, LocalDate marketDataDate) {
     if (!subdirectoryExists(QUOTES_DIR)) {
       log.debug("No quotes directory found");
       return;
@@ -318,14 +291,14 @@ public abstract class ExampleMarketDataBuilder {
 
     try {
       Map<QuoteId, Double> quotes = QuotesCsvLoader.load(marketDataDate, quotesResource);
-      builder.addValues(quotes);
+      builder.addValueMap(quotes);
 
     } catch (Exception ex) {
       log.error("Error loading quotes", ex);
     }
   }
 
-  private void loadFxRates(MarketEnvironmentBuilder builder) {
+  private void loadFxRates(ImmutableMarketDataBuilder builder) {
     // TODO - load from CSV file - format to be defined
     builder.addValue(FxRateId.of(Currency.GBP, Currency.USD), FxRate.of(Currency.GBP, Currency.USD, 1.61));
   }
@@ -338,7 +311,7 @@ public abstract class ExampleMarketDataBuilder {
         .collect(toImmutableList());
   }
 
-  private void loadCreditMarketData(MarketEnvironmentBuilder builder, LocalDate marketDataDate) {
+  private void loadCreditMarketData(ImmutableMarketDataBuilder builder, LocalDate marketDataDate) {
     if (!subdirectoryExists(CREDIT_DIR)) {
       log.debug("No credit curves directory found");
       return;
@@ -360,7 +333,7 @@ public abstract class ExampleMarketDataBuilder {
     loadCdsIndexSpreadCurves(builder, creditMarketDataDateDirectory);
   }
 
-  private void loadCdsYieldCurves(MarketEnvironmentBuilder builder, String creditMarketDataDateDirectory) {
+  private void loadCdsYieldCurves(ImmutableMarketDataBuilder builder, String creditMarketDataDateDirectory) {
     ResourceLocator cdsYieldCurvesResource = getResource(creditMarketDataDateDirectory, CDS_YIELD_CURVES_FILE);
     if (cdsYieldCurvesResource == null) {
       log.debug("Unable to load cds yield curves: file not found at {}/{}", creditMarketDataDateDirectory,
@@ -377,7 +350,7 @@ public abstract class ExampleMarketDataBuilder {
     }
   }
 
-  private void loadCdsSingleNameSpreadCurves(MarketEnvironmentBuilder builder, String creditMarketDataDateDirectory) {
+  private void loadCdsSingleNameSpreadCurves(ImmutableMarketDataBuilder builder, String creditMarketDataDateDirectory) {
     ResourceLocator singleNameCurvesResource = getResource(creditMarketDataDateDirectory, SINGLE_NAME_CREDIT_CURVES_FILE);
     if (singleNameCurvesResource == null) {
       log.debug("Unable to load single name spread curves: file not found at {}/{}", creditMarketDataDateDirectory,
@@ -404,8 +377,7 @@ public abstract class ExampleMarketDataBuilder {
     }
   }
 
-  private void loadCdsIndexSpreadCurves(MarketEnvironmentBuilder builder, String creditMarketDataDateDirectory) {
-
+  private void loadCdsIndexSpreadCurves(ImmutableMarketDataBuilder builder, String creditMarketDataDateDirectory) {
     ResourceLocator inputCurvesResource = getResource(creditMarketDataDateDirectory, INDEX_CREDIT_CURVES_FILE);
     if (inputCurvesResource == null) {
       log.debug("Unable to load single name spread curves: file not found at {}/{}", creditMarketDataDateDirectory,

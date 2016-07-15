@@ -29,11 +29,39 @@ public final class CurveGroupDefinitionBuilder {
   /**
    * The entries in the curve group.
    */
-  private final Map<CurveName, CurveGroupEntry> entries = new LinkedHashMap<>();
+  private final Map<CurveName, CurveGroupEntry> entries;
   /**
    * The definitions specifying how the curves are calibrated.
    */
-  private final Map<CurveName, NodalCurveDefinition> curveDefinitions = new LinkedHashMap<>();
+  private final Map<CurveName, NodalCurveDefinition> curveDefinitions;
+  /**
+   * Flag indicating if the Jacobian matrices should be computed and stored in metadata or not.
+   * The default value is 'true'.
+   */
+  private boolean computeJacobian = true;
+  /**
+   * Flag indicating if present value sensitivity to market quotes should be computed and stored in metadata or not.
+   * The default value is 'false'.
+   */
+  private boolean computePvSensitivityToMarketQuote = false;
+
+  CurveGroupDefinitionBuilder() {
+    this.entries = new LinkedHashMap<>();
+    this.curveDefinitions = new LinkedHashMap<>();
+  }
+
+  CurveGroupDefinitionBuilder(
+      CurveGroupName name,
+      Map<CurveName, CurveGroupEntry> entries,
+      Map<CurveName, NodalCurveDefinition> curveDefinitions,
+      boolean computeJacobian,
+      boolean computePvSensitivityToMarketQuote) {
+    this.name = name;
+    this.entries = entries;
+    this.curveDefinitions = curveDefinitions;
+    this.computeJacobian = computeJacobian;
+    this.computePvSensitivityToMarketQuote = computePvSensitivityToMarketQuote;
+  }
 
   //-------------------------------------------------------------------------
   /**
@@ -44,6 +72,32 @@ public final class CurveGroupDefinitionBuilder {
    */
   public CurveGroupDefinitionBuilder name(CurveGroupName name) {
     this.name = ArgChecker.notNull(name, "name");
+    return this;
+  }
+
+  /**
+   * Sets the 'compute Jacobian' flag of the curve group definition.
+   *
+   * @param computeJacobian  the flag indicating if the Jacobian matrices should be
+   *   computed and stored in metadata or not
+   * @return this builder
+   */
+  public CurveGroupDefinitionBuilder computeJacobian(boolean computeJacobian) {
+    this.computeJacobian = computeJacobian;
+    return this;
+  }
+
+  /**
+   * Sets the 'compute PV sensitivity to market quote' flag of the curve group definition.
+   * <p>
+   * If set, the Jacobian matrices will also be calculated, even if not requested.
+   *
+   * @param computePvSensitivityToMarketQuote  the flag indicating if present value sensitivity
+   *   to market quotes should be computed and stored in metadata or not
+   * @return this builder
+   */
+  public CurveGroupDefinitionBuilder computePvSensitivityToMarketQuote(boolean computePvSensitivityToMarketQuote) {
+    this.computePvSensitivityToMarketQuote = computePvSensitivityToMarketQuote;
     return this;
   }
 
@@ -95,6 +149,7 @@ public final class CurveGroupDefinitionBuilder {
     return mergeEntry(entry);
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Adds the definition of a forward curve to the curve group definition.
    *
@@ -105,8 +160,8 @@ public final class CurveGroupDefinitionBuilder {
    */
   public CurveGroupDefinitionBuilder addForwardCurve(
       NodalCurveDefinition curveDefinition,
-      RateIndex index,
-      RateIndex... otherIndices) {
+      Index index,
+      Index... otherIndices) {
 
     ArgChecker.notNull(curveDefinition, "curveDefinition");
     ArgChecker.notNull(index, "index");
@@ -128,7 +183,11 @@ public final class CurveGroupDefinitionBuilder {
    * @param otherIndices  the additional indices for which the curve provides forward rates
    * @return this builder
    */
-  public CurveGroupDefinitionBuilder addForwardCurve(CurveName curveName, RateIndex index, RateIndex... otherIndices) {
+  public CurveGroupDefinitionBuilder addForwardCurve(
+      CurveName curveName,
+      Index index,
+      Index... otherIndices) {
+
     ArgChecker.notNull(curveName, "curveName");
     ArgChecker.notNull(index, "index");
 
@@ -139,6 +198,7 @@ public final class CurveGroupDefinitionBuilder {
     return mergeEntry(entry);
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Adds the definition of a curve to the curve group definition which is used to provide
    * discount rates and forward rates.
@@ -222,7 +282,13 @@ public final class CurveGroupDefinitionBuilder {
    * @return the definition of the curve group built from the data in this object
    */
   public CurveGroupDefinition build() {
-    return new CurveGroupDefinition(name, entries.values(), curveDefinitions.values());
+    // note that this defaults the jacobian flag based on the market quote flag
+    return new CurveGroupDefinition(
+        name,
+        entries.values(),
+        curveDefinitions.values(),
+        computeJacobian || computePvSensitivityToMarketQuote,
+        computePvSensitivityToMarketQuote);
   }
 
 }

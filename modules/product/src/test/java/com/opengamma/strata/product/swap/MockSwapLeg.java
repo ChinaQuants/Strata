@@ -5,12 +5,12 @@
  */
 package com.opengamma.strata.product.swap;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static com.opengamma.strata.product.swap.SwapLegType.IBOR;
 
@@ -33,12 +33,12 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableSet;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.product.rate.FixedRateObservation;
+import com.opengamma.strata.product.common.PayReceive;
+import com.opengamma.strata.product.rate.FixedRateComputation;
 
 /**
  * Mock.
@@ -55,7 +55,7 @@ public final class MockSwapLeg implements SwapLeg, ImmutableBean, Serializable {
           .accrualPeriods(RateAccrualPeriod.builder()
               .startDate(date(2012, 1, 15))
               .endDate(date(2012, 8, 15))
-              .rateObservation(FixedRateObservation.of(0.012d))
+              .rateComputation(FixedRateComputation.of(0.012d))
               .build())
           .dayCount(ACT_365F)
           .notional(1_000_000d)
@@ -72,7 +72,7 @@ public final class MockSwapLeg implements SwapLeg, ImmutableBean, Serializable {
           .accrualPeriods(RateAccrualPeriod.builder()
               .startDate(date(2012, 1, 15))
               .endDate(date(2012, 8, 15))
-              .rateObservation(FixedRateObservation.of(0.012d))
+              .rateComputation(FixedRateComputation.of(0.012d))
               .build())
           .dayCount(ACT_365F)
           .notional(1_000_000d)

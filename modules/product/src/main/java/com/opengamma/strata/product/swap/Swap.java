@@ -6,6 +6,7 @@
 package com.opengamma.strata.product.swap;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
+import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -30,14 +31,14 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.Product;
+import com.opengamma.strata.product.common.PayReceive;
 
 /**
  * A rate swap.
@@ -173,6 +174,7 @@ public final class Swap
         .get();  // always at least one leg, so get() is safe
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Checks if this trade is cross-currency.
    * <p>
@@ -189,6 +191,22 @@ public final class Swap
       }
     }
     return false;
+  }
+
+  /**
+   * Returns the set of payment currencies referred to by the swap.
+   * <p>
+   * This returns the complete set of payment currencies for the swap.
+   * This will typically return one or two currencies.
+   * <p>
+   * If there is an FX reset, then this set contains the currency of the payment,
+   * not the currency of the notional. Note that in many cases, the currency of
+   * the FX reset notional will be the currency of the other leg.
+   * 
+   * @return the set of payment currencies referred to by this swap
+   */
+  public ImmutableSet<Currency> allPaymentCurrencies() {
+    return legs.stream().map(leg -> leg.getCurrency()).collect(toImmutableSet());
   }
 
   //-------------------------------------------------------------------------

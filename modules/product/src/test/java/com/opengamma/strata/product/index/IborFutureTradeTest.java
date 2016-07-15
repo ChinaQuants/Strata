@@ -6,6 +6,7 @@
 package com.opengamma.strata.product.index;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
+import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -13,7 +14,7 @@ import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -38,6 +39,10 @@ public class IborFutureTradeTest {
     assertEquals(test.getProduct(), PRODUCT);
     assertEquals(test.getPrice(), PRICE);
     assertEquals(test.getQuantity(), QUANTITY);
+  }
+
+  public void test_builder_badPrice() {
+    assertThrowsIllegalArg(() -> sut().toBuilder().price(2.1).build());
   }
 
   //-------------------------------------------------------------------------

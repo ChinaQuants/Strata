@@ -32,12 +32,12 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.ResolvedProduct;
+import com.opengamma.strata.product.common.PayReceive;
 
 /**
  * A rate swap, resolved for pricing.
@@ -222,13 +222,18 @@ public final class ResolvedSwap
   }
 
   /**
-   * Returns the set of primary currencies of this swap.
+   * Returns the set of payment currencies referred to by the swap.
    * <p>
-   * Any currency associated with FX reset is not included.
+   * This returns the complete set of payment currencies for the swap.
+   * This will typically return one or two currencies.
+   * <p>
+   * If there is an FX reset, then this set contains the currency of the payment,
+   * not the currency of the notional. Note that in many cases, the currency of
+   * the FX reset notional will be the currency of the other leg.
    * 
    * @return the currencies
    */
-  public ImmutableSet<Currency> allCurrencies() {
+  public ImmutableSet<Currency> allPaymentCurrencies() {
     return currencies;
   }
 

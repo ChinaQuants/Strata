@@ -9,13 +9,12 @@ import java.time.LocalDate;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivity;
 import com.opengamma.strata.market.curve.CurveMetadata;
-import com.opengamma.strata.market.curve.CurveUnitParameterSensitivity;
-import com.opengamma.strata.market.curve.IsdaCreditCurveInputs;
-import com.opengamma.strata.market.curve.IsdaYieldCurveInputs;
 import com.opengamma.strata.market.curve.NodalCurve;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivity;
+import com.opengamma.strata.market.param.ParameterMetadata;
+import com.opengamma.strata.market.param.UnitParameterSensitivity;
 import com.opengamma.strata.pricer.impl.credit.isda.IsdaCompliantCreditCurve;
 import com.opengamma.strata.pricer.impl.credit.isda.IsdaCompliantCurve;
 import com.opengamma.strata.pricer.impl.credit.isda.IsdaCompliantYieldCurve;
@@ -86,8 +85,8 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     return IsdaCdsHelper.price(valuationDate, product, yieldCurve, creditCurve, recoveryRate, scalingFactor);
   }
@@ -112,8 +111,8 @@ public class IsdaCdsPricer {
       LocalDate valuationDate,
       double recoveryRate) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     return IsdaCdsHelper.parSpread(valuationDate, product, yieldCurve, creditCurve, recoveryRate);
   }
@@ -127,11 +126,11 @@ public class IsdaCdsPricer {
    * The static factory methods either bootstrap and calibrate a curve or they replace the
    * calibrated values with a supplied vector of zeroes or hazards (the y axis of the calibrated curve)
    */
-  static class ISDANodalCurve implements NodalCurve {
+  static class IsdaNodalCurve implements NodalCurve {
     private final IsdaCompliantCurve underlyingCurve;
     private final CurveMetadata curveMetadata;
 
-    private ISDANodalCurve(IsdaCompliantCurve underlyingCurve, CurveMetadata curveMetadata) {
+    private IsdaNodalCurve(IsdaCompliantCurve underlyingCurve, CurveMetadata curveMetadata) {
       this.underlyingCurve = underlyingCurve;
       this.curveMetadata = curveMetadata;
     }
@@ -148,7 +147,12 @@ public class IsdaCdsPricer {
 
     @Override
     public NodalCurve withYValues(DoubleArray values) {
-      return new ISDANodalCurve(IsdaCompliantCurve.makeFromRT(getXValues(), values), curveMetadata);
+      return new IsdaNodalCurve(IsdaCompliantCurve.makeFromRT(getXValues(), values), curveMetadata);
+    }
+
+    @Override
+    public NodalCurve withValues(DoubleArray xValues, DoubleArray yValues) {
+      return new IsdaNodalCurve(IsdaCompliantCurve.makeFromRT(xValues, yValues), curveMetadata);
     }
 
     @Override
@@ -157,18 +161,45 @@ public class IsdaCdsPricer {
     }
 
     @Override
-    public int getParameterCount() {
-      return underlyingCurve.getNumberOfKnots();
+    public IsdaNodalCurve withMetadata(CurveMetadata metadata) {
+      return new IsdaNodalCurve(underlyingCurve, metadata);
     }
 
+    //-------------------------------------------------------------------------
+    @Override
+    public int getParameterCount() {
+      return underlyingCurve.getParameterCount();
+    }
+
+    @Override
+    public double getParameter(int parameterIndex) {
+      return underlyingCurve.getParameter(parameterIndex);
+    }
+
+    @Override
+    public ParameterMetadata getParameterMetadata(int parameterIndex) {
+      return underlyingCurve.getParameterMetadata(parameterIndex);
+    }
+
+    @Override
+    public IsdaNodalCurve withParameter(int parameterIndex, double newValue) {
+      return new IsdaNodalCurve(underlyingCurve.withParameter(parameterIndex, newValue), curveMetadata);
+    }
+
+    @Override
+    public IsdaNodalCurve withNode(double x, double y, ParameterMetadata paramMetadata) {
+      throw new UnsupportedOperationException("ISDA credit curve does not allow node to be inserted");
+    }
+
+    //-------------------------------------------------------------------------
     @Override
     public double yValue(double x) {
       return underlyingCurve.yValue(x);
     }
 
     @Override
-    public CurveUnitParameterSensitivity yValueParameterSensitivity(double x) {
-      return CurveUnitParameterSensitivity.of(curveMetadata, DoubleArray.EMPTY);
+    public UnitParameterSensitivity yValueParameterSensitivity(double x) {
+      return createParameterSensitivity(DoubleArray.filled(getParameterCount()));
     }
 
     @Override
@@ -180,7 +211,7 @@ public class IsdaCdsPricer {
     public static NodalCurve of(LocalDate valuationDate, IsdaYieldCurveInputs yieldCurveInputs) {
       IsdaCompliantYieldCurve yieldCurve = IsdaCdsHelper.createIsdaDiscountCurve(valuationDate, yieldCurveInputs);
       IsdaCompliantCurve underlying = yieldCurve;
-      return new ISDANodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
     }
 
     // bootstraps a credit curve from par rates
@@ -193,33 +224,33 @@ public class IsdaCdsPricer {
       IsdaCompliantCreditCurve creditCurve = IsdaCdsHelper.createIsdaCreditCurve(valuationDate, creditCurveInputs, yieldCurve,
           recoveryRate);
       IsdaCompliantCurve underlying = creditCurve;
-      return new ISDANodalCurve(underlying, creditCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, creditCurveInputs.getCurveMetaData());
     }
 
     // overwrites the x and y values of a calibrated curve, but copy the curve metadata to the new instance
     public static NodalCurve of(IsdaYieldCurveInputs yieldCurveInputs, double[] t, double[] rt) {
       IsdaCompliantYieldCurve yieldCurve = IsdaCompliantYieldCurve.makeFromRT(t, rt);
       IsdaCompliantCurve underlying = yieldCurve;
-      return new ISDANodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
     }
 
     public static NodalCurve of(IsdaYieldCurveInputs yieldCurveInputs, DoubleArray t, DoubleArray rt) {
       IsdaCompliantYieldCurve yieldCurve = IsdaCompliantYieldCurve.makeFromRT(t, rt);
       IsdaCompliantCurve underlying = yieldCurve;
-      return new ISDANodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, yieldCurveInputs.getCurveMetaData());
     }
 
     // overwrites the x and y values of a calibrated curve, but copy the curve metadata to the new instance
     public static NodalCurve of(IsdaCreditCurveInputs creditCurveInputs, double[] t, double[] ht) {
       IsdaCompliantCreditCurve creditCurve = IsdaCompliantCreditCurve.makeFromRT(t, ht);
       IsdaCompliantCurve underlying = creditCurve;
-      return new ISDANodalCurve(underlying, creditCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, creditCurveInputs.getCurveMetaData());
     }
 
     public static NodalCurve of(IsdaCreditCurveInputs creditCurveInputs, DoubleArray t, DoubleArray ht) {
       IsdaCompliantCreditCurve creditCurve = IsdaCompliantCreditCurve.makeFromRT(t, ht);
       IsdaCompliantCurve underlying = creditCurve;
-      return new ISDANodalCurve(underlying, creditCurveInputs.getCurveMetaData());
+      return new IsdaNodalCurve(underlying, creditCurveInputs.getCurveMetaData());
     }
   }
 
@@ -243,11 +274,11 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
-    NodalCurve bumpedYieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs.parallelShiftParRatesinBps(ONE_BPS));
-    NodalCurve bumpedCreditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
+    NodalCurve bumpedYieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs.parallelShiftParRatesinBps(ONE_BPS));
+    NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
 
     CurrencyAmount basePrice = presentValue(
         product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
@@ -275,11 +306,11 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
-    NodalCurve bumpedYieldCurve = yieldCurve.shiftedBy((x, y) -> y + ONE_BPS);
-    NodalCurve bumpedCreditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
+    NodalCurve bumpedYieldCurve = yieldCurve.withPerturbation((i, value, meta) -> value + ONE_BPS);
+    NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
 
     CurrencyAmount basePrice = presentValue(
         product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
@@ -299,7 +330,7 @@ public class IsdaCdsPricer {
    * @param scalingFactor  linear scaling factor associated with underlying index, or 1 in case of CDS
    * @return present value of fee leg and any up front fee
    */
-  public CurveCurrencyParameterSensitivities ir01BucketedPar(
+  public CurrencyParameterSensitivities ir01BucketedPar(
       ResolvedCds product,
       IsdaYieldCurveInputs yieldCurveInputs,
       IsdaCreditCurveInputs creditCurveInputs,
@@ -307,14 +338,14 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     int points = yieldCurveInputs.getNumberOfPoints();
     DoubleArray paramSens = DoubleArray.of(points, i -> {
-      NodalCurve bumpedYieldCurve = ISDANodalCurve.of(
+      NodalCurve bumpedYieldCurve = IsdaNodalCurve.of(
           valuationDate, yieldCurveInputs.bucketedShiftParRatesinBps(i, ONE_BPS));
-      NodalCurve bumpedCreditCurve = ISDANodalCurve.of(
+      NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(
           valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
       CurrencyAmount basePrice = presentValue(
           product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
@@ -323,8 +354,8 @@ public class IsdaCdsPricer {
       CurrencyAmount sensitivity = bumpedPrice.minus(basePrice);
       return sensitivity.getAmount();
     });
-    return CurveCurrencyParameterSensitivities.of(
-        CurveCurrencyParameterSensitivity.of(yieldCurveInputs.getCurveMetaData(), product.getCurrency(), paramSens));
+    return CurrencyParameterSensitivities.of(
+        CurrencyParameterSensitivity.of(yieldCurveInputs.getName(), product.getCurrency(), paramSens));
   }
 
   /**
@@ -338,7 +369,7 @@ public class IsdaCdsPricer {
    * @param scalingFactor  linear scaling factor associated with underlying index, or 1 in case of CDS
    * @return present value of fee leg and any up front fee
    */
-  public CurveCurrencyParameterSensitivities ir01BucketedZero(
+  public CurrencyParameterSensitivities ir01BucketedZero(
       ResolvedCds product,
       IsdaYieldCurveInputs yieldCurveInputs,
       IsdaCreditCurveInputs creditCurveInputs,
@@ -346,15 +377,15 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     int points = yieldCurveInputs.getNumberOfPoints();
     DoubleArray paramSens = DoubleArray.of(points, i -> {
       DoubleArray shiftVector = yieldCurve.getYValues();
       shiftVector = shiftVector.with(i, shiftVector.get(i) + ONE_BPS);
-      NodalCurve bumpedYieldCurve = ISDANodalCurve.of(yieldCurveInputs, yieldCurve.getXValues(), shiftVector);
-      NodalCurve bumpedCreditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
+      NodalCurve bumpedYieldCurve = IsdaNodalCurve.of(yieldCurveInputs, yieldCurve.getXValues(), shiftVector);
+      NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, bumpedYieldCurve, recoveryRate);
       CurrencyAmount basePrice = presentValue(
           product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
       CurrencyAmount bumpedPrice = presentValue(
@@ -362,8 +393,8 @@ public class IsdaCdsPricer {
       CurrencyAmount sensitivity = bumpedPrice.minus(basePrice);
       return sensitivity.getAmount();
     });
-    return CurveCurrencyParameterSensitivities.of(
-        CurveCurrencyParameterSensitivity.of(yieldCurveInputs.getCurveMetaData(), product.getCurrency(), paramSens));
+    return CurrencyParameterSensitivities.of(
+        CurrencyParameterSensitivity.of(yieldCurveInputs.getName(), product.getCurrency(), paramSens));
   }
 
   //-------------------------------------------------------------------------
@@ -387,11 +418,11 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     NodalCurve bumpedYieldCurve = yieldCurve;
-    NodalCurve bumpedCreditCurve = ISDANodalCurve.of(
+    NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(
         valuationDate, creditCurveInputs.parallelShiftParRatesinBps(ONE_BPS), bumpedYieldCurve, recoveryRate);
 
     CurrencyAmount basePrice = presentValue(
@@ -420,11 +451,11 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     NodalCurve bumpedYieldCurve = yieldCurve;
-    NodalCurve bumpedCreditCurve = creditCurve.shiftedBy((x, y) -> y + ONE_BPS);
+    NodalCurve bumpedCreditCurve = creditCurve.withPerturbation((i, value, meta) -> value + ONE_BPS);
 
     CurrencyAmount basePrice = presentValue(
         product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
@@ -444,7 +475,7 @@ public class IsdaCdsPricer {
    * @param scalingFactor  linear scaling factor associated with underlying index, or 1 in case of CDS
    * @return present value of fee leg and any up front fee
    */
-  public CurveCurrencyParameterSensitivities cs01BucketedPar(
+  public CurrencyParameterSensitivities cs01BucketedPar(
       ResolvedCds product,
       IsdaYieldCurveInputs yieldCurveInputs,
       IsdaCreditCurveInputs creditCurveInputs,
@@ -452,13 +483,13 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     int points = creditCurveInputs.getNumberOfPoints();
     DoubleArray paramSens = DoubleArray.of(points, i -> {
       NodalCurve bumpedYieldCurve = yieldCurve;
-      NodalCurve bumpedCreditCurve = ISDANodalCurve.of(
+      NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(
           valuationDate, creditCurveInputs.bucketedShiftParRatesinBps(i, ONE_BPS), yieldCurve, recoveryRate);
       CurrencyAmount basePrice = presentValue(
           product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
@@ -467,8 +498,8 @@ public class IsdaCdsPricer {
       CurrencyAmount sensitivity = bumpedPrice.minus(basePrice);
       return sensitivity.getAmount();
     });
-    return CurveCurrencyParameterSensitivities.of(
-        CurveCurrencyParameterSensitivity.of(creditCurveInputs.getCurveMetaData(), product.getCurrency(), paramSens));
+    return CurrencyParameterSensitivities.of(
+        CurrencyParameterSensitivity.of(creditCurveInputs.getName(), product.getCurrency(), paramSens));
   }
 
   /**
@@ -482,7 +513,7 @@ public class IsdaCdsPricer {
    * @param scalingFactor  linear scaling factor associated with underlying index, or 1 in case of CDS
    * @return present value of fee leg and any up front fee
    */
-  public CurveCurrencyParameterSensitivities cs01BucketedHazard(
+  public CurrencyParameterSensitivities cs01BucketedHazard(
       ResolvedCds product,
       IsdaYieldCurveInputs yieldCurveInputs,
       IsdaCreditCurveInputs creditCurveInputs,
@@ -490,15 +521,15 @@ public class IsdaCdsPricer {
       double recoveryRate,
       double scalingFactor) {
 
-    NodalCurve yieldCurve = ISDANodalCurve.of(valuationDate, yieldCurveInputs);
-    NodalCurve creditCurve = ISDANodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
+    NodalCurve yieldCurve = IsdaNodalCurve.of(valuationDate, yieldCurveInputs);
+    NodalCurve creditCurve = IsdaNodalCurve.of(valuationDate, creditCurveInputs, yieldCurve, recoveryRate);
 
     int points = creditCurveInputs.getNumberOfPoints();
     DoubleArray paramSens = DoubleArray.of(points, i -> {
       DoubleArray shiftVector = creditCurve.getYValues();
       shiftVector = shiftVector.with(i, shiftVector.get(i) + ONE_BPS);
       NodalCurve bumpedYieldCurve = yieldCurve;
-      NodalCurve bumpedCreditCurve = ISDANodalCurve.of(creditCurveInputs, creditCurve.getXValues(), shiftVector);
+      NodalCurve bumpedCreditCurve = IsdaNodalCurve.of(creditCurveInputs, creditCurve.getXValues(), shiftVector);
       CurrencyAmount basePrice = presentValue(
           product, yieldCurve, creditCurve, valuationDate, recoveryRate, scalingFactor);
       CurrencyAmount bumpedPrice = presentValue(
@@ -506,8 +537,8 @@ public class IsdaCdsPricer {
       CurrencyAmount sensitivity = bumpedPrice.minus(basePrice);
       return sensitivity.getAmount();
     });
-    return CurveCurrencyParameterSensitivities.of(
-        CurveCurrencyParameterSensitivity.of(creditCurveInputs.getCurveMetaData(), product.getCurrency(), paramSens));
+    return CurrencyParameterSensitivities.of(
+        CurrencyParameterSensitivity.of(creditCurveInputs.getName(), product.getCurrency(), paramSens));
   }
 
   //-------------------------------------------------------------------------

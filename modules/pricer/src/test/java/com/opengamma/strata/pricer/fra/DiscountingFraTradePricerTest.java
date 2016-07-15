@@ -16,22 +16,22 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.index.IborIndexObservation;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.market.sensitivity.IborRateSensitivity;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.IborIndexRates;
+import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.datasets.RatesProviderDataSets;
+import com.opengamma.strata.pricer.rate.IborIndexRates;
+import com.opengamma.strata.pricer.rate.IborRateSensitivity;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.SimpleRatesProvider;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.fra.FraTrade;
 import com.opengamma.strata.product.fra.ResolvedFra;
 import com.opengamma.strata.product.fra.ResolvedFraTrade;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 
 /**
  * Test {@link DiscountingFraTradePricer}.
@@ -57,13 +57,19 @@ public class DiscountingFraTradePricerTest {
     IborIndexRates mockIbor = mock(IborIndexRates.class);
     RATES_PROVIDER = new SimpleRatesProvider(VAL_DATE, mockDf);
     RATES_PROVIDER.setIborRates(mockIbor);
-    IborIndexObservation obs = ((IborRateObservation) RFRA.getFloatingRate()).getObservation();
+    IborIndexObservation obs = ((IborRateComputation) RFRA.getFloatingRate()).getObservation();
     IborRateSensitivity sens = IborRateSensitivity.of(obs, 1d);
     when(mockIbor.ratePointSensitivity(obs)).thenReturn(sens);
     when(mockIbor.rate(obs)).thenReturn(FORWARD_RATE);
     when(mockDf.discountFactor(RFRA.getPaymentDate())).thenReturn(DISCOUNT_FACTOR);
   }
 
+  //-------------------------------------------------------------------------
+  public void test_getters() {
+    assertEquals(DiscountingFraTradePricer.DEFAULT.getProductPricer(), DiscountingFraProductPricer.DEFAULT);
+  }
+
+  //-------------------------------------------------------------------------
   public void test_currencyExposure() {
     assertEquals(PRICER_TRADE.currencyExposure(RFRA_TRADE, RATES_PROVIDER),
         MultiCurrencyAmount.of(PRICER_TRADE.presentValue(RFRA_TRADE, RATES_PROVIDER)));
@@ -81,7 +87,7 @@ public class DiscountingFraTradePricerTest {
         .product(FRA)
         .build()
         .resolve(REF_DATA);
-    ImmutableRatesProvider ratesProvider = RatesProviderDataSets.MULTI_GBP.toBuilder(paymentDate)
+    ImmutableRatesProvider ratesProvider = RatesProviderDataSets.multiGbp(paymentDate).toBuilder()
         .timeSeries(GBP_LIBOR_3M, LocalDateDoubleTimeSeries.of(paymentDate, publishedRate))
         .build();
     assertEquals(PRICER_TRADE.currentCash(trade, ratesProvider), CurrencyAmount.of(FRA.getCurrency(),

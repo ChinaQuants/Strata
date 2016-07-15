@@ -28,20 +28,20 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.SecuritizedProduct;
 import com.opengamma.strata.product.SecurityId;
-import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.RateComputation;
 import com.opengamma.strata.product.swap.InflationRateCalculation;
 
 /**
@@ -52,12 +52,16 @@ import com.opengamma.strata.product.swap.InflationRateCalculation;
  * All of the payments are adjusted for inflation.
  * <p>
  * The periodic coupon payment schedule is defined using {@code periodicSchedule}.
- * The payment amount will be computed based on this schedule and {@link RateObservation} of {@code InflationRateCalculation}.
+ * The payment amount will be computed based on this schedule and {@link RateComputation} of {@code InflationRateCalculation}.
  * The nominal payment is defined from the last period of the periodic coupon payment schedule.
  * <p>
  * The legal entity of this bond is identified by {@code legalEntityId}.
  * The enum, {@code yieldConvention}, specifies the yield computation convention.
  * The accrued interest must be computed with {@code dayCount}.
+ * 
+ * <h4>Price</h4>
+ * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+ * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
 @BeanDefinition(constructorScope = "package")
 public final class CapitalIndexedBond
@@ -134,7 +138,7 @@ public final class CapitalIndexedBond
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment settlementDateOffset;
   /**
-   * Ex-coupon period. 
+   * Ex-coupon period.
    * <p>
    * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
    * owner of the bond on the payment date but to the owner of the bond on the detachment date.
@@ -191,7 +195,7 @@ public final class CapitalIndexedBond
           .detachmentDate(exCouponPeriodAdjuster.adjust(period.getEndDate()))
           .notional(notional)
           .currency(currency)
-          .rateObservation(rateCalculation.createRateObservation(period.getEndDate()))
+          .rateComputation(rateCalculation.createRateComputation(period.getEndDate()))
           .realCoupon(resolvedGearings.get(i))
           .build());
     }

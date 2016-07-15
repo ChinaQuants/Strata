@@ -21,6 +21,8 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -28,8 +30,6 @@ import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
@@ -43,7 +43,7 @@ import com.opengamma.strata.product.SecurityId;
 public class FixedCouponBondTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
-  private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.GERMAN_BONDS;
+  private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.DE_BONDS;
   private static final StandardId LEGAL_ENTITY = StandardId.of("OG-Ticker", "BUN EUR");
   private static final double NOTIONAL = 1.0e7;
   private static final double FIXED_RATE = 0.015;
@@ -171,7 +171,7 @@ public class FixedCouponBondTest {
         .notional(1.0e6)
         .accrualSchedule(sche)
         .settlementDateOffset(DaysAdjustment.ofBusinessDays(2, SAT_SUN))
-        .yieldConvention(FixedCouponBondYieldConvention.UK_BUMP_DMO)
+        .yieldConvention(FixedCouponBondYieldConvention.GB_BUMP_DMO)
         .build();
   }
 

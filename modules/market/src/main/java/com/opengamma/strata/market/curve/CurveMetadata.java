@@ -6,12 +6,12 @@
 package com.opengamma.strata.market.curve;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.market.ValueType;
+import com.opengamma.strata.market.param.ParameterMetadata;
 
 /**
  * Metadata about a curve and curve parameters.
@@ -58,10 +58,11 @@ public interface CurveMetadata {
    */
   public abstract ValueType getYValueType();
 
+  //-------------------------------------------------------------------------
   /**
    * Gets curve information of a specific type.
    * <p>
-   * This method supplies whatever additional information is available for the curve.
+   * If the information is not found, an exception is thrown.
    * <p>
    * The most common information is the {@linkplain CurveInfoType#DAY_COUNT day count}
    * and {@linkplain CurveInfoType#JACOBIAN curve calibration information}.
@@ -79,10 +80,10 @@ public interface CurveMetadata {
   /**
    * Finds curve information of a specific type.
    * <p>
+   * If the info is not found, optional empty is returned.
+   * <p>
    * The most common information is the {@linkplain CurveInfoType#DAY_COUNT day count}
    * and {@linkplain CurveInfoType#JACOBIAN curve calibration information}.
-   * <p>
-   * If the info is not found, optional empty is returned.
    * 
    * @param <T>  the type of the info
    * @param type  the type to find
@@ -91,29 +92,40 @@ public interface CurveMetadata {
   public abstract <T> Optional<T> findInfo(CurveInfoType<T> type);
 
   /**
+   * Gets the metadata of the parameter at the specified index.
+   * <p>
+   * If there is no specific parameter metadata, an empty instance will be returned.
+   * 
+   * @param parameterIndex  the zero-based index of the parameter to get
+   * @return the metadata of the parameter
+   * @throws IndexOutOfBoundsException if the index is invalid
+   */
+  public default ParameterMetadata getParameterMetadata(int parameterIndex) {
+    return getParameterMetadata().map(pm -> pm.get(parameterIndex)).orElse(ParameterMetadata.empty());
+  }
+
+  /**
    * Gets metadata about each parameter underlying the curve, optional.
    * <p>
    * If present, the parameter metadata will match the number of parameters on the curve.
    * 
    * @return the parameter metadata
    */
-  public abstract Optional<List<CurveParameterMetadata>> getParameterMetadata();
+  public abstract Optional<List<ParameterMetadata>> getParameterMetadata();
 
   //-------------------------------------------------------------------------
   /**
    * Returns an instance where the specified additional information has been added.
    * <p>
-   * The result will contain the specified additional information.
-   * If this metadata instance already contains additional info, the two maps will
-   * be merged, with the specified map taking priority, as per {@link Map#putAll(Map)}.
-   * <p>
-   * The map must contain no nulls. The value of each entry must match the parameterized
-   * type of the associated {@code CurveInfoType} key.
+   * The additional information is stored in the result using {@code Map.put} semantics,
+   * removing the key if the instance is null.
    * 
-   * @param additionalInfo  the additional information to add
+   * @param <T>  the type of the info
+   * @param type  the type to store under
+   * @param value  the value to store, may be null
    * @return the new curve metadata
    */
-  public abstract CurveMetadata withInfo(Map<CurveInfoType<?>, Object> additionalInfo);
+  public abstract <T> DefaultCurveMetadata withInfo(CurveInfoType<T> type, T value);
 
   /**
    * Returns an instance where the parameter metadata has been changed.
@@ -124,6 +136,6 @@ public interface CurveMetadata {
    * @param parameterMetadata  the new parameter metadata, may be null
    * @return the new curve metadata
    */
-  public abstract CurveMetadata withParameterMetadata(List<CurveParameterMetadata> parameterMetadata);
+  public abstract CurveMetadata withParameterMetadata(List<? extends ParameterMetadata> parameterMetadata);
 
 }

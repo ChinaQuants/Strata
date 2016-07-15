@@ -477,7 +477,7 @@ public final class Result<T>
           failure(results);
 
     } catch (Exception e) {
-      return failure(e, "Error whilst combining success results");
+      return failure(e);
     }
   }
 
@@ -533,7 +533,7 @@ public final class Result<T>
           failure(results);
 
     } catch (Exception e) {
-      return failure(e, "Error whilst combining success results");
+      return failure(e);
     }
   }
 
@@ -600,7 +600,7 @@ public final class Result<T>
    * Returns the actual result value if calculated successfully, throwing an
    * exception if a failure occurred.
    * <p>
-   * If this result is a failure then an an IllegalStateException will be thrown.
+   * If this result is a failure then an {@code IllegalStateException} will be thrown.
    * To avoid this, call {@link #isSuccess()} or {@link #isFailure()} first.
    * <p>
    * Application code is recommended to use {@link #map(Function)} and
@@ -704,7 +704,7 @@ public final class Result<T>
       try {
         return Result.success(function.apply(value));
       } catch (Exception e) {
-        return Result.failure(e, "Error whilst calling map on value: {}", value);
+        return Result.failure(e);
       }
     } else {
       return Result.failure(this);
@@ -740,7 +740,7 @@ public final class Result<T>
       try {
         return Objects.requireNonNull(function.apply(value));
       } catch (Exception e) {
-        return failure(e, "Error whilst calling flatMap on value: {}", value);
+        return failure(e);
       }
     } else {
       return Result.failure(this);
@@ -777,7 +777,7 @@ public final class Result<T>
       try {
         return Objects.requireNonNull(function.apply(value, other.value));
       } catch (Exception e) {
-        return failure(e, "Error whilst trying to combine: {} with: {}", value, other.value);
+        return failure(e);
       }
     } else {
       return failure(this, other);

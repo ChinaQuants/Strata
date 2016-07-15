@@ -26,12 +26,12 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.basics.currency.Payment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.ResolvedProduct;
 
@@ -171,7 +171,7 @@ public final class ResolvedFxSingle
 
   //-------------------------------------------------------------------------
   /**
-   * Gets currency pair of the base currency and counter currency. 
+   * Gets currency pair of the base currency and counter currency.
    * <p>
    * This currency pair is conventional, thus indifferent to the direction of FX.
    * 
@@ -184,8 +184,8 @@ public final class ResolvedFxSingle
   /**
    * Gets the currency amount in which the amount is received.
    * <p>
-   * This returns the currency amount whose amount is non-negative. 
-   * If both are zero, the currency amount of {@code counterCurrencyPayment} is returned. 
+   * This returns the currency amount whose amount is non-negative.
+   * If both are zero, the currency amount of {@code counterCurrencyPayment} is returned.
    * 
    * @return the receive currency amount
    */

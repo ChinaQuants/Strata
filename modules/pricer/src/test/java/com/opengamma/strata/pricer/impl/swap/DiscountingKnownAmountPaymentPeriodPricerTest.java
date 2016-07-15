@@ -20,24 +20,24 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.ConstantNodalCurve;
+import com.opengamma.strata.market.curve.ConstantCurve;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.explain.ExplainKey;
 import com.opengamma.strata.market.explain.ExplainMap;
 import com.opengamma.strata.market.explain.ExplainMapBuilder;
-import com.opengamma.strata.market.interpolator.CurveInterpolator;
-import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
-import com.opengamma.strata.market.view.DiscountFactors;
-import com.opengamma.strata.market.view.SimpleDiscountFactors;
+import com.opengamma.strata.pricer.DiscountFactors;
+import com.opengamma.strata.pricer.SimpleDiscountFactors;
+import com.opengamma.strata.pricer.ZeroRateSensitivity;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.rate.SimpleRatesProvider;
-import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.swap.KnownAmountSwapPaymentPeriod;
 
 /**
  * Test {@link DiscountingKnownAmountPaymentPeriodPricer}
@@ -60,13 +60,13 @@ public class DiscountingKnownAmountPaymentPeriodPricerTest {
   private static final Payment PAYMENT = Payment.of(AMOUNT_GBP1000, PAYMENT_DATE);
   private static final Payment PAYMENT_PAST = Payment.of(AMOUNT_GBP1000, VAL_DATE.minusDays(1));
 
-  private static final KnownAmountPaymentPeriod PERIOD = KnownAmountPaymentPeriod.builder()
+  private static final KnownAmountSwapPaymentPeriod PERIOD = KnownAmountSwapPaymentPeriod.builder()
       .payment(PAYMENT)
       .startDate(DATE_1)
       .endDate(DATE_2)
       .unadjustedEndDate(DATE_2U)
       .build();
-  private static final KnownAmountPaymentPeriod PERIOD_PAST = KnownAmountPaymentPeriod.builder()
+  private static final KnownAmountSwapPaymentPeriod PERIOD_PAST = KnownAmountSwapPaymentPeriod.builder()
       .payment(PAYMENT_PAST)
       .startDate(DATE_1)
       .endDate(DATE_2)
@@ -123,7 +123,7 @@ public class DiscountingKnownAmountPaymentPeriodPricerTest {
     ZeroRateSensitivity actual = (ZeroRateSensitivity) point.getSensitivities().get(0);
     assertEquals(actual.getCurrency(), GBP);
     assertEquals(actual.getCurveCurrency(), GBP);
-    assertEquals(actual.getDate(), PAYMENT_DATE);
+    assertEquals(actual.getYearFraction(), relativeYearFraction);
     assertEquals(actual.getSensitivity(), expected, AMOUNT_1000 * TOLERANCE_PV);
   }
 
@@ -247,7 +247,7 @@ public class DiscountingKnownAmountPaymentPeriodPricerTest {
   //-------------------------------------------------------------------------
   // creates a simple provider
   private SimpleRatesProvider createProvider(LocalDate valDate) {
-    Curve curve = ConstantNodalCurve.of(Curves.discountFactors("Test", DAY_COUNT), DISCOUNT_FACTOR);
+    Curve curve = ConstantCurve.of(Curves.discountFactors("Test", DAY_COUNT), DISCOUNT_FACTOR);
     DiscountFactors df = SimpleDiscountFactors.of(GBP, valDate, curve);
     SimpleRatesProvider prov = new SimpleRatesProvider(valDate);
     prov.setDayCount(DAY_COUNT);

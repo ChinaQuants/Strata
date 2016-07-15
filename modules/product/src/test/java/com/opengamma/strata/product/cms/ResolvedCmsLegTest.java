@@ -5,18 +5,18 @@
  */
 package com.opengamma.strata.product.cms;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 
 /**
  * Test {@link ResolvedCmsLeg}.
@@ -38,6 +38,7 @@ public class ResolvedCmsLegTest {
     assertEquals(test.getStartDate(), PERIOD_1.getStartDate());
     assertEquals(test.getEndDate(), PERIOD_2.getEndDate());
     assertEquals(test.getIndex(), PERIOD_1.getIndex());
+    assertEquals(test.getUnderlyingIndex(), PERIOD_1.getIndex().getTemplate().getConvention().getFloatingLeg().getIndex());
     assertEquals(test.getPayReceive(), RECEIVE);
   }
 

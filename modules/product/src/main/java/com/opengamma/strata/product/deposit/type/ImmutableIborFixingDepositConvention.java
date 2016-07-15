@@ -27,15 +27,15 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.BuySell;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.deposit.IborFixingDeposit;
 import com.opengamma.strata.product.deposit.IborFixingDepositTrade;
 
@@ -56,7 +56,7 @@ import com.opengamma.strata.product.deposit.IborFixingDepositTrade;
  * <li>Fixing date, the date on which the index is to be observed, typically 2 business days before the start date
  * </ul>
  * The period between the start date and end date is specified by {@link IborFixingDepositTemplate},
- * not by this convention. However, the period is typically equal to the tenor of the index. 
+ * not by this convention. However, the period is typically equal to the tenor of the index.
  */
 @BeanDefinition
 public final class ImmutableIborFixingDepositConvention

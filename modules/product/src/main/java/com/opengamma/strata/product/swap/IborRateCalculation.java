@@ -8,7 +8,7 @@ package com.opengamma.strata.product.swap;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.opengamma.strata.basics.value.ValueSchedule.ALWAYS_0;
 import static com.opengamma.strata.basics.value.ValueSchedule.ALWAYS_1;
-import static com.opengamma.strata.product.swap.IborRateAveragingMethod.UNWEIGHTED;
+import static com.opengamma.strata.product.swap.IborRateResetMethod.UNWEIGHTED;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -37,21 +37,21 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.index.IborIndexObservation;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.value.ValueSchedule;
-import com.opengamma.strata.product.rate.FixedRateObservation;
+import com.opengamma.strata.product.rate.FixedRateComputation;
 import com.opengamma.strata.product.rate.IborAveragedFixing;
-import com.opengamma.strata.product.rate.IborAveragedRateObservation;
-import com.opengamma.strata.product.rate.IborRateObservation;
-import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.IborAveragedRateComputation;
+import com.opengamma.strata.product.rate.IborRateComputation;
+import com.opengamma.strata.product.rate.RateComputation;
 
 /**
  * Defines the calculation of a floating rate swap leg based on an Ibor index.
@@ -165,7 +165,7 @@ public final class IborRateCalculation
    * If this property is present and there is no initial stub, it is ignored.
    */
   @PropertyDefinition(get = "optional")
-  private final StubCalculation initialStub;
+  private final IborRateStubCalculation initialStub;
   /**
    * The rate to be used in final stub, optional.
    * <p>
@@ -178,7 +178,7 @@ public final class IborRateCalculation
    * If this property is present and there is no final stub, it is ignored.
    */
   @PropertyDefinition(get = "optional")
-  private final StubCalculation finalStub;
+  private final IborRateStubCalculation finalStub;
   /**
    * The gearing multiplier, optional.
    * <p>
@@ -279,8 +279,8 @@ public final class IborRateCalculation
     if ((scheduleInitialStub.isPresent() && initialStub == null) ||
         (scheduleFinalStub.isPresent() && finalStub == null)) {
       return toBuilder()
-          .initialStub(firstNonNull(initialStub, StubCalculation.NONE))
-          .finalStub(firstNonNull(finalStub, StubCalculation.NONE))
+          .initialStub(firstNonNull(initialStub, IborRateStubCalculation.NONE))
+          .finalStub(firstNonNull(finalStub, IborRateStubCalculation.NONE))
           .build()
           .createAccrualPeriods(accrualSchedule, paymentSchedule, refData);
     }
@@ -296,11 +296,11 @@ public final class IborRateCalculation
     ImmutableList.Builder<RateAccrualPeriod> accrualPeriods = ImmutableList.builder();
     for (int i = 0; i < accrualSchedule.size(); i++) {
       SchedulePeriod period = accrualSchedule.getPeriod(i);
-      RateObservation rateObs = createRateObservation(
+      RateComputation rateComputation = createRateComputation(
           period, fixingDateAdjuster, resetScheduleFn, iborObservationFn, i, scheduleInitialStub, scheduleFinalStub, refData);
       accrualPeriods.add(RateAccrualPeriod.builder(period)
           .yearFraction(period.yearFraction(dayCount, accrualSchedule))
-          .rateObservation(rateObs)
+          .rateComputation(rateComputation)
           .negativeRateMethod(negativeRateMethod)
           .gearing(resolvedGearings.get(i))
           .spread(resolvedSpreads.get(i))
@@ -309,8 +309,8 @@ public final class IborRateCalculation
     return accrualPeriods.build();
   }
 
-  // creates the rate observation
-  private RateObservation createRateObservation(
+  // creates the rate computation
+  private RateComputation createRateComputation(
       SchedulePeriod period,
       DateAdjuster fixingDateAdjuster,
       Function<SchedulePeriod, Schedule> resetScheduleFn,
@@ -323,14 +323,14 @@ public final class IborRateCalculation
     LocalDate fixingDate = fixingDateAdjuster.adjust(fixingRelativeTo.selectBaseDate(period));
     // handle stubs
     if (scheduleInitialStub.isPresent() && scheduleInitialStub.get() == period) {
-      return initialStub.createRateObservation(fixingDate, index, refData);
+      return initialStub.createRateComputation(fixingDate, index, refData);
     }
     if (scheduleFinalStub.isPresent() && scheduleFinalStub.get() == period) {
-      return finalStub.createRateObservation(fixingDate, index, refData);
+      return finalStub.createRateComputation(fixingDate, index, refData);
     }
     // handle explicit reset periods, possible averaging
     if (resetScheduleFn != null) {
-      return createRateObservationWithResetPeriods(
+      return createRateComputationWithResetPeriods(
           resetScheduleFn.apply(period),
           fixingDateAdjuster,
           iborObservationFn,
@@ -338,14 +338,14 @@ public final class IborRateCalculation
     }
     // handle possible fixed rate
     if (firstRegularRate != null && isFirstRegularPeriod(scheduleIndex, scheduleInitialStub.isPresent())) {
-      return FixedRateObservation.of(firstRegularRate);
+      return FixedRateComputation.of(firstRegularRate);
     }
     // simple Ibor
-    return IborRateObservation.of(iborObservationFn.apply(fixingDate));
+    return IborRateComputation.of(iborObservationFn.apply(fixingDate));
   }
 
   // reset periods have been specified, which may or may not imply averaging
-  private RateObservation createRateObservationWithResetPeriods(
+  private RateComputation createRateComputationWithResetPeriods(
       Schedule resetSchedule,
       DateAdjuster fixingDateAdjuster,
       Function<LocalDate, IborIndexObservation> iborObservationFn,
@@ -358,10 +358,10 @@ public final class IborRateCalculation
       fixings.add(IborAveragedFixing.builder()
           .observation(iborObservationFn.apply(fixingDate))
           .fixedRate(firstRegular && i == 0 ? firstRegularRate : null)
-          .weight(resetPeriods.getAveragingMethod() == UNWEIGHTED ? 1 : resetPeriod.lengthInDays())
+          .weight(resetPeriods.getResetMethod() == UNWEIGHTED ? 1 : resetPeriod.lengthInDays())
           .build());
     }
-    return IborAveragedRateObservation.of(fixings);
+    return IborAveragedRateComputation.of(fixings);
   }
 
   // is the period the first regular period
@@ -408,8 +408,8 @@ public final class IborRateCalculation
       DaysAdjustment fixingDateOffset,
       NegativeRateMethod negativeRateMethod,
       Double firstRegularRate,
-      StubCalculation initialStub,
-      StubCalculation finalStub,
+      IborRateStubCalculation initialStub,
+      IborRateStubCalculation finalStub,
       ValueSchedule gearing,
       ValueSchedule spread) {
     JodaBeanUtils.notNull(dayCount, "dayCount");
@@ -566,7 +566,7 @@ public final class IborRateCalculation
    * If this property is present and there is no initial stub, it is ignored.
    * @return the optional value of the property, not null
    */
-  public Optional<StubCalculation> getInitialStub() {
+  public Optional<IborRateStubCalculation> getInitialStub() {
     return Optional.ofNullable(initialStub);
   }
 
@@ -583,7 +583,7 @@ public final class IborRateCalculation
    * If this property is present and there is no final stub, it is ignored.
    * @return the optional value of the property, not null
    */
-  public Optional<StubCalculation> getFinalStub() {
+  public Optional<IborRateStubCalculation> getFinalStub() {
     return Optional.ofNullable(finalStub);
   }
 
@@ -743,13 +743,13 @@ public final class IborRateCalculation
     /**
      * The meta-property for the {@code initialStub} property.
      */
-    private final MetaProperty<StubCalculation> initialStub = DirectMetaProperty.ofImmutable(
-        this, "initialStub", IborRateCalculation.class, StubCalculation.class);
+    private final MetaProperty<IborRateStubCalculation> initialStub = DirectMetaProperty.ofImmutable(
+        this, "initialStub", IborRateCalculation.class, IborRateStubCalculation.class);
     /**
      * The meta-property for the {@code finalStub} property.
      */
-    private final MetaProperty<StubCalculation> finalStub = DirectMetaProperty.ofImmutable(
-        this, "finalStub", IborRateCalculation.class, StubCalculation.class);
+    private final MetaProperty<IborRateStubCalculation> finalStub = DirectMetaProperty.ofImmutable(
+        this, "finalStub", IborRateCalculation.class, IborRateStubCalculation.class);
     /**
      * The meta-property for the {@code gearing} property.
      */
@@ -888,7 +888,7 @@ public final class IborRateCalculation
      * The meta-property for the {@code initialStub} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<StubCalculation> initialStub() {
+    public MetaProperty<IborRateStubCalculation> initialStub() {
       return initialStub;
     }
 
@@ -896,7 +896,7 @@ public final class IborRateCalculation
      * The meta-property for the {@code finalStub} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<StubCalculation> finalStub() {
+    public MetaProperty<IborRateStubCalculation> finalStub() {
       return finalStub;
     }
 
@@ -970,8 +970,8 @@ public final class IborRateCalculation
     private DaysAdjustment fixingDateOffset;
     private NegativeRateMethod negativeRateMethod;
     private Double firstRegularRate;
-    private StubCalculation initialStub;
-    private StubCalculation finalStub;
+    private IborRateStubCalculation initialStub;
+    private IborRateStubCalculation finalStub;
     private ValueSchedule gearing;
     private ValueSchedule spread;
 
@@ -1056,10 +1056,10 @@ public final class IborRateCalculation
           this.firstRegularRate = (Double) newValue;
           break;
         case 1233359378:  // initialStub
-          this.initialStub = (StubCalculation) newValue;
+          this.initialStub = (IborRateStubCalculation) newValue;
           break;
         case 355242820:  // finalStub
-          this.finalStub = (StubCalculation) newValue;
+          this.finalStub = (IborRateStubCalculation) newValue;
           break;
         case -91774989:  // gearing
           this.gearing = (ValueSchedule) newValue;
@@ -1247,7 +1247,7 @@ public final class IborRateCalculation
      * @param initialStub  the new value
      * @return this, for chaining, not null
      */
-    public Builder initialStub(StubCalculation initialStub) {
+    public Builder initialStub(IborRateStubCalculation initialStub) {
       this.initialStub = initialStub;
       return this;
     }
@@ -1265,7 +1265,7 @@ public final class IborRateCalculation
      * @param finalStub  the new value
      * @return this, for chaining, not null
      */
-    public Builder finalStub(StubCalculation finalStub) {
+    public Builder finalStub(IborRateStubCalculation finalStub) {
       this.finalStub = finalStub;
       return this;
     }

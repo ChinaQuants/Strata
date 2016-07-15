@@ -17,7 +17,7 @@ import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
-import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.INDEX_LINKED_FLOAT;
+import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.GB_IL_FLOAT;
 import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.US_IL_REAL;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTERPOLATED;
 import static org.testng.Assert.assertEquals;
@@ -30,15 +30,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.value.ValueSchedule;
-import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.RateComputation;
 import com.opengamma.strata.product.swap.InflationRateCalculation;
 
 /**
@@ -71,7 +71,7 @@ public class ResolvedCapitalIndexedBondTest {
     for (int i = 0; i < 4; ++i) {
       LocalDate start = SCHEDULE_ADJ.adjust(unAdjDates[i], REF_DATA);
       LocalDate end = SCHEDULE_ADJ.adjust(unAdjDates[i + 1], REF_DATA);
-      RateObservation obs = RATE_CALC.createRateObservation(end);
+      RateComputation rateComputation = RATE_CALC.createRateComputation(end);
       PERIODIC[i] = CapitalIndexedBondPaymentPeriod.builder()
           .currency(USD)
           .startDate(start)
@@ -80,7 +80,7 @@ public class ResolvedCapitalIndexedBondTest {
           .unadjustedEndDate(unAdjDates[i + 1])
           .detachmentDate(end)
           .realCoupon(COUPON)
-          .rateObservation(obs)
+          .rateComputation(rateComputation)
           .notional(NOTIONAL)
           .build();
     }
@@ -120,7 +120,7 @@ public class ResolvedCapitalIndexedBondTest {
         .endDate(PERIODIC[2].getEndDate())
         .currency(GBP)
         .notional(NOTIONAL)
-        .rateObservation(PERIODIC[2].getRateObservation())
+        .rateComputation(PERIODIC[2].getRateComputation())
         .realCoupon(COUPON)
         .build();
     assertThrowsIllegalArg(() -> ResolvedCapitalIndexedBond.builder()
@@ -203,7 +203,7 @@ public class ResolvedCapitalIndexedBondTest {
         .frequency(CapitalIndexedBondTest.sut2().getAccrualSchedule().getFrequency())
         .rollConvention(CapitalIndexedBondTest.sut2().getAccrualSchedule().calculatedRollConvention())
         .settlementDateOffset(DaysAdjustment.ofBusinessDays(3, GBLO))
-        .yieldConvention(INDEX_LINKED_FLOAT)
+        .yieldConvention(GB_IL_FLOAT)
         .rateCalculation(CapitalIndexedBondTest.sut2().getRateCalculation())
         .build();
   }

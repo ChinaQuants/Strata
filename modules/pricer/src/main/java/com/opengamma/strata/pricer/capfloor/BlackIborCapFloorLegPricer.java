@@ -5,7 +5,6 @@
  */
 package com.opengamma.strata.pricer.capfloor;
 
-import com.opengamma.strata.pricer.impl.capfloor.BlackIborCapletFloorletPeriodPricer;
 import com.opengamma.strata.product.capfloor.IborCapletFloorletPeriod;
 
 /**
@@ -15,13 +14,13 @@ public class BlackIborCapFloorLegPricer
     extends VolatilityIborCapFloorLegPricer {
 
   /**
-   * Default implementation. 
+   * Default implementation.
    */
   public static final BlackIborCapFloorLegPricer DEFAULT =
       new BlackIborCapFloorLegPricer(BlackIborCapletFloorletPeriodPricer.DEFAULT);
 
   /**
-   * Creates an instance. 
+   * Creates an instance.
    * 
    * @param periodPricer  the pricer for {@link IborCapletFloorletPeriod}.
    */

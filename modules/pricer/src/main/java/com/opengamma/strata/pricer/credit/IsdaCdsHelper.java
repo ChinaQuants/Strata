@@ -11,15 +11,12 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.stream.Stream;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayConvention;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.market.curve.IsdaCreditCurveInputs;
-import com.opengamma.strata.market.curve.IsdaYieldCurveInputs;
-import com.opengamma.strata.market.curve.IsdaYieldCurveUnderlyingType;
 import com.opengamma.strata.market.curve.NodalCurve;
 import com.opengamma.strata.pricer.PricingException;
 import com.opengamma.strata.pricer.impl.credit.isda.AccrualOnDefaultFormulae;
@@ -44,7 +41,7 @@ import com.opengamma.strata.product.credit.type.IsdaYieldCurveConvention;
  * Par rate representations of the curves are calibrated and converted to ISDA calibrated curves.
  * Present value of the expanded CDS product (single name or index) is calculated here.
  */
-public class IsdaCdsHelper {
+class IsdaCdsHelper {
 
   // hard-coded reference data
   public static final ReferenceData REF_DATA = ReferenceData.standard();

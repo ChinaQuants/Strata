@@ -5,18 +5,18 @@
  */
 package com.opengamma.strata.product.index;
 
-import static com.opengamma.strata.basics.PutCall.CALL;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static com.opengamma.strata.product.common.PutCall.CALL;
 import static org.testng.Assert.assertEquals;
 
 import java.time.ZoneOffset;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 
 /**
  * Test {@link ResolvedIborFutureOption}. 
@@ -39,6 +39,7 @@ public class ResolvedIborFutureOptionTest {
     assertEquals(test.getExpiryDate(), PRODUCT.getExpiryDate());
     assertEquals(test.getRounding(), PRODUCT.getRounding());
     assertEquals(test.getUnderlyingFuture(), PRODUCT.getUnderlyingFuture().resolve(REF_DATA));
+    assertEquals(test.getIndex(), PRODUCT.getUnderlyingFuture().getIndex());
   }
 
   public void test_builder_expiryNotAfterTradeDate() {
@@ -49,6 +50,10 @@ public class ResolvedIborFutureOptionTest {
         .strikePrice(PRODUCT.getStrikePrice())
         .underlyingFuture(PRODUCT.getUnderlyingFuture().resolve(REF_DATA))
         .build());
+  }
+
+  public void test_builder_badPrice() {
+    assertThrowsIllegalArg(() -> sut().toBuilder().strikePrice(2.1).build());
   }
 
   //-------------------------------------------------------------------------

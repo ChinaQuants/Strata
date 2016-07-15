@@ -9,27 +9,26 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-import com.opengamma.strata.basics.PutCall;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
+import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSensitivity;
-import com.opengamma.strata.market.view.SwaptionVolatilities;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
-import com.opengamma.strata.product.rate.FixedRateObservation;
-import com.opengamma.strata.product.rate.RateObservation;
-import com.opengamma.strata.product.swap.PaymentPeriod;
+import com.opengamma.strata.product.common.PutCall;
+import com.opengamma.strata.product.common.SettlementType;
+import com.opengamma.strata.product.rate.FixedRateComputation;
+import com.opengamma.strata.product.rate.RateComputation;
 import com.opengamma.strata.product.swap.RatePaymentPeriod;
 import com.opengamma.strata.product.swap.ResolvedSwap;
 import com.opengamma.strata.product.swap.ResolvedSwapLeg;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapLegType;
-import com.opengamma.strata.product.swaption.CashSettlement;
-import com.opengamma.strata.product.swaption.CashSettlementMethod;
+import com.opengamma.strata.product.swap.SwapPaymentPeriod;
+import com.opengamma.strata.product.swaption.CashSwaptionSettlement;
+import com.opengamma.strata.product.swaption.CashSwaptionSettlementMethod;
 import com.opengamma.strata.product.swaption.ResolvedSwaption;
-import com.opengamma.strata.product.swaption.SettlementType;
 
 /**
  * Pricer for swaption with par yield curve method of cash settlement based on volatilities.
@@ -84,7 +83,7 @@ public class VolatilitySwaptionCashParYieldProductPricer {
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value of the swaption
+   * @return the present value
    */
   public CurrencyAmount presentValue(
       ResolvedSwaption swaption,
@@ -117,7 +116,7 @@ public class VolatilitySwaptionCashParYieldProductPricer {
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value of the swaption
+   * @return the currency exposure
    */
   public MultiCurrencyAmount currencyExposure(
       ResolvedSwaption swaption,
@@ -262,17 +261,18 @@ public class VolatilitySwaptionCashParYieldProductPricer {
 
   //-------------------------------------------------------------------------
   /**
-   * Calculates the present value sensitivity of the swaption.
+   * Calculates the present value sensitivity of the swaption to the rate curves.
    * <p>
-   * The present value sensitivity of the product is the sensitivity of the present value to
-   * the underlying curves.
+   * The present value sensitivity is computed in a "sticky strike" style, i.e. the sensitivity to the 
+   * curve nodes with the volatility at the swaption strike unchanged. This sensitivity does not include a potential 
+   * change of volatility due to the implicit change of forward rate or moneyness.
    * 
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value curve sensitivity of the swap product
+   * @return the point sensitivity to the rate curves
    */
-  public PointSensitivityBuilder presentValueSensitivityStickyStrike(
+  public PointSensitivityBuilder presentValueSensitivityRatesStickyStrike(
       ResolvedSwaption swaption,
       RatesProvider ratesProvider,
       SwaptionVolatilities swaptionVolatilities) {
@@ -285,9 +285,10 @@ public class VolatilitySwaptionCashParYieldProductPricer {
       return PointSensitivityBuilder.none();
     }
     double forward = getSwapPricer().parRate(underlying, ratesProvider);
-    double annuityCash = getSwapPricer().getLegPricer().annuityCash(fixedLeg, forward);
-    double annuityCashDr = getSwapPricer().getLegPricer().annuityCashDerivative(fixedLeg, forward);
-    LocalDate settlementDate = ((CashSettlement) swaption.getSwaptionSettlement()).getSettlementDate();
+    ValueDerivatives annuityDerivative = getSwapPricer().getLegPricer().annuityCashDerivative(fixedLeg, forward);
+    double annuityCash = annuityDerivative.getValue();
+    double annuityCashDr = annuityDerivative.getDerivative(0);
+    LocalDate settlementDate = ((CashSwaptionSettlement) swaption.getSwaptionSettlement()).getSettlementDate();
     double discountSettle = ratesProvider.discountFactor(fixedLeg.getCurrency(), settlementDate);
     double strike = calculateStrike(fixedLeg);
     double tenor = swaptionVolatilities.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
@@ -315,21 +316,20 @@ public class VolatilitySwaptionCashParYieldProductPricer {
    * @param swaptionVolatilities  the volatilities
    * @return the point sensitivity to the volatility
    */
-  public SwaptionSensitivity presentValueSensitivityVolatility(
+  public SwaptionSensitivity presentValueSensitivityModelParamsVolatility(
       ResolvedSwaption swaption,
       RatesProvider ratesProvider,
       SwaptionVolatilities swaptionVolatilities) {
 
     validate(swaption, ratesProvider, swaptionVolatilities);
-    ZonedDateTime expiryDateTime = swaption.getExpiry();
-    double expiry = swaptionVolatilities.relativeTime(expiryDateTime);
+    double expiry = swaptionVolatilities.relativeTime(swaption.getExpiry());
     ResolvedSwap underlying = swaption.getUnderlying();
     ResolvedSwapLeg fixedLeg = fixedLeg(underlying);
     double tenor = swaptionVolatilities.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
     double strike = calculateStrike(fixedLeg);
     if (expiry < 0d) { // Option has expired already
       return SwaptionSensitivity.of(
-          swaptionVolatilities.getConvention(), expiryDateTime, tenor, strike, 0d, fixedLeg.getCurrency(), 0d);
+          swaptionVolatilities.getName(), expiry, tenor, strike, 0d, fixedLeg.getCurrency(), 0d);
     }
     double forward = getSwapPricer().parRate(underlying, ratesProvider);
     double numeraire = calculateNumeraire(swaption, fixedLeg, forward, ratesProvider);
@@ -337,8 +337,8 @@ public class VolatilitySwaptionCashParYieldProductPricer {
     PutCall putCall = PutCall.ofPut(fixedLeg.getPayReceive().isReceive());
     double vega = numeraire * swaptionVolatilities.priceVega(expiry, tenor, putCall, strike, forward, volatility);
     return SwaptionSensitivity.of(
-        swaptionVolatilities.getConvention(),
-        expiryDateTime,
+        swaptionVolatilities.getName(),
+        expiry,
         tenor,
         strike,
         forward,
@@ -363,7 +363,7 @@ public class VolatilitySwaptionCashParYieldProductPricer {
       RatesProvider ratesProvider) {
 
     double annuityCash = swapPricer.getLegPricer().annuityCash(fixedLeg, forward);
-    CashSettlement cashSettlement = (CashSettlement) swaption.getSwaptionSettlement();
+    CashSwaptionSettlement cashSettlement = (CashSwaptionSettlement) swaption.getSwaptionSettlement();
     double discountSettle = ratesProvider.discountFactor(fixedLeg.getCurrency(), cashSettlement.getSettlementDate());
     return Math.abs(annuityCash * discountSettle);
   }
@@ -375,13 +375,13 @@ public class VolatilitySwaptionCashParYieldProductPricer {
    * @return the strike
    */
   protected double calculateStrike(ResolvedSwapLeg fixedLeg) {
-    PaymentPeriod paymentPeriod = fixedLeg.getPaymentPeriods().get(0);
+    SwapPaymentPeriod paymentPeriod = fixedLeg.getPaymentPeriods().get(0);
     ArgChecker.isTrue(paymentPeriod instanceof RatePaymentPeriod, "Payment period must be RatePaymentPeriod");
     RatePaymentPeriod ratePaymentPeriod = (RatePaymentPeriod) paymentPeriod;
     // compounding is caught when par rate is computed
-    RateObservation rateObservation = ratePaymentPeriod.getAccrualPeriods().get(0).getRateObservation();
-    ArgChecker.isTrue(rateObservation instanceof FixedRateObservation, "Swap leg must be fixed leg");
-    return ((FixedRateObservation) rateObservation).getRate();
+    RateComputation rateComputation = ratePaymentPeriod.getAccrualPeriods().get(0).getRateComputation();
+    ArgChecker.isTrue(rateComputation instanceof FixedRateComputation, "Swap leg must be fixed leg");
+    return ((FixedRateComputation) rateComputation).getRate();
   }
 
   /**
@@ -427,8 +427,8 @@ public class VolatilitySwaptionCashParYieldProductPricer {
     ArgChecker.isFalse(swaption.getUnderlying().isCrossCurrency(), "Underlying swap must be single currency");
     ArgChecker.isTrue(swaption.getSwaptionSettlement().getSettlementType().equals(SettlementType.CASH),
         "Swaption must be cash settlement");
-    CashSettlement cashSettle = (CashSettlement) swaption.getSwaptionSettlement();
-    ArgChecker.isTrue(cashSettle.getCashSettlementMethod().equals(CashSettlementMethod.PAR_YIELD),
+    CashSwaptionSettlement cashSettle = (CashSwaptionSettlement) swaption.getSwaptionSettlement();
+    ArgChecker.isTrue(cashSettle.getMethod().equals(CashSwaptionSettlementMethod.PAR_YIELD),
         "Cash settlement method must be par yield");
   }
 

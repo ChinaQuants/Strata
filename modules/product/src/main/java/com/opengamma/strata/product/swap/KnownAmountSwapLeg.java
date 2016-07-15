@@ -27,19 +27,19 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.value.ValueSchedule;
+import com.opengamma.strata.product.common.PayReceive;
 
 /**
  * A fixed swap leg defined in terms of known amounts.
@@ -141,7 +141,7 @@ public final class KnownAmountSwapLeg
    * Converts this swap leg to the equivalent {@code ResolvedSwapLeg}.
    * <p>
    * An {@link ResolvedSwapLeg} represents the same data as this leg, but with
-   * a complete schedule of dates defined using {@link KnownAmountPaymentPeriod}.
+   * a complete schedule of dates defined using {@link KnownAmountSwapPaymentPeriod}.
    * 
    * @param refData  the reference data to use when resolving
    * @return the equivalent resolved swap leg
@@ -152,7 +152,7 @@ public final class KnownAmountSwapLeg
   public ResolvedSwapLeg resolve(ReferenceData refData) {
     Schedule resolvedAccruals = accrualSchedule.createSchedule(refData);
     Schedule resolvedPayments = paymentSchedule.createSchedule(resolvedAccruals, refData);
-    List<PaymentPeriod> payPeriods = createPaymentPeriods(resolvedPayments, refData);
+    List<SwapPaymentPeriod> payPeriods = createPaymentPeriods(resolvedPayments, refData);
     return ResolvedSwapLeg.builder()
         .type(getType())
         .payReceive(payReceive)
@@ -161,20 +161,20 @@ public final class KnownAmountSwapLeg
   }
 
   // create the payment period
-  private List<PaymentPeriod> createPaymentPeriods(Schedule resolvedPayments, ReferenceData refData) {
+  private List<SwapPaymentPeriod> createPaymentPeriods(Schedule resolvedPayments, ReferenceData refData) {
     // resolve amount schedule against payment schedule
     List<Double> amounts = amount.resolveValues(resolvedPayments.getPeriods());
     // resolve against reference data once
     DateAdjuster paymentDateAdjuster = paymentSchedule.getPaymentDateOffset().resolve(refData);
     // build up payment periods using schedule
-    ImmutableList.Builder<PaymentPeriod> paymentPeriods = ImmutableList.builder();
+    ImmutableList.Builder<SwapPaymentPeriod> paymentPeriods = ImmutableList.builder();
     for (int index = 0; index < resolvedPayments.size(); index++) {
       SchedulePeriod paymentPeriod = resolvedPayments.getPeriod(index);
       LocalDate baseDate = paymentSchedule.getPaymentRelativeTo().selectBaseDate(paymentPeriod);
       LocalDate paymentDate = paymentDateAdjuster.adjust(baseDate);
       double amount = payReceive.normalize(amounts.get(index));
       Payment payment = Payment.of(CurrencyAmount.of(currency, amount), paymentDate);
-      paymentPeriods.add(KnownAmountPaymentPeriod.of(payment, paymentPeriod));
+      paymentPeriods.add(KnownAmountSwapPaymentPeriod.of(payment, paymentPeriod));
     }
     return paymentPeriods.build();
   }

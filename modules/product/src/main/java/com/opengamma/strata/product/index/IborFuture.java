@@ -25,15 +25,15 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
 import com.opengamma.strata.basics.value.Rounding;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecuritizedProduct;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.SecurityId;
+import com.opengamma.strata.product.rate.IborRateComputation;
 
 /**
  * A futures contract based on an Ibor index.
@@ -46,6 +46,14 @@ import com.opengamma.strata.product.rate.IborRateObservation;
  * For example, the widely traded "CME Eurodollar futures contract" has a notional
  * of 1 million USD, is based on the USD Libor 3 month rate 'USD-LIBOR-3M', expiring
  * two business days before an IMM date (the 3rd Wednesday of the month).
+ * 
+ * <h4>Price</h4>
+ * The price of an Ibor future is based on the interest rate of the underlying index.
+ * It is defined as {@code (100 - percentRate)}.
+ * <p>
+ * Strata uses <i>decimal prices</i> for Ibor futures in the trade model, pricers and market data.
+ * The decimal price is based on the decimal rate equivalent to the percentage.
+ * For example, a price of 99.32 implies an interest rate of 0.68% which is represented in Strata by 0.9932.
  */
 @BeanDefinition(constructorScope = "package")
 public final class IborFuture
@@ -144,7 +152,7 @@ public final class IborFuture
   //-------------------------------------------------------------------------
   @Override
   public ResolvedIborFuture resolve(ReferenceData refData) {
-    IborRateObservation iborRate = IborRateObservation.of(index, lastTradeDate, refData);
+    IborRateComputation iborRate = IborRateComputation.of(index, lastTradeDate, refData);
     return new ResolvedIborFuture(securityId, currency, notional, accrualFactor, iborRate, rounding);
   }
 

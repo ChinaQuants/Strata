@@ -5,23 +5,23 @@
  */
 package com.opengamma.strata.pricer.bond;
 
-import static com.opengamma.strata.basics.PutCall.CALL;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
+import static com.opengamma.strata.product.common.PutCall.CALL;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Period;
 import java.time.ZoneId;
 
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
@@ -33,10 +33,10 @@ import com.opengamma.strata.product.bond.BondFutureOptionTrade;
 import com.opengamma.strata.product.bond.BondFutureTrade;
 import com.opengamma.strata.product.bond.FixedCouponBond;
 import com.opengamma.strata.product.bond.FixedCouponBondYieldConvention;
-import com.opengamma.strata.product.common.FutureOptionPremiumStyle;
+import com.opengamma.strata.product.option.FutureOptionPremiumStyle;
 
 /**
- * Data sets of bond, bond future and bond future option. 
+ * Data sets of bond, bond future and bond future option.
  */
 public final class BondDataSets {
 
@@ -103,7 +103,7 @@ public final class BondDataSets {
       .lastTradeDate(LAST_TRADING_DATE_USD)
       .build();
   /** trade date */
-  public static final LocalDate TRADE_DATE_USD = LocalDate.of(2011, 6, 20);
+  public static final LocalDate TRADE_DATE_USD = LocalDate.of(2011, 6, 19);
   private static final TradeInfo TRADE_INFO_USD = TradeInfo.builder().tradeDate(TRADE_DATE_USD).build();
   /** Quantity of bond future trade */
   public static final long QUANTITY_USD = 1234l;
@@ -115,12 +115,12 @@ public final class BondDataSets {
       .price(1.1d)
       .build();
   /** Reference price */
-  public static final double REFERENCE_PRICE_USD = 1.2345d;
+  public static final double SETTLE_PRICE_USD = 1.2345d;
 
   //      =====     Fixed coupon bonds, bond future, EUR   =====      
   // bond basket
   private static final StandardId ISSUER_ID_EUR = StandardId.of("OG-Ticker", "GOVT2");
-  private static final FixedCouponBondYieldConvention YIELD_CONVENTION_EUR = FixedCouponBondYieldConvention.GERMAN_BONDS;
+  private static final FixedCouponBondYieldConvention YIELD_CONVENTION_EUR = FixedCouponBondYieldConvention.DE_BONDS;
   /** Notional of underlying bond */
   public static final double NOTIONAL_EUR = 100000d;
   private static final HolidayCalendarId CALENDAR_EUR = HolidayCalendarIds.EUTA;

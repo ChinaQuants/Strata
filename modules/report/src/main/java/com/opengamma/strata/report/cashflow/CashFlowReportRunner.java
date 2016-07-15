@@ -22,11 +22,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Maps;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.config.Measures;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.market.explain.ExplainKey;
 import com.opengamma.strata.market.explain.ExplainMap;
+import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.report.Report;
 import com.opengamma.strata.report.ReportCalculationResults;
 import com.opengamma.strata.report.ReportRequirements;
@@ -261,7 +261,7 @@ public class CashFlowReportRunner
     if (header != null) {
       return header;
     }
-    return humanizeUpperCamelCase(key.toString());
+    return humanizeUpperCamelCase(key.getName());
   }
 
   private String humanizeUpperCamelCase(String str) {

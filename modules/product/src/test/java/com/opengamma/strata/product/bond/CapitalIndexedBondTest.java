@@ -17,7 +17,7 @@ import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
-import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.INDEX_LINKED_FLOAT;
+import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.GB_IL_FLOAT;
 import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.US_IL_REAL;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTERPOLATED;
 import static org.testng.Assert.assertEquals;
@@ -29,11 +29,11 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
@@ -42,7 +42,7 @@ import com.opengamma.strata.basics.value.ValueAdjustment;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
 import com.opengamma.strata.product.SecurityId;
-import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.RateComputation;
 import com.opengamma.strata.product.swap.InflationRateCalculation;
 
 /**
@@ -163,7 +163,7 @@ public class CapitalIndexedBondTest {
       LocalDate start = SCHEDULE_ADJ.adjust(unAdjDates[i], REF_DATA);
       LocalDate end = SCHEDULE_ADJ.adjust(unAdjDates[i + 1], REF_DATA);
       LocalDate detachment = EX_COUPON.adjust(end, REF_DATA);
-      RateObservation obs = RATE_CALC.createRateObservation(end);
+      RateComputation comp = RATE_CALC.createRateComputation(end);
       periodic[i] = CapitalIndexedBondPaymentPeriod.builder()
           .currency(USD)
           .startDate(start)
@@ -172,7 +172,7 @@ public class CapitalIndexedBondTest {
           .unadjustedEndDate(unAdjDates[i + 1])
           .detachmentDate(detachment)
           .realCoupon(COUPONS[i])
-          .rateObservation(obs)
+          .rateComputation(comp)
           .notional(NOTIONAL)
           .build();
     }
@@ -228,7 +228,7 @@ public class CapitalIndexedBondTest {
         .rateCalculation(RATE_CALC)
         .exCouponPeriod(EX_COUPON)
         .legalEntityId(LEGAL_ENTITY)
-        .yieldConvention(INDEX_LINKED_FLOAT)
+        .yieldConvention(GB_IL_FLOAT)
         .settlementDateOffset(SETTLE_OFFSET)
         .accrualSchedule(SCHEDULE)
         .build();
@@ -249,7 +249,7 @@ public class CapitalIndexedBondTest {
                 .build())
         .exCouponPeriod(EX_COUPON)
         .legalEntityId(StandardId.of("OG-Ticker", "US-Govt-1"))
-        .yieldConvention(INDEX_LINKED_FLOAT)
+        .yieldConvention(GB_IL_FLOAT)
         .settlementDateOffset(DaysAdjustment.ofBusinessDays(2, GBLO))
         .accrualSchedule(
             PeriodicSchedule.of(

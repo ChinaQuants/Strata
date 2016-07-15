@@ -25,11 +25,11 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.Iterables;
-import com.opengamma.strata.basics.LongShort;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.IborIndex;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.product.ResolvedProduct;
+import com.opengamma.strata.product.common.LongShort;
 import com.opengamma.strata.product.swap.ResolvedSwap;
 
 /**
@@ -56,7 +56,7 @@ public final class ResolvedSwaption
   @PropertyDefinition(validate = "notNull")
   private final LongShort longShort;
   /**
-   * Settlement method.  
+   * Settlement method.
    * <p>
    * The settlement of the option is specified by {@link SwaptionSettlement}.
    */
@@ -73,7 +73,7 @@ public final class ResolvedSwaption
    * The underlying swap.
    * <p>
    * At expiry, if the option is exercised, this swap will be entered into. The swap description is the swap 
-   * as viewed by the party long the option. 
+   * as viewed by the party long the option.
    */
   @PropertyDefinition(validate = "notNull")
   private final ResolvedSwap underlying;
@@ -96,7 +96,7 @@ public final class ResolvedSwaption
    * @return the currency
    */
   public Currency getCurrency() {
-    return Iterables.getOnlyElement(underlying.allCurrencies());
+    return Iterables.getOnlyElement(underlying.allPaymentCurrencies());
   }
 
   /**

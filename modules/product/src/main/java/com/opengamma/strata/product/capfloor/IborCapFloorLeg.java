@@ -29,21 +29,21 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.Resolvable;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.IborIndexObservation;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.Resolvable;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.common.PayReceive;
+import com.opengamma.strata.product.rate.IborRateComputation;
 import com.opengamma.strata.product.swap.FixingRelativeTo;
 import com.opengamma.strata.product.swap.IborRateCalculation;
 
@@ -113,8 +113,8 @@ public final class IborCapFloorLeg
   /**
    * The cap schedule, optional.
    * <p>
-   * This defines the strike value of a cap as an initial value and a list of adjustments. 
-   * Thus individual caplets may have different strike values. 
+   * This defines the strike value of a cap as an initial value and a list of adjustments.
+   * Thus individual caplets may have different strike values.
    * The cap rate is only allowed to change at payment period boundaries.
    * <p>
    * If the product is not a cap, the cap schedule will be absent.
@@ -124,8 +124,8 @@ public final class IborCapFloorLeg
   /**
    * The floor schedule, optional.
    * <p>
-   * This defines the strike value of a floor as an initial value and a list of adjustments. 
-   * Thus individual floorlets may have different strike values. 
+   * This defines the strike value of a floor as an initial value and a list of adjustments.
+   * Thus individual floorlets may have different strike values.
    * The floor rate is only allowed to change at payment period boundaries.
    * <p>
    * If the product is not a floor, the floor schedule will be absent.
@@ -160,9 +160,9 @@ public final class IborCapFloorLeg
     ArgChecker.isTrue(!this.getPaymentSchedule().getStubConvention().isPresent() ||
         this.getPaymentSchedule().getStubConvention().get().equals(StubConvention.NONE), "Stub period is not allowed");
     ArgChecker.isFalse(this.getCapSchedule().isPresent() == this.getFloorSchedule().isPresent(),
-        "one of cap schedule and floor schedule should be empty");
+        "One of cap schedule and floor schedule should be empty");
     ArgChecker.isTrue(this.getCalculation().getIndex().getTenor().getPeriod().equals(this.getPaymentSchedule()
-        .getFrequency().getPeriod()), "payment frequency period should be the same as index tenor period");
+        .getFrequency().getPeriod()), "Payment frequency period should be the same as index tenor period");
   }
 
   //-------------------------------------------------------------------------
@@ -195,10 +195,9 @@ public final class IborCapFloorLeg
     List<Double> cap = getCapSchedule().isPresent() ? capSchedule.resolveValues(adjustedSchedule.getPeriods()) : null;
     List<Double> floor = getFloorSchedule().isPresent() ? floorSchedule.resolveValues(adjustedSchedule.getPeriods()) : null;
     List<Double> notionals = notional.resolveValues(adjustedSchedule.getPeriods());
-    DateAdjuster paymentDateAdjuster = paymentDateOffset.resolve(refData);
     DateAdjuster fixingDateAdjuster = calculation.getFixingDateOffset().resolve(refData);
+    DateAdjuster paymentDateAdjuster = paymentDateOffset.resolve(refData);
     Function<LocalDate, IborIndexObservation> obsFn = calculation.getIndex().resolve(refData);
-
     ImmutableList.Builder<IborCapletFloorletPeriod> periodsBuild = ImmutableList.builder();
     for (int i = 0; i < adjustedSchedule.size(); i++) {
       SchedulePeriod period = adjustedSchedule.getPeriod(i);
@@ -212,7 +211,7 @@ public final class IborCapFloorLeg
           .unadjustedEndDate(period.getUnadjustedEndDate())
           .startDate(period.getStartDate())
           .endDate(period.getEndDate())
-          .iborRate(IborRateObservation.of(obsFn.apply(fixingDate)))
+          .iborRate(IborRateComputation.of(obsFn.apply(fixingDate)))
           .paymentDate(paymentDate)
           .notional(signedNotional)
           .currency(currency)

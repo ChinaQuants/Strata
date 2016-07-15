@@ -13,14 +13,15 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
+import com.opengamma.strata.pricer.model.HullWhiteOneFactorPiecewiseConstantParameters;
+import com.opengamma.strata.pricer.model.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.product.index.ResolvedIborFuture;
@@ -71,15 +72,15 @@ public class HullWhiteIborFutureTradePricerTest {
   }
 
   public void test_presentValueSensitivity() {
-    PointSensitivities point = PRICER.presentValueSensitivity(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
-    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expected =
+    PointSensitivities point = PRICER.presentValueSensitivityRates(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
+    CurrencyParameterSensitivities computed = RATE_PROVIDER.parameterSensitivity(point);
+    CurrencyParameterSensitivities expected =
         FD_CAL.sensitivity(RATE_PROVIDER, p -> PRICER.presentValue(FUTURE_TRADE, p, HW_PROVIDER, LAST_PRICE));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * QUANTITY * TOL_FD));
   }
 
   public void test_presentValueSensitivityHullWhiteParameter() {
-    DoubleArray computed = PRICER.presentValueSensitivityHullWhiteParameter(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
+    DoubleArray computed = PRICER.presentValueSensitivityModelParamsHullWhite(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
     DoubleArray vols = HW_PROVIDER.getParameters().getVolatility();
     int size = vols.size();
     double[] expected = new double[size];
@@ -106,15 +107,15 @@ public class HullWhiteIborFutureTradePricerTest {
   }
 
   public void test_parSpreadSensitivity() {
-    PointSensitivities point = PRICER.parSpreadSensitivity(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
-    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(RATE_PROVIDER,
+    PointSensitivities point = PRICER.parSpreadSensitivityRates(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
+    CurrencyParameterSensitivities computed = RATE_PROVIDER.parameterSensitivity(point);
+    CurrencyParameterSensitivities expected = FD_CAL.sensitivity(RATE_PROVIDER,
         p -> CurrencyAmount.of(EUR, PRICER.parSpread(FUTURE_TRADE, p, HW_PROVIDER, LAST_PRICE)));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * QUANTITY * TOL_FD));
   }
 
   public void test_currencyExposure() {
-    PointSensitivities point = PRICER.presentValueSensitivity(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
+    PointSensitivities point = PRICER.presentValueSensitivityRates(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
     MultiCurrencyAmount expected = RATE_PROVIDER.currencyExposure(point)
         .plus(PRICER.presentValue(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER, LAST_PRICE));
     MultiCurrencyAmount computed = PRICER.currencyExposure(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER, LAST_PRICE);
@@ -129,8 +130,8 @@ public class HullWhiteIborFutureTradePricerTest {
   }
 
   public void regression_pvSensi() {
-    PointSensitivities point = PRICER.presentValueSensitivity(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
-    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point);
+    PointSensitivities point = PRICER.presentValueSensitivityRates(FUTURE_TRADE, RATE_PROVIDER, HW_PROVIDER);
+    CurrencyParameterSensitivities computed = RATE_PROVIDER.parameterSensitivity(point);
     double[] expected = new double[] {0.0, 0.0, 9.514709785770103E7, -1.939992074119211E8, 0.0, 0.0, 0.0, 0.0 };
     assertEquals(computed.size(), 1);
     assertTrue(DoubleArrayMath.fuzzyEquals(computed.getSensitivity(HullWhiteIborFutureDataSet.FWD3_NAME, EUR)

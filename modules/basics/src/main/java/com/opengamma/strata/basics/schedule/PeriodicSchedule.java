@@ -31,9 +31,9 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 
 /**
@@ -266,7 +266,7 @@ public final class PeriodicSchedule
    * <p>
    * During schedule generation, if this is present it will be used to override the start date
    * of the first generated schedule period.
-   * If not present, then the the start of the first period will be the normal start date.
+   * If not present, then the start of the first period will be the normal start date.
    */
   @PropertyDefinition(get = "optional")
   private final AdjustableDate overrideStartDate;
@@ -1017,7 +1017,7 @@ public final class PeriodicSchedule
    * <p>
    * During schedule generation, if this is present it will be used to override the start date
    * of the first generated schedule period.
-   * If not present, then the the start of the first period will be the normal start date.
+   * If not present, then the start of the first period will be the normal start date.
    * @return the optional value of the property, not null
    */
   public Optional<AdjustableDate> getOverrideStartDate() {
@@ -1715,7 +1715,7 @@ public final class PeriodicSchedule
      * <p>
      * During schedule generation, if this is present it will be used to override the start date
      * of the first generated schedule period.
-     * If not present, then the the start of the first period will be the normal start date.
+     * If not present, then the start of the first period will be the normal start date.
      * @param overrideStartDate  the new value
      * @return this, for chaining, not null
      */

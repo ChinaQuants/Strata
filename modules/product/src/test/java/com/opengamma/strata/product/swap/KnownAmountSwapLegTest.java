@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.product.swap;
 
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
@@ -16,6 +14,8 @@ import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static org.testng.Assert.assertEquals;
 
@@ -24,13 +24,13 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.basics.market.ReferenceData;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.value.ValueAdjustment;
 import com.opengamma.strata.basics.value.ValueSchedule;
@@ -130,18 +130,18 @@ public class KnownAmountSwapLegTest {
         .currency(GBP)
         .build();
     // expected
-    KnownAmountPaymentPeriod rpp1 = KnownAmountPaymentPeriod.builder()
+    KnownAmountSwapPaymentPeriod rpp1 = KnownAmountSwapPaymentPeriod.builder()
         .payment(Payment.ofPay(CurrencyAmount.of(GBP, 123d), DATE_02_07))
         .startDate(DATE_01_06)
         .endDate(DATE_02_05)
         .unadjustedStartDate(DATE_01_05)
         .build();
-    KnownAmountPaymentPeriod rpp2 = KnownAmountPaymentPeriod.builder()
+    KnownAmountSwapPaymentPeriod rpp2 = KnownAmountSwapPaymentPeriod.builder()
         .payment(Payment.ofPay(CurrencyAmount.of(GBP, 234d), DATE_03_07))
         .startDate(DATE_02_05)
         .endDate(DATE_03_05)
         .build();
-    KnownAmountPaymentPeriod rpp3 = KnownAmountPaymentPeriod.builder()
+    KnownAmountSwapPaymentPeriod rpp3 = KnownAmountSwapPaymentPeriod.builder()
         .payment(Payment.ofPay(CurrencyAmount.of(GBP, 234d), DATE_04_09))
         .startDate(DATE_03_05)
         .endDate(DATE_04_07)

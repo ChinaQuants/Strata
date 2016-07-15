@@ -18,13 +18,16 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.opengamma.strata.basics.CalculationTarget;
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.marketdata.CalculationEnvironment;
-import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
+import com.opengamma.strata.calc.ColumnHeader;
+import com.opengamma.strata.calc.Results;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.result.Result;
+import com.opengamma.strata.data.MarketData;
+import com.opengamma.strata.data.scenario.ScenarioArray;
+import com.opengamma.strata.data.scenario.ScenarioMarketData;
 
 /**
  * The default calculation task runner.
@@ -93,79 +96,82 @@ class DefaultCalculationTaskRunner implements CalculationTaskRunner {
 
   //-------------------------------------------------------------------------
   @Override
-  public Results calculateSingleScenario(
+  public Results calculate(
       CalculationTasks tasks,
-      CalculationEnvironment marketData,
+      MarketData marketData,
       ReferenceData refData) {
 
     // perform the calculations
-    Results results = calculateMultipleScenarios(tasks, marketData, refData);
+    ScenarioMarketData md = ScenarioMarketData.of(1, marketData);
+    Results results = calculateMultiScenario(tasks, md, refData);
 
     // unwrap the results
     // since there is only one scenario it is not desirable to return scenario result containers
-    List<Result<?>> unwrappedResults = results.getItems().stream()
-        .map(DefaultCalculationTaskRunner::unwrapScenarioResult)
+    List<Result<?>> mappedResults = results.getCells().stream()
+        .map(r -> unwrapScenarioResult(r))
         .collect(toImmutableList());
-
-    return results.toBuilder().items(unwrappedResults).build();
+    return Results.of(results.getColumns(), mappedResults);
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Unwraps the result from an instance of {@link ScenarioResult} containing a single result.
+   * Unwraps the result from an instance of {@link ScenarioArray} containing a single result.
    * <p>
    * When the user executes a single scenario the functions are invoked with a set of scenario market data
    * of size 1. This means the functions are simpler and always deal with scenarios. But if the user has
    * asked for a single set of results they don't want to see a collection of size 1 so the scenario results
    * need to be unwrapped.
    * <p>
-   * If {@code result} is a failure or doesn't contain a {@code ScenarioResult} it is returned.
+   * If {@code result} is a failure or doesn't contain a {@code ScenarioArray} it is returned.
    * <p>
-   * If this method is called with a {@code ScenarioResult} containing more than one value it throws an exception.
+   * If this method is called with a {@code ScenarioArray} containing more than one value it throws an exception.
    */
   private static Result<?> unwrapScenarioResult(Result<?> result) {
     if (result.isFailure()) {
       return result;
     }
     Object value = result.getValue();
-    if (!(value instanceof ScenarioResult)) {
+    if (!(value instanceof ScenarioArray)) {
       return result;
     }
-    ScenarioResult<?> scenarioResult = (ScenarioResult<?>) value;
+    ScenarioArray<?> scenarioResult = (ScenarioArray<?>) value;
 
-    if (scenarioResult.size() != 1) {
+    if (scenarioResult.getScenarioCount() != 1) {
       throw new IllegalArgumentException(Messages.format(
-          "Expected one result but found {} in {}", scenarioResult.size(), scenarioResult));
+          "Expected one result but found {} in {}", scenarioResult.getScenarioCount(), scenarioResult));
     }
     return Result.success(scenarioResult.get(0));
   }
 
   @Override
-  public Results calculateMultipleScenarios(
+  public void calculateAsync(
       CalculationTasks tasks,
-      CalculationEnvironment marketData,
+      MarketData marketData,
+      ReferenceData refData,
+      CalculationListener listener) {
+
+    // the listener is decorated to unwrap ScenarioArrays containing a single result
+    ScenarioMarketData md = ScenarioMarketData.of(1, marketData);
+    UnwrappingListener unwrappingListener = new UnwrappingListener(listener);
+    calculateMultiScenarioAsync(tasks, md, refData, unwrappingListener);
+  }
+
+  //-------------------------------------------------------------------------
+  @Override
+  public Results calculateMultiScenario(
+      CalculationTasks tasks,
+      ScenarioMarketData marketData,
       ReferenceData refData) {
 
     AggregatingListener listener = new AggregatingListener(tasks.getColumns());
-    calculateMultipleScenariosAsync(tasks, marketData, refData, listener);
+    calculateMultiScenarioAsync(tasks, marketData, refData, listener);
     return listener.result();
   }
 
   @Override
-  public void calculateSingleScenarioAsync(
+  public void calculateMultiScenarioAsync(
       CalculationTasks tasks,
-      CalculationEnvironment marketData,
-      ReferenceData refData,
-      CalculationListener listener) {
-
-    // the listener is decorated to unwrap ScenarioResults containing a single result
-    UnwrappingListener unwrappingListener = new UnwrappingListener(listener);
-    calculateMultipleScenariosAsync(tasks, marketData, refData, unwrappingListener);
-  }
-
-  @Override
-  public void calculateMultipleScenariosAsync(
-      CalculationTasks tasks,
-      CalculationEnvironment marketData,
+      ScenarioMarketData marketData,
       ReferenceData refData,
       CalculationListener listener) {
 
@@ -181,7 +187,7 @@ class DefaultCalculationTaskRunner implements CalculationTaskRunner {
   // submits a task to the executor to be run
   private void runTask(
       CalculationTask task,
-      CalculationEnvironment marketData,
+      ScenarioMarketData marketData,
       ReferenceData refData,
       Consumer<CalculationResults> consumer) {
 
@@ -240,18 +246,18 @@ class DefaultCalculationTaskRunner implements CalculationTaskRunner {
     private static Results buildResults(List<CalculationResult> calculationResults, List<Column> columns) {
       List<Result<?>> results =
           calculationResults.stream()
-              .map(CalculationResult::getResult)
+              .map(r -> r.getResult())
               .collect(toImmutableList());
-
-      int columnCount = columns.size();
-      int rowCount = (columnCount == 0) ? 0 : calculationResults.size() / columnCount;
-      return Results.of(rowCount, columnCount, results);
+      List<ColumnHeader> headers = columns.stream()
+          .map(c -> c.toHeader())
+          .collect(toImmutableList());
+      return Results.of(headers, results);
     }
   }
 
   //-------------------------------------------------------------------------
   /**
-   * Listener that decorates another listener and unwraps {@link ScenarioResult} instances
+   * Listener that decorates another listener and unwraps {@link ScenarioArray} instances
    * containing a single value before passing the value to the delegate listener.
    * This is used by the single scenario async method.
    */

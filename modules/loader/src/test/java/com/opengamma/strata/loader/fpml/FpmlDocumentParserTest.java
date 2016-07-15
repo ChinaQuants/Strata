@@ -5,10 +5,6 @@
  */
 package com.opengamma.strata.loader.fpml;
 
-import static com.opengamma.strata.basics.BuySell.BUY;
-import static com.opengamma.strata.basics.BuySell.SELL;
-import static com.opengamma.strata.basics.PayReceive.PAY;
-import static com.opengamma.strata.basics.PayReceive.RECEIVE;
 import static com.opengamma.strata.basics.currency.Currency.CHF;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
@@ -38,10 +34,17 @@ import static com.opengamma.strata.basics.index.OvernightIndices.EUR_EONIA;
 import static com.opengamma.strata.collect.TestHelper.assertEqualsBean;
 import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.product.common.BuySell.BUY;
+import static com.opengamma.strata.product.common.BuySell.SELL;
+import static com.opengamma.strata.product.common.PayReceive.PAY;
+import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Period;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
@@ -53,8 +56,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
-import com.opengamma.strata.basics.PayReceive;
-import com.opengamma.strata.basics.Trade;
+import com.opengamma.strata.basics.ImmutableReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
@@ -67,9 +71,6 @@ import com.opengamma.strata.basics.date.HolidayCalendars;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.ImmutableFxIndex;
 import com.opengamma.strata.basics.index.PriceIndices;
-import com.opengamma.strata.basics.market.ImmutableReferenceData;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConvention;
@@ -79,6 +80,9 @@ import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.io.XmlElement;
+import com.opengamma.strata.product.Trade;
+import com.opengamma.strata.product.common.LongShort;
+import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.deposit.TermDeposit;
 import com.opengamma.strata.product.deposit.TermDepositTrade;
 import com.opengamma.strata.product.fra.Fra;
@@ -92,13 +96,14 @@ import com.opengamma.strata.product.fx.FxSwap;
 import com.opengamma.strata.product.fx.FxSwapTrade;
 import com.opengamma.strata.product.payment.BulletPayment;
 import com.opengamma.strata.product.payment.BulletPaymentTrade;
-import com.opengamma.strata.product.rate.FixedRateObservation;
-import com.opengamma.strata.product.rate.IborInterpolatedRateObservation;
-import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.FixedRateComputation;
+import com.opengamma.strata.product.rate.IborInterpolatedRateComputation;
+import com.opengamma.strata.product.rate.IborRateComputation;
 import com.opengamma.strata.product.swap.CompoundingMethod;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
-import com.opengamma.strata.product.swap.IborRateAveragingMethod;
 import com.opengamma.strata.product.swap.IborRateCalculation;
+import com.opengamma.strata.product.swap.IborRateResetMethod;
+import com.opengamma.strata.product.swap.IborRateStubCalculation;
 import com.opengamma.strata.product.swap.InflationRateCalculation;
 import com.opengamma.strata.product.swap.NotionalSchedule;
 import com.opengamma.strata.product.swap.OvernightRateCalculation;
@@ -109,9 +114,11 @@ import com.opengamma.strata.product.swap.RateCalculationSwapLeg;
 import com.opengamma.strata.product.swap.RatePaymentPeriod;
 import com.opengamma.strata.product.swap.ResetSchedule;
 import com.opengamma.strata.product.swap.ResolvedSwapLeg;
-import com.opengamma.strata.product.swap.StubCalculation;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapTrade;
+import com.opengamma.strata.product.swaption.PhysicalSwaptionSettlement;
+import com.opengamma.strata.product.swaption.Swaption;
+import com.opengamma.strata.product.swaption.SwaptionTrade;
 
 /**
  * Test {@link FpmlDocumentParser}.
@@ -121,6 +128,7 @@ public class FpmlDocumentParserTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
   private static final HolidayCalendarId GBLO_USNY = GBLO.combinedWith(USNY);
+  private static final HolidayCalendarId GBLO_EUTA = GBLO.combinedWith(EUTA);
 
   //-------------------------------------------------------------------------
   public void bulletPayment() {
@@ -231,6 +239,82 @@ public class FpmlDocumentParserTest {
     assertEquals(farLeg.getBaseCurrencyAmount(), CurrencyAmount.of(GBP, -10000000));
     assertEquals(farLeg.getCounterCurrencyAmount(), CurrencyAmount.of(USD, 15000000));
     assertEquals(farLeg.getPaymentDate(), date(2002, 2, 25));
+  }
+
+  public void swaption() {
+    String location = "classpath:com/opengamma/strata/loader/fpml/ird-ex10-euro-swaption-relative.xml";
+    ByteSource resource = ResourceLocator.of(location).getByteSource();
+    List<Trade> trades = FpmlDocumentParser.of(FpmlPartySelector.matching("Party1")).parseTrades(resource);
+    assertEquals(trades.size(), 1);
+    Trade trade = trades.get(0);
+    assertEquals(trade.getClass(), SwaptionTrade.class);
+    SwaptionTrade swaptionTrade = (SwaptionTrade) trade;
+    assertEquals(swaptionTrade.getInfo().getTradeDate(), Optional.of(date(1992, 8, 30)));
+    Swaption swaption = swaptionTrade.getProduct();
+
+    //Test the parsing of the underlying swap
+    Swap swap = swaption.getUnderlying();
+    NotionalSchedule notional = NotionalSchedule.of(EUR, 50000000d);
+    RateCalculationSwapLeg payLeg = RateCalculationSwapLeg.builder()
+        .payReceive(PayReceive.PAY)
+        .accrualSchedule(PeriodicSchedule.builder()
+            .startDate(date(1994, 12, 14))
+            .endDate(date(1999, 12, 14))
+            .startDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
+            .businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, FRPA))
+            .frequency(Frequency.P6M)
+            .rollConvention(RollConvention.ofDayOfMonth(14))
+            .build())
+        .paymentSchedule(PaymentSchedule.builder()
+            .paymentFrequency(Frequency.P6M)
+            .paymentDateOffset(DaysAdjustment.ofCalendarDays(0, BusinessDayAdjustment.of(MODIFIED_FOLLOWING, FRPA)))
+            .build())
+        .notionalSchedule(notional)
+        .calculation(IborRateCalculation.builder()
+            .index(EUR_LIBOR_6M)
+            .dayCount(ACT_360)
+            .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, GBLO))
+            .build())
+        .build();
+    RateCalculationSwapLeg recLeg = RateCalculationSwapLeg.builder()
+        .payReceive(PayReceive.RECEIVE)
+        .accrualSchedule(PeriodicSchedule.builder()
+            .startDate(date(1994, 12, 14))
+            .endDate(date(1999, 12, 14))
+            .startDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
+            .businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, FRPA))
+            .frequency(Frequency.P12M)
+            .rollConvention(RollConvention.ofDayOfMonth(14))
+            .build())
+        .paymentSchedule(PaymentSchedule.builder()
+            .paymentFrequency(Frequency.P12M)
+            .paymentDateOffset(DaysAdjustment.ofCalendarDays(0, BusinessDayAdjustment.of(MODIFIED_FOLLOWING, FRPA)))
+            .build())
+        .notionalSchedule(notional)
+        .calculation(FixedRateCalculation.builder()
+            .dayCount(THIRTY_E_360)
+            .rate(ValueSchedule.of(0.06))
+            .build())
+        .build();
+    assertEqualsBean((Bean) swap.getLegs().get(0), payLeg);
+    assertEqualsBean((Bean) swap.getLegs().get(1), recLeg);
+
+    //Test the parsing of the option part of the swaption
+    Swap underylingSwap = Swap.of(payLeg, recLeg);
+    AdjustableDate expiryDate = AdjustableDate.of(
+        LocalDate.of(1993, 8, 28),
+        BusinessDayAdjustment.of(FOLLOWING, GBLO_EUTA));
+    LocalTime expiryTime = LocalTime.of(11, 0, 0);
+    ZoneId expiryZone = ZoneId.of("Europe/Brussels");
+    Swaption swaptionExpected = Swaption.builder()
+        .expiryDate(expiryDate)
+        .expiryZone(expiryZone)
+        .expiryTime(expiryTime)
+        .longShort(LongShort.LONG)
+        .swaptionSettlement(PhysicalSwaptionSettlement.DEFAULT)
+        .underlying(underylingSwap)
+        .build();
+    assertEqualsBean((Bean) swaption, swaptionExpected);
   }
 
   //-------------------------------------------------------------------------
@@ -433,7 +517,7 @@ public class FpmlDocumentParserTest {
             .index(EUR_LIBOR_6M)
             .dayCount(ACT_360)
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, GBLO))
-            .initialStub(StubCalculation.ofIborInterpolatedRate(EUR_LIBOR_3M, EUR_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(EUR_LIBOR_3M, EUR_LIBOR_6M))
             .build())
         .build();
     RateCalculationSwapLeg recLeg = RateCalculationSwapLeg.builder()
@@ -494,7 +578,7 @@ public class FpmlDocumentParserTest {
             .index(EUR_LIBOR_6M)
             .dayCount(ACT_360)
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, SAT_SUN))
-            .initialStub(StubCalculation.ofIborInterpolatedRate(EUR_LIBOR_3M, EUR_LIBOR_6M))
+            .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(EUR_LIBOR_3M, EUR_LIBOR_6M))
             .build())
         .build();
     RateCalculationSwapLeg recLeg = RateCalculationSwapLeg.builder()
@@ -709,8 +793,8 @@ public class FpmlDocumentParserTest {
             .index(EUR_EURIBOR_6M)
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, EUTA))
             .spread(ValueSchedule.of(0.001))
-            .initialStub(StubCalculation.ofFixedRate(0.05125))
-            .finalStub(StubCalculation.ofIborRate(EUR_EURIBOR_3M))
+            .initialStub(IborRateStubCalculation.ofFixedRate(0.05125))
+            .finalStub(IborRateStubCalculation.ofIborRate(EUR_EURIBOR_3M))
             .build())
         .build();
     RateCalculationSwapLeg recLeg = RateCalculationSwapLeg.builder()
@@ -848,7 +932,7 @@ public class FpmlDocumentParserTest {
             .index(USD_LIBOR_6M)
             .resetPeriods(ResetSchedule.builder()
                 .resetFrequency(Frequency.P1M)
-                .averagingMethod(IborRateAveragingMethod.UNWEIGHTED)
+                .resetMethod(IborRateResetMethod.UNWEIGHTED)
                 .businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, GBLO))
                 .build())
             .dayCount(ACT_360)
@@ -1165,10 +1249,10 @@ public class FpmlDocumentParserTest {
     RateAccrualPeriod ap = pp.getAccrualPeriods().get(0);
     assertEquals(ap.getStartDate().toString(), startDateStr);
     assertEquals(ap.getEndDate().toString(), endDateStr);
-    if (ap.getRateObservation() instanceof IborInterpolatedRateObservation) {
-      assertEquals(((IborInterpolatedRateObservation) ap.getRateObservation()).getFixingDate().toString(), fixingDateStr);
-    } else if (ap.getRateObservation() instanceof IborRateObservation) {
-      assertEquals(((IborRateObservation) ap.getRateObservation()).getFixingDate().toString(), fixingDateStr);
+    if (ap.getRateComputation() instanceof IborInterpolatedRateComputation) {
+      assertEquals(((IborInterpolatedRateComputation) ap.getRateComputation()).getFixingDate().toString(), fixingDateStr);
+    } else if (ap.getRateComputation() instanceof IborRateComputation) {
+      assertEquals(((IborRateComputation) ap.getRateComputation()).getFixingDate().toString(), fixingDateStr);
     } else {
       fail();
     }
@@ -1191,10 +1275,10 @@ public class FpmlDocumentParserTest {
     RateAccrualPeriod ap = pp.getAccrualPeriods().get(accrualIndex);
     assertEquals(ap.getStartDate().toString(), startDateStr);
     assertEquals(ap.getEndDate().toString(), endDateStr);
-    if (ap.getRateObservation() instanceof IborInterpolatedRateObservation) {
-      assertEquals(((IborInterpolatedRateObservation) ap.getRateObservation()).getFixingDate().toString(), fixingDateStr);
-    } else if (ap.getRateObservation() instanceof IborRateObservation) {
-      assertEquals(((IborRateObservation) ap.getRateObservation()).getFixingDate().toString(), fixingDateStr);
+    if (ap.getRateComputation() instanceof IborInterpolatedRateComputation) {
+      assertEquals(((IborInterpolatedRateComputation) ap.getRateComputation()).getFixingDate().toString(), fixingDateStr);
+    } else if (ap.getRateComputation() instanceof IborRateComputation) {
+      assertEquals(((IborRateComputation) ap.getRateComputation()).getFixingDate().toString(), fixingDateStr);
     } else {
       fail();
     }
@@ -1216,8 +1300,8 @@ public class FpmlDocumentParserTest {
     RateAccrualPeriod ap = pp.getAccrualPeriods().get(0);
     assertEquals(ap.getStartDate().toString(), startDateStr);
     assertEquals(ap.getEndDate().toString(), endDateStr);
-    if (ap.getRateObservation() instanceof FixedRateObservation) {
-      assertEquals(((FixedRateObservation) ap.getRateObservation()).getRate(), rate);
+    if (ap.getRateComputation() instanceof FixedRateComputation) {
+      assertEquals(((FixedRateComputation) ap.getRateComputation()).getRate(), rate);
     } else {
       fail();
     }

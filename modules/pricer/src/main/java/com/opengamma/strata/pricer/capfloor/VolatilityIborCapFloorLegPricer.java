@@ -8,8 +8,6 @@ package com.opengamma.strata.pricer.capfloor;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.view.IborCapletFloorletVolatilities;
-import com.opengamma.strata.pricer.impl.capfloor.VolatilityIborCapletFloorletPeriodPricer;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.capfloor.IborCapFloorLeg;
 import com.opengamma.strata.product.capfloor.IborCapletFloorletPeriod;
@@ -27,7 +25,7 @@ import com.opengamma.strata.product.capfloor.ResolvedIborCapFloorLeg;
 public class VolatilityIborCapFloorLegPricer {
 
   /**
-   * Default implementation. 
+   * Default implementation.
    */
   public static final VolatilityIborCapFloorLegPricer DEFAULT =
       new VolatilityIborCapFloorLegPricer(VolatilityIborCapletFloorletPeriodPricer.DEFAULT);
@@ -38,7 +36,7 @@ public class VolatilityIborCapFloorLegPricer {
   private final VolatilityIborCapletFloorletPeriodPricer periodPricer;
 
   /**
-   * Creates an instance. 
+   * Creates an instance.
    * 
    * @param periodPricer  the pricer for {@link IborCapletFloorletPeriod}.
    */
@@ -48,12 +46,12 @@ public class VolatilityIborCapFloorLegPricer {
 
   //-------------------------------------------------------------------------
   /**
-   * Calculates the present value of the cap/floor leg.
+   * Calculates the present value of the Ibor cap/floor leg.
    * <p>
    * The present value of the leg is the value on the valuation date.
    * The result is returned using the payment currency of the leg.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value
@@ -71,13 +69,14 @@ public class VolatilityIborCapFloorLegPricer {
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the present value delta of the cap/floor leg.
+   * Calculates the present value delta of the Ibor cap/floor leg.
    * <p>
    * The present value delta of the leg is the sensitivity value on the valuation date.
    * The result is returned using the payment currency of the leg.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value delta
@@ -95,13 +94,14 @@ public class VolatilityIborCapFloorLegPricer {
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the present value gamma of the cap/floor leg.
+   * Calculates the present value gamma of the Ibor cap/floor leg.
    * <p>
    * The present value gamma of the leg is the sensitivity value on the valuation date.
    * The result is returned using the payment currency of the leg.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value gamma
@@ -119,13 +119,14 @@ public class VolatilityIborCapFloorLegPricer {
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the present value theta of the cap/floor leg.
+   * Calculates the present value theta of the Ibor cap/floor leg.
    * <p>
    * The present value theta of the leg is the sensitivity value on the valuation date.
    * The result is returned using the payment currency of the leg.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value theta
@@ -143,18 +144,19 @@ public class VolatilityIborCapFloorLegPricer {
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the present value curve sensitivity of the cap/floor leg.
+   * Calculates the present value rates sensitivity of the Ibor cap/floor leg.
    * <p>
-   * The present value sensitivity of the leg is the sensitivity of the present value to
-   * the underlying curves.
+   * The present value rates sensitivity of the leg is the sensitivity
+   * of the present value to the underlying curves.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value curve sensitivity 
    */
-  public PointSensitivityBuilder presentValueSensitivity(
+  public PointSensitivityBuilder presentValueSensitivityRates(
       ResolvedIborCapFloorLeg capFloorLeg,
       RatesProvider ratesProvider,
       IborCapletFloorletVolatilities volatilities) {
@@ -162,23 +164,24 @@ public class VolatilityIborCapFloorLegPricer {
     validate(ratesProvider, volatilities);
     return capFloorLeg.getCapletFloorletPeriods()
         .stream()
-        .map(period -> periodPricer.presentValueSensitivity(period, ratesProvider, volatilities))
+        .map(period -> periodPricer.presentValueSensitivityRates(period, ratesProvider, volatilities))
         .reduce((p1, p2) -> p1.combinedWith(p2))
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the present value volatility sensitivity of the cap/floor leg.
+   * Calculates the present value volatility sensitivity of the Ibor cap/floor leg.
    * <p>
-   * The present value volatility sensitivity of the leg is the sensitivity of the present value to the volatility 
-   * values.
+   * The present value volatility sensitivity of the leg is the sensitivity
+   * of the present value to the volatility values.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the present value volatility sensitivity
    */
-  public PointSensitivityBuilder presentValueSensitivityVolatility(
+  public PointSensitivityBuilder presentValueSensitivityModelParamsVolatility(
       ResolvedIborCapFloorLeg capFloorLeg,
       RatesProvider ratesProvider,
       IborCapletFloorletVolatilities volatilities) {
@@ -186,15 +189,16 @@ public class VolatilityIborCapFloorLegPricer {
     validate(ratesProvider, volatilities);
     return capFloorLeg.getCapletFloorletPeriods()
         .stream()
-        .map(period -> periodPricer.presentValueSensitivityVolatility(period, ratesProvider, volatilities))
+        .map(period -> periodPricer.presentValueSensitivityModelParamsVolatility(period, ratesProvider, volatilities))
         .reduce((c1, c2) -> c1.combinedWith(c2))
         .get();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Calculates the current cash of the cap/floor leg. 
+   * Calculates the current cash of the Ibor cap/floor leg.
    * 
-   * @param capFloorLeg  the cap/floor leg
+   * @param capFloorLeg  the Ibor cap/floor leg
    * @param ratesProvider  the rates provider 
    * @param volatilities  the volatilities
    * @return the current cash

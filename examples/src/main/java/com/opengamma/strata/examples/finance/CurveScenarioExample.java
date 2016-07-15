@@ -6,7 +6,7 @@
 package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
-import static com.opengamma.strata.function.StandardComponents.marketDataFactory;
+import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.collect.ImmutableList;
-import com.opengamma.strata.basics.PayReceive;
-import com.opengamma.strata.basics.Trade;
+import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -25,30 +25,32 @@ import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
 import com.opengamma.strata.basics.index.IborIndices;
-import com.opengamma.strata.basics.market.ReferenceData;
-import com.opengamma.strata.basics.market.StandardId;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
-import com.opengamma.strata.calc.config.Measures;
-import com.opengamma.strata.calc.config.ReportingCurrency;
+import com.opengamma.strata.calc.Results;
+import com.opengamma.strata.calc.marketdata.MarketDataConfig;
+import com.opengamma.strata.calc.marketdata.MarketDataFilter;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
-import com.opengamma.strata.calc.marketdata.MarketEnvironment;
-import com.opengamma.strata.calc.marketdata.config.MarketDataConfig;
-import com.opengamma.strata.calc.marketdata.scenario.PerturbationMapping;
-import com.opengamma.strata.calc.marketdata.scenario.ScenarioDefinition;
-import com.opengamma.strata.calc.runner.Results;
-import com.opengamma.strata.calc.runner.function.result.ScenarioResult;
+import com.opengamma.strata.calc.marketdata.PerturbationMapping;
+import com.opengamma.strata.calc.marketdata.ScenarioDefinition;
+import com.opengamma.strata.calc.runner.CalculationFunctions;
+import com.opengamma.strata.data.MarketData;
+import com.opengamma.strata.data.scenario.ScenarioArray;
+import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
-import com.opengamma.strata.function.StandardComponents;
-import com.opengamma.strata.function.marketdata.curve.CurveParallelShifts;
-import com.opengamma.strata.function.marketdata.scenario.curve.AnyCurveFilter;
 import com.opengamma.strata.market.curve.Curve;
+import com.opengamma.strata.market.curve.CurveId;
+import com.opengamma.strata.market.curve.CurveParallelShifts;
+import com.opengamma.strata.measure.Measures;
+import com.opengamma.strata.measure.StandardComponents;
+import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeAttributeType;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.FixedRateCalculation;
 import com.opengamma.strata.product.swap.IborRateCalculation;
 import com.opengamma.strata.product.swap.NotionalSchedule;
@@ -96,23 +98,24 @@ public class CurveScenarioExample {
     // the columns, specifying the measures to be calculated
     List<Column> columns = ImmutableList.of(
         Column.of(Measures.PRESENT_VALUE),
-        Column.of(Measures.PV01));
+        Column.of(Measures.PV01_CALIBRATED_SUM));
 
     // use the built-in example market data
     ExampleMarketDataBuilder marketDataBuilder = ExampleMarketData.builder();
 
     // the complete set of rules for calculating measures
-    CalculationRules rules = CalculationRules.builder()
-        .pricingRules(StandardComponents.pricingRules())
-        .marketDataRules(marketDataBuilder.rules())
-        .reportingCurrency(ReportingCurrency.of(Currency.USD))
-        .build();
+    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
+    CalculationFunctions functions = StandardComponents.calculationFunctions();
+    CalculationRules rules = CalculationRules.of(
+        functions,
+        Currency.USD,
+        marketDataBuilder.ratesLookup(valuationDate));
 
     // mappings that select which market data to apply perturbations to
     // this applies the perturbations above to all curves
     PerturbationMapping<Curve> mapping = PerturbationMapping.of(
         Curve.class,
-        AnyCurveFilter.INSTANCE,
+        MarketDataFilter.ofIdType(CurveId.class),
         // no shift for the base scenario, 1bp absolute shift to calibrated curves (zeros)
         CurveParallelShifts.absolute(0, ONE_BP));
 
@@ -121,23 +124,22 @@ public class CurveScenarioExample {
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(mapping);
 
     // build a market data snapshot for the valuation date
-    LocalDate valuationDate = LocalDate.of(2014, 1, 22);
-    MarketEnvironment marketSnapshot = marketDataBuilder.buildSnapshot(valuationDate);
+    MarketData marketData = marketDataBuilder.buildSnapshot(valuationDate);
 
     // the reference data, such as holidays and securities
     ReferenceData refData = ReferenceData.standard();
 
     // calculate the results
     MarketDataRequirements reqs = MarketDataRequirements.of(rules, trades, columns, refData);
-    MarketEnvironment enhancedMarketData = marketDataFactory()
-        .buildMarketData(reqs, MarketDataConfig.empty(), marketSnapshot, refData, scenarioDefinition);
-    Results results = runner.calculateMultipleScenarios(rules, trades, columns, enhancedMarketData, refData);
+    ScenarioMarketData scenarioMarketData =
+        marketDataFactory().createMultiScenario(reqs, MarketDataConfig.empty(), marketData, refData, scenarioDefinition);
+    Results results = runner.calculateMultiScenario(rules, trades, columns, scenarioMarketData, refData);
 
     // TODO Replace the results processing below with a report once the reporting framework supports scenarios
 
     // The results are lists of currency amounts containing one value for each scenario
-    ScenarioResult<?> pvList = (ScenarioResult<?>) results.get(0, 0).getValue();
-    ScenarioResult<?> pv01List = (ScenarioResult<?>) results.get(0, 1).getValue();
+    ScenarioArray<?> pvList = (ScenarioArray<?>) results.get(0, 0).getValue();
+    ScenarioArray<?> pv01List = (ScenarioArray<?>) results.get(0, 1).getValue();
 
     double pvBase = ((CurrencyAmount) pvList.get(0)).getAmount();
     double pvShifted = ((CurrencyAmount) pvList.get(1)).getAmount();

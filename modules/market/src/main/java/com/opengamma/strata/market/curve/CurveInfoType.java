@@ -8,12 +8,24 @@ package com.opengamma.strata.market.curve;
 import org.joda.convert.FromString;
 
 import com.opengamma.strata.basics.date.DayCount;
-import com.opengamma.strata.collect.type.TypedString;
+import com.opengamma.strata.collect.TypedString;
+import com.opengamma.strata.collect.array.DoubleArray;
 
 /**
- * The type of additional curve information.
+ * The type that provides meaning to additional curve information.
+ * <p>
+ * Additional curve information is stored in {@link CurveMetadata}.
+ * It provides the ability to associate arbitrary information with a curve in a key-value map.
+ * For example, it might be used to provide information about one of the axes.
+ * <p>
+ * Applications that wish to use curve information should declare a static
+ * constant declaring the {@code CurveInfoType} instance, the type parameter
+ * and an UpperCamelCase name. For example:
+ * <pre>
+ *  public static final CurveInfoType&lt;String&gt; OWNER = CurveInfoType.of("Owner");
+ * </pre>
  * 
- * @param <T>  the type associated with the info
+ * @param <T>  the type of the associated value
  */
 public final class CurveInfoType<T>
     extends TypedString<CurveInfoType<T>> {
@@ -30,6 +42,12 @@ public final class CurveInfoType<T>
    * Key used to access information about the number of compounding per year, as an {@link Integer}.
    */
   public static final CurveInfoType<Integer> COMPOUNDING_PER_YEAR = CurveInfoType.of("CompoundingPerYear");
+  /**
+   * Key used to access information about the present value sensitivity to market quote, 
+   * represented by a {@link DoubleArray}.
+   */
+  public static final CurveInfoType<DoubleArray> PV_SENSITIVITY_TO_MARKET_QUOTE =
+      CurveInfoType.of("PVSensitivityToMarketQuote");
 
   /** Serialization version. */
   private static final long serialVersionUID = 1L;

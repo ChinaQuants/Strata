@@ -11,9 +11,10 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
-import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParametersProvider;
+import com.opengamma.strata.pricer.model.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.swaption.ResolvedSwaption;
 import com.opengamma.strata.product.swaption.ResolvedSwaptionTrade;
@@ -31,12 +32,12 @@ public class HullWhiteSwaptionPhysicalTradePricer {
    */
   public static final HullWhiteSwaptionPhysicalTradePricer DEFAULT = new HullWhiteSwaptionPhysicalTradePricer();
 
-  /** 
+  /**
    * Pricer for {@link Swaption}.  
    */
   private static final HullWhiteSwaptionPhysicalProductPricer PRICER_PRODUCT = HullWhiteSwaptionPhysicalProductPricer.DEFAULT;
-  /** 
-   * Pricer for {@link Payment} which is used to described the premium.  
+  /**
+   * Pricer for {@link Payment} which is used to described the premium.
    */
   private static final DiscountingPaymentPricer PRICER_PREMIUM = DiscountingPaymentPricer.DEFAULT;
 
@@ -48,7 +49,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
    * @param trade  the swaption trade
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter trade
-   * @return the present value of the swaption trade
+   * @return the present value
    */
   public CurrencyAmount presentValue(
       ResolvedSwaptionTrade trade,
@@ -64,12 +65,12 @@ public class HullWhiteSwaptionPhysicalTradePricer {
 
   //-------------------------------------------------------------------------
   /**
-   * Computes the currency exposure of the swaption trade
+   * Computes the currency exposure of the swaption trade.
    * 
    * @param trade  the swaption trade
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter provider
-   * @return the currency exposure of the swaption trade
+   * @return the currency exposure
    */
   public MultiCurrencyAmount currencyExposure(
       ResolvedSwaptionTrade trade,
@@ -80,7 +81,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   }
 
   /**
-   * Calculates the current of the swaption trade.
+   * Calculates the current cash of the swaption trade.
    * <p>
    * Only the premium is contributing to the current cash for non-cash settle swaptions.
    * 
@@ -106,19 +107,19 @@ public class HullWhiteSwaptionPhysicalTradePricer {
    * @param trade  the swaption trade
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter provider
-   * @return the present value curve sensitivity of the swaption trade
+   * @return the point sensitivity to the rate curves
    */
-  public PointSensitivityBuilder presentValueSensitivity(
+  public PointSensitivities presentValueSensitivityRates(
       ResolvedSwaptionTrade trade,
       RatesProvider ratesProvider,
       HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     ResolvedSwaption product = trade.getProduct();
     PointSensitivityBuilder pvcsProduct =
-        PRICER_PRODUCT.presentValueSensitivity(product, ratesProvider, hwProvider);
+        PRICER_PRODUCT.presentValueSensitivityRates(product, ratesProvider, hwProvider);
     Payment premium = trade.getPremium();
     PointSensitivityBuilder pvcsPremium = PRICER_PREMIUM.presentValueSensitivity(premium, ratesProvider);
-    return pvcsProduct.combinedWith(pvcsPremium);
+    return pvcsProduct.combinedWith(pvcsPremium).build();
   }
 
   //-------------------------------------------------------------------------
@@ -130,13 +131,13 @@ public class HullWhiteSwaptionPhysicalTradePricer {
    * @param hwProvider  the Hull-White model parameter provider
    * @return the present value Hull-White model parameter sensitivity of the swaption trade
    */
-  public DoubleArray presentValueSensitivityHullWhiteParameter(
+  public DoubleArray presentValueSensitivityModelParamsHullWhite(
       ResolvedSwaptionTrade trade,
       RatesProvider ratesProvider,
       HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     ResolvedSwaption product = trade.getProduct();
-    return PRICER_PRODUCT.presentValueSensitivityHullWhiteParameter(product, ratesProvider, hwProvider);
+    return PRICER_PRODUCT.presentValueSensitivityModelParamsHullWhite(product, ratesProvider, hwProvider);
   }
 
 }

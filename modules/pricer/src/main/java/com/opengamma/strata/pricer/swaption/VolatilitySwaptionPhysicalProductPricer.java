@@ -8,21 +8,19 @@ package com.opengamma.strata.pricer.swaption;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-import com.opengamma.strata.basics.PutCall;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.market.sensitivity.SwaptionSensitivity;
-import com.opengamma.strata.market.view.SwaptionVolatilities;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
+import com.opengamma.strata.product.common.PutCall;
+import com.opengamma.strata.product.common.SettlementType;
 import com.opengamma.strata.product.swap.ResolvedSwap;
 import com.opengamma.strata.product.swap.ResolvedSwapLeg;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapLegType;
 import com.opengamma.strata.product.swaption.ResolvedSwaption;
-import com.opengamma.strata.product.swaption.SettlementType;
 
 /**
  * Pricer for swaption with physical settlement based on volatilities.
@@ -77,7 +75,7 @@ public class VolatilitySwaptionPhysicalProductPricer {
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value of the swaption
+   * @return the present value
    */
   public CurrencyAmount presentValue(
       ResolvedSwaption swaption,
@@ -110,7 +108,7 @@ public class VolatilitySwaptionPhysicalProductPricer {
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value of the swaption
+   * @return the currency exposure
    */
   public MultiCurrencyAmount currencyExposure(
       ResolvedSwaption swaption,
@@ -154,7 +152,7 @@ public class VolatilitySwaptionPhysicalProductPricer {
    * is the first derivative of the price with respect to forward. The derivative is computed in the formula
    * underlying the volatility (Black or Normal), it does not take into account the potential change of implied 
    * volatility induced by the change of forward. The number computed by this method is closely related
-   * to the {@link VolatilitySwaptionPhysicalProductPricer#presentValueSensitivityStickyStrike} method.
+   * to the {@link VolatilitySwaptionPhysicalProductPricer#presentValueSensitivityRatesStickyStrike} method.
    * <p>
    * Related methods: Some concrete classes to this interface also implement a {@code presentValueSensitivity} 
    * method which take into account the change of implied volatility.
@@ -265,17 +263,18 @@ public class VolatilitySwaptionPhysicalProductPricer {
 
   //-------------------------------------------------------------------------
   /**
-   * Calculates the present value sensitivity of the swaption.
+   * Calculates the present value sensitivity of the swaption to the rate curves.
    * <p>
-   * The present value sensitivity of the product is the sensitivity of the present value to
-   * the underlying curves.
+   * The present value sensitivity is computed in a "sticky strike" style, i.e. the sensitivity to the 
+   * curve nodes with the volatility at the swaption strike unchanged. This sensitivity does not include a potential 
+   * change of volatility due to the implicit change of forward rate or moneyness.
    * 
    * @param swaption  the swaption
    * @param ratesProvider  the rates provider
    * @param swaptionVolatilities  the volatilities
-   * @return the present value curve sensitivity of the swap product
+   * @return the point sensitivity to the rate curves
    */
-  public PointSensitivityBuilder presentValueSensitivityStickyStrike(
+  public PointSensitivityBuilder presentValueSensitivityRatesStickyStrike(
       ResolvedSwaption swaption,
       RatesProvider ratesProvider,
       SwaptionVolatilities swaptionVolatilities) {
@@ -314,14 +313,13 @@ public class VolatilitySwaptionPhysicalProductPricer {
    * @param swaptionVolatilities  the volatilities
    * @return the point sensitivity to the volatility
    */
-  public SwaptionSensitivity presentValueSensitivityVolatility(
+  public SwaptionSensitivity presentValueSensitivityModelParamsVolatility(
       ResolvedSwaption swaption,
       RatesProvider ratesProvider,
       SwaptionVolatilities swaptionVolatilities) {
 
     validate(swaption, ratesProvider, swaptionVolatilities);
-    ZonedDateTime expiryDateTime = swaption.getExpiry();
-    double expiry = swaptionVolatilities.relativeTime(expiryDateTime);
+    double expiry = swaptionVolatilities.relativeTime(swaption.getExpiry());
     ResolvedSwap underlying = swaption.getUnderlying();
     ResolvedSwapLeg fixedLeg = fixedLeg(underlying);
     double tenor = swaptionVolatilities.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
@@ -329,7 +327,7 @@ public class VolatilitySwaptionPhysicalProductPricer {
     double strike = getSwapPricer().getLegPricer().couponEquivalent(fixedLeg, ratesProvider, pvbp);
     if (expiry < 0d) { // Option has expired already
       return SwaptionSensitivity.of(
-          swaptionVolatilities.getConvention(), expiryDateTime, tenor, strike, 0d, fixedLeg.getCurrency(), 0d);
+          swaptionVolatilities.getName(), expiry, tenor, strike, 0d, fixedLeg.getCurrency(), 0d);
     }
     double forward = getSwapPricer().parRate(underlying, ratesProvider);
     double numeraire = Math.abs(pvbp);
@@ -337,8 +335,8 @@ public class VolatilitySwaptionPhysicalProductPricer {
     PutCall putCall = PutCall.ofPut(fixedLeg.getPayReceive().isReceive());
     double vega = numeraire * swaptionVolatilities.priceVega(expiry, tenor, putCall, strike, forward, volatility);
     return SwaptionSensitivity.of(
-        swaptionVolatilities.getConvention(),
-        expiryDateTime,
+        swaptionVolatilities.getName(),
+        expiry,
         tenor,
         strike,
         forward,

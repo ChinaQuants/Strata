@@ -23,7 +23,7 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
-import com.opengamma.strata.basics.market.ReferenceData;
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.product.ProductTrade;
 import com.opengamma.strata.product.ResolvableTrade;
 import com.opengamma.strata.product.TradeInfo;
@@ -34,7 +34,7 @@ import com.opengamma.strata.product.TradeInfo;
  * An Over-The-Counter (OTC) trade in an {@link FxNdf}.
  * <p>
  * An NDF is a financial instrument that returns the difference between a fixed FX rate 
- * agreed at the inception of the trade and the FX rate at maturity. 
+ * agreed at the inception of the trade and the FX rate at maturity.
  * It is primarily used to handle FX requirements for currencies that have settlement restrictions.
  * For example, the forward may be between USD and CNY (Chinese Yuan).
  */
