@@ -33,7 +33,7 @@ public class NotionalEquivalentCalculator {
 
   //-------------------------------------------------------------------------
   /**
-   * Calculates the notional equivalent from the present value market quote sensitivities. 
+   * Calculates the notional equivalent from the present value market quote sensitivities.
    * <p>
    * The notional equivalent is the notional in each instrument used to calibrate the curves to have the same
    * sensitivity as the one of the portfolio described by the market quote sensitivities.
@@ -61,7 +61,7 @@ public class NotionalEquivalentCalculator {
         notionalArray[i] = s.getSensitivity().get(i) / pvSensi.get(i);
       }
       DoubleArray notional = DoubleArray.ofUnsafe(notionalArray);
-      equivalentList.add(CurrencyParameterSensitivity.of(name, s.getCurrency(), notional));
+      equivalentList.add(CurrencyParameterSensitivity.of(name, s.getParameterMetadata(), s.getCurrency(), notional));
     }
     return CurrencyParameterSensitivities.of(equivalentList);
   }

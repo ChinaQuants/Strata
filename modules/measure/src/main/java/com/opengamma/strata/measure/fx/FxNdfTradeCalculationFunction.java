@@ -7,6 +7,7 @@ package com.opengamma.strata.measure.fx;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -17,7 +18,6 @@ import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationFunction;
 import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.FunctionRequirements;
-import com.opengamma.strata.calc.runner.FunctionUtils;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.data.scenario.ScenarioArray;
@@ -33,16 +33,17 @@ import com.opengamma.strata.product.fx.ResolvedFxNdfTrade;
  * Perform calculations on a single {@code FxNdfTrade} for each of a set of scenarios.
  * <p>
  * This uses the standard discounting calculation method.
+ * An instance of {@link RatesMarketDataLookup} must be specified.
  * The supported built-in measures are:
  * <ul>
  *   <li>{@linkplain Measures#PRESENT_VALUE Present value}
- *   <li>{@linkplain Measures#PRESENT_VALUE_MULTI_CCY Present value with no currency conversion}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_SUM PV01 calibrated sum}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_BUCKETED PV01 calibrated bucketed}
  *   <li>{@linkplain Measures#PV01_MARKET_QUOTE_SUM PV01 market quote sum}
  *   <li>{@linkplain Measures#PV01_MARKET_QUOTE_BUCKETED PV01 market quote bucketed}
  *   <li>{@linkplain Measures#CURRENCY_EXPOSURE Currency exposure}
  *   <li>{@linkplain Measures#CURRENT_CASH Current cash}
+ *   <li>{@linkplain Measures#RESOLVED_TARGET Resolved trade}
  *   <li>{@linkplain Measures#FORWARD_FX_RATE Forward FX rate}
  * </ul>
  * <p>
@@ -64,12 +65,10 @@ public class FxNdfTradeCalculationFunction
           .put(Measures.CURRENCY_EXPOSURE, FxNdfMeasureCalculations.DEFAULT::currencyExposure)
           .put(Measures.CURRENT_CASH, FxNdfMeasureCalculations.DEFAULT::currentCash)
           .put(Measures.FORWARD_FX_RATE, FxNdfMeasureCalculations.DEFAULT::forwardFxRate)
+          .put(Measures.RESOLVED_TARGET, (rt, smd) -> ScenarioArray.ofSingleValue(smd.getScenarioCount(), rt))
           .build();
 
-  private static final ImmutableSet<Measure> MEASURES = ImmutableSet.<Measure>builder()
-      .addAll(CALCULATORS.keySet())
-      .add(Measures.PRESENT_VALUE_MULTI_CCY)
-      .build();
+  private static final ImmutableSet<Measure> MEASURES = CALCULATORS.keySet();
 
   /**
    * Creates an instance.
@@ -86,6 +85,11 @@ public class FxNdfTradeCalculationFunction
   @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
+  }
+
+  @Override
+  public Optional<String> identifier(FxNdfTrade target) {
+    return target.getInfo().getId().map(id -> id.toString());
   }
 
   @Override
@@ -133,8 +137,6 @@ public class FxNdfTradeCalculationFunction
     for (Measure measure : measures) {
       results.put(measure, calculate(measure, resolved, marketData));
     }
-    // The calculated value is the same for these two measures but they are handled differently WRT FX conversion
-    FunctionUtils.duplicateResult(Measures.PRESENT_VALUE, Measures.PRESENT_VALUE_MULTI_CCY, results);
     return results;
   }
 
@@ -146,7 +148,7 @@ public class FxNdfTradeCalculationFunction
 
     SingleMeasureCalculation calculator = CALCULATORS.get(measure);
     if (calculator == null) {
-      return Result.failure(FailureReason.INVALID_INPUT, "Unsupported measure: {}", measure);
+      return Result.failure(FailureReason.UNSUPPORTED, "Unsupported measure for FxNdfTrade: {}", measure);
     }
     return Result.of(() -> calculator.calculate(trade, marketData));
   }

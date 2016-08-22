@@ -105,11 +105,27 @@ final class CombinedScenarioMarketData
   }
 
   @Override
+  public Set<MarketDataId<?>> getIds() {
+    return ImmutableSet.<MarketDataId<?>>builder()
+        .addAll(underlying1.getIds())
+        .addAll(underlying2.getIds())
+        .build();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public <T> Set<MarketDataId<T>> findIds(MarketDataName<T> name) {
     return ImmutableSet.<MarketDataId<T>>builder()
         .addAll(underlying1.findIds(name))
         .addAll(underlying2.findIds(name))
+        .build();
+  }
+
+  @Override
+  public Set<ObservableId> getTimeSeriesIds() {
+    return ImmutableSet.<ObservableId>builder()
+        .addAll(underlying1.getTimeSeriesIds())
+        .addAll(underlying2.getTimeSeriesIds())
         .build();
   }
 

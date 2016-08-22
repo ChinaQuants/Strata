@@ -18,10 +18,13 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.FieldName;
 import com.opengamma.strata.data.FxRateId;
 import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.data.ObservableSource;
@@ -45,6 +48,28 @@ public class ImmutableScenarioMarketDataBuilderTest {
   }
 
   //-------------------------------------------------------------------------
+  public void test_values() {
+    FxRateId eurGbpId = FxRateId.of(Currency.EUR, Currency.GBP);
+    FxRateId eurUsdId = FxRateId.of(Currency.EUR, Currency.USD);
+    FxRate eurGbpRate1 = FxRate.of(Currency.EUR, Currency.GBP, 0.85);
+    FxRate eurGbpRate2 = FxRate.of(Currency.EUR, Currency.GBP, 0.8);
+    FxRate eurUsdRate2 = FxRate.of(Currency.EUR, Currency.USD, 1.1);
+    Map<FxRateId, FxRate> values1 = ImmutableMap.of(
+        eurGbpId, eurGbpRate1);
+    Map<FxRateId, FxRate> values2 = ImmutableMap.of(
+        eurGbpId, eurGbpRate2,
+        eurUsdId, eurUsdRate2);
+
+    ImmutableScenarioMarketData marketData = ImmutableScenarioMarketData.builder(VAL_DATE)
+        .values(values1)
+        .values(values2)  // replaces values1
+        .build();
+    assertEquals(marketData.getScenarioCount(), 1);
+    assertEquals(marketData.getIds(), ImmutableSet.of(eurGbpId, eurUsdId));
+    assertEquals(marketData.getValue(eurGbpId), MarketDataBox.ofSingleValue(eurGbpRate2));
+    assertEquals(marketData.getValue(eurUsdId), MarketDataBox.ofSingleValue(eurUsdRate2));
+  }
+
   public void test_addSingleAndList() {
     FxRateId eurGbpId = FxRateId.of(Currency.EUR, Currency.GBP);
     FxRateId eurUsdId = FxRateId.of(Currency.EUR, Currency.USD);
@@ -57,6 +82,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .addScenarioValue(eurUsdId, ImmutableList.of(eurUsdRate1, eurUsdRate2))
         .build();
     assertEquals(marketData.getScenarioCount(), 2);
+    assertEquals(marketData.getIds(), ImmutableSet.of(eurGbpId, eurUsdId));
     assertEquals(marketData.getValue(eurGbpId), MarketDataBox.ofSingleValue(eurGbpRate));
     assertEquals(marketData.getValue(eurUsdId), MarketDataBox.ofScenarioValues(eurUsdRate1, eurUsdRate2));
   }
@@ -73,6 +99,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .addBox(eurUsdId, MarketDataBox.ofScenarioValues(eurUsdRate1, eurUsdRate2))
         .build();
     assertEquals(marketData.getScenarioCount(), 2);
+    assertEquals(marketData.getIds(), ImmutableSet.of(eurGbpId, eurUsdId));
     assertEquals(marketData.getValue(eurGbpId), MarketDataBox.ofSingleValue(eurGbpRate));
     assertEquals(marketData.getValue(eurUsdId), MarketDataBox.ofScenarioValues(eurUsdRate1, eurUsdRate2));
   }
@@ -105,6 +132,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .addValueMap(values)
         .build();
     assertEquals(marketData.getScenarioCount(), 1);
+    assertEquals(marketData.getIds(), ImmutableSet.of(eurGbpId, eurUsdId));
     assertEquals(marketData.getValue(eurGbpId), MarketDataBox.ofSingleValue(eurGbpRate));
     assertEquals(marketData.getValue(eurUsdId), MarketDataBox.ofSingleValue(eurUsdRate));
   }
@@ -113,9 +141,9 @@ public class ImmutableScenarioMarketDataBuilderTest {
   public void test_addScenarioValueMap() {
     FxRateId eurGbpId = FxRateId.of(Currency.EUR, Currency.GBP);
     FxRateId eurUsdId = FxRateId.of(Currency.EUR, Currency.USD);
-    FxRatesArray eurGbpRates = FxRatesArray.of(Currency.EUR, Currency.GBP, DoubleArray.of(0.79, 0.8, 0.81));
-    FxRatesArray eurUsdRates = FxRatesArray.of(Currency.EUR, Currency.USD, DoubleArray.of(1.09, 1.1, 1.11));
-    Map<FxRateId, FxRatesArray> values = ImmutableMap.of(
+    FxRateScenarioArray eurGbpRates = FxRateScenarioArray.of(Currency.EUR, Currency.GBP, DoubleArray.of(0.79, 0.8, 0.81));
+    FxRateScenarioArray eurUsdRates = FxRateScenarioArray.of(Currency.EUR, Currency.USD, DoubleArray.of(1.09, 1.1, 1.11));
+    Map<FxRateId, FxRateScenarioArray> values = ImmutableMap.of(
         eurGbpId, eurGbpRates,
         eurUsdId, eurUsdRates);
 
@@ -123,6 +151,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .addScenarioValueMap(values)
         .build();
     assertEquals(marketData.getScenarioCount(), 3);
+    assertEquals(marketData.getIds(), ImmutableSet.of(eurGbpId, eurUsdId));
     assertEquals(marketData.getValue(eurGbpId), MarketDataBox.ofScenarioValue(eurGbpRates));
     assertEquals(marketData.getValue(eurUsdId), MarketDataBox.ofScenarioValue(eurUsdRates));
   }
@@ -194,7 +223,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
 
   public void test_combinedWithReceiverHasOneScenario() {
     ImmutableScenarioMarketData marketData1 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .build();
 
     ImmutableScenarioMarketData marketData2 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
@@ -202,7 +231,7 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .build();
 
     ImmutableScenarioMarketData expected = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))
         .build();
 
@@ -215,11 +244,11 @@ public class ImmutableScenarioMarketDataBuilderTest {
         .build();
 
     ImmutableScenarioMarketData marketData2 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .build();
 
     ImmutableScenarioMarketData expected = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))
         .build();
 
@@ -233,6 +262,16 @@ public class ImmutableScenarioMarketDataBuilderTest {
 
     private TestId(String id) {
       this.id = id;
+    }
+
+    @Override
+    public StandardId getStandardId() {
+      throw new UnsupportedOperationException("getStandardId not implemented");
+    }
+
+    @Override
+    public FieldName getFieldName() {
+      throw new UnsupportedOperationException("getFieldName not implemented");
     }
 
     @Override

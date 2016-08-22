@@ -5,9 +5,9 @@
  */
 package com.opengamma.strata.pricer.bond;
 
-import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.GERMAN_BONDS;
-import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.JAPAN_SIMPLE;
-import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.UK_BUMP_DMO;
+import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.DE_BONDS;
+import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.JP_SIMPLE;
+import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.GB_BUMP_DMO;
 import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.US_STREET;
 
 import java.time.LocalDate;
@@ -35,6 +35,10 @@ import com.opengamma.strata.product.bond.ResolvedFixedCouponBond;
  * Pricer for for rate fixed coupon bond products.
  * <p>
  * This function provides the ability to price a {@link ResolvedFixedCouponBond}.
+ * 
+ * <h4>Price</h4>
+ * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
+ * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
 public class DiscountingFixedCouponBondProductPricer {
 
@@ -84,7 +88,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * The present value of the product is the value on the valuation date.
    * The result is expressed using the payment currency of the bond.
    * <p>
-   * Coupon payments of the product are considered based on the valuation date. 
+   * Coupon payments of the product are considered based on the valuation date.
    * 
    * @param bond  the product
    * @param provider  the rates provider
@@ -109,13 +113,13 @@ public class DiscountingFixedCouponBondProductPricer {
   }
 
   /**
-   * Calculates the present value of the fixed coupon bond product with z-spread. 
+   * Calculates the present value of the fixed coupon bond product with z-spread.
    * <p>
    * The present value of the product is the value on the valuation date.
    * The result is expressed using the payment currency of the bond.
    * <p>
    * The z-spread is a parallel shift applied to continuously compounded rates or
-   * periodic compounded rates of the issuer discounting curve. 
+   * periodic compounded rates of the issuer discounting curve.
    * 
    * @param bond  the product
    * @param provider  the rates provider
@@ -145,7 +149,7 @@ public class DiscountingFixedCouponBondProductPricer {
 
     IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
         bond.getLegalEntityId(), bond.getCurrency());
-    CurrencyAmount pvNominal = nominalPricer.presentValue(
+    CurrencyAmount pvNominal = nominalPricer.presentValueWithSpread(
         bond.getNominalPayment(), discountFactors.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
     CurrencyAmount pvCoupon = presentValueCouponFromZSpread(
         bond, discountFactors, zSpread, compoundedRateType, periodsPerYear, referenceDate);
@@ -157,6 +161,8 @@ public class DiscountingFixedCouponBondProductPricer {
    * Calculates the dirty price of the fixed coupon bond.
    * <p>
    * The fixed coupon bond is represented as {@link Security} where standard ID of the bond is stored.
+   * <p>
+   * Strata uses <i>decimal prices</i> for bonds. For example, a price of 99.32% is represented in Strata by 0.9932.
    * 
    * @param bond  the product
    * @param provider  the rates provider
@@ -272,6 +278,8 @@ public class DiscountingFixedCouponBondProductPricer {
 
   /**
    * Calculates the clean price of the fixed coupon bond from its settlement date and dirty price.
+   * <p>
+   * Strata uses <i>decimal prices</i> for bonds. For example, a price of 99.32% is represented in Strata by 0.9932.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -357,7 +365,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * the underlying curves.
    * <p>
    * The z-spread is a parallel shift applied to continuously compounded rates or
-   * periodic compounded rates of the issuer discounting curve. 
+   * periodic compounded rates of the issuer discounting curve.
    * 
    * @param bond  the product
    * @param provider  the rates provider
@@ -527,7 +535,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * Calculates the dirty price of the fixed coupon bond from yield.
    * <p>
    * The yield must be fractional.
-   * The dirty price is computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction. 
+   * The dirty price is computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -539,17 +547,17 @@ public class DiscountingFixedCouponBondProductPricer {
     int nCoupon = payments.size() - couponIndex(payments, settlementDate);
     FixedCouponBondYieldConvention yieldConv = bond.getYieldConvention();
     if (nCoupon == 1) {
-      if (yieldConv.equals(US_STREET) || yieldConv.equals(GERMAN_BONDS)) {
+      if (yieldConv.equals(US_STREET) || yieldConv.equals(DE_BONDS)) {
         FixedCouponBondPaymentPeriod payment = payments.get(payments.size() - 1);
         return (1d + payment.getFixedRate() * payment.getYearFraction()) /
             (1d + factorToNextCoupon(bond, settlementDate) * yield /
                 ((double) bond.getFrequency().eventsPerYear()));
       }
     }
-    if ((yieldConv.equals(US_STREET)) || (yieldConv.equals(UK_BUMP_DMO)) || (yieldConv.equals(GERMAN_BONDS))) {
+    if ((yieldConv.equals(US_STREET)) || (yieldConv.equals(GB_BUMP_DMO)) || (yieldConv.equals(DE_BONDS))) {
       return dirtyPriceFromYieldStandard(bond, settlementDate, yield);
     }
-    if (yieldConv.equals(JAPAN_SIMPLE)) {
+    if (yieldConv.equals(JP_SIMPLE)) {
       LocalDate maturityDate = bond.getUnadjustedEndDate();
       if (settlementDate.isAfter(maturityDate)) {
         return 0d;
@@ -586,10 +594,10 @@ public class DiscountingFixedCouponBondProductPricer {
   /**
    * Calculates the yield of the fixed coupon bond product from dirty price.
    * <p>
-   * The dirty price must be fractional. 
+   * The dirty price must be fractional.
    * If the analytic formula is not available, the yield is computed by solving
    * a root-finding problem with {@link #dirtyPriceFromYield(ResolvedFixedCouponBond, LocalDate, double)}.  
-   * The result is also expressed in fraction. 
+   * The result is also expressed in fraction.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -597,7 +605,7 @@ public class DiscountingFixedCouponBondProductPricer {
    * @return the yield of the product 
    */
   public double yieldFromDirtyPrice(ResolvedFixedCouponBond bond, LocalDate settlementDate, double dirtyPrice) {
-    if (bond.getYieldConvention().equals(JAPAN_SIMPLE)) {
+    if (bond.getYieldConvention().equals(JP_SIMPLE)) {
       double cleanPrice = cleanPriceFromDirtyPrice(bond, settlementDate, dirtyPrice);
       LocalDate maturityDate = bond.getUnadjustedEndDate();
       double maturity = bond.getDayCount().relativeYearFraction(settlementDate, maturityDate);
@@ -620,10 +628,10 @@ public class DiscountingFixedCouponBondProductPricer {
    * Calculates the modified duration of the fixed coupon bond product from yield.
    * <p>
    * The modified duration is defined as the minus of the first derivative of dirty price
-   * with respect to yield, divided by the dirty price. 
+   * with respect to yield, divided by the dirty price.
    * <p>
    * The input yield must be fractional. The dirty price and its derivative are
-   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction. 
+   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -635,16 +643,16 @@ public class DiscountingFixedCouponBondProductPricer {
     int nCoupon = payments.size() - couponIndex(payments, settlementDate);
     FixedCouponBondYieldConvention yieldConv = bond.getYieldConvention();
     if (nCoupon == 1) {
-      if (yieldConv.equals(US_STREET) || yieldConv.equals(GERMAN_BONDS)) {
+      if (yieldConv.equals(US_STREET) || yieldConv.equals(DE_BONDS)) {
         double couponPerYear = bond.getFrequency().eventsPerYear();
         double factor = factorToNextCoupon(bond, settlementDate);
         return factor / couponPerYear / (1d + factor * yield / couponPerYear);
       }
     }
-    if (yieldConv.equals(US_STREET) || yieldConv.equals(UK_BUMP_DMO) || yieldConv.equals(GERMAN_BONDS)) {
+    if (yieldConv.equals(US_STREET) || yieldConv.equals(GB_BUMP_DMO) || yieldConv.equals(DE_BONDS)) {
       return modifiedDurationFromYieldStandard(bond, settlementDate, yield);
     }
-    if (yieldConv.equals(JAPAN_SIMPLE)) {
+    if (yieldConv.equals(JP_SIMPLE)) {
       LocalDate maturityDate = bond.getUnadjustedEndDate();
       if (settlementDate.isAfter(maturityDate)) {
         return 0d;
@@ -694,10 +702,10 @@ public class DiscountingFixedCouponBondProductPricer {
   /**
    * Calculates the Macaulay duration of the fixed coupon bond product from yield.
    * <p>
-   * Macaulay defined an alternative way of weighting the future cash flows. 
+   * Macaulay defined an alternative way of weighting the future cash flows.
    * <p>
    * The input yield must be fractional. The dirty price and its derivative are
-   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction. 
+   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -712,7 +720,7 @@ public class DiscountingFixedCouponBondProductPricer {
       return factorToNextCoupon(bond, settlementDate) /
           bond.getFrequency().eventsPerYear();
     }
-    if ((yieldConv.equals(US_STREET)) || (yieldConv.equals(UK_BUMP_DMO)) || (yieldConv.equals(GERMAN_BONDS))) {
+    if ((yieldConv.equals(US_STREET)) || (yieldConv.equals(GB_BUMP_DMO)) || (yieldConv.equals(DE_BONDS))) {
       return modifiedDurationFromYield(bond, settlementDate, yield) *
           (1d + yield / bond.getFrequency().eventsPerYear());
     }
@@ -723,10 +731,10 @@ public class DiscountingFixedCouponBondProductPricer {
    * Calculates the convexity of the fixed coupon bond product from yield.
    * <p>
    * The convexity is defined as the second derivative of dirty price with respect
-   * to yield, divided by the dirty price. 
+   * to yield, divided by the dirty price.
    * <p>
    * The input yield must be fractional. The dirty price and its derivative are
-   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction. 
+   * computed for {@link FixedCouponBondYieldConvention}, and the result is expressed in fraction.
    * 
    * @param bond  the product
    * @param settlementDate  the settlement date
@@ -738,7 +746,7 @@ public class DiscountingFixedCouponBondProductPricer {
     int nCoupon = payments.size() - couponIndex(payments, settlementDate);
     FixedCouponBondYieldConvention yieldConv = bond.getYieldConvention();
     if (nCoupon == 1) {
-      if (yieldConv.equals(US_STREET) || yieldConv.equals(GERMAN_BONDS)) {
+      if (yieldConv.equals(US_STREET) || yieldConv.equals(DE_BONDS)) {
         double couponPerYear = bond.getFrequency().eventsPerYear();
         double factorToNextCoupon = factorToNextCoupon(bond, settlementDate);
         double timeToPay = factorToNextCoupon / couponPerYear;
@@ -746,10 +754,10 @@ public class DiscountingFixedCouponBondProductPricer {
         return 2d * timeToPay * timeToPay / (disc * disc);
       }
     }
-    if (yieldConv.equals(US_STREET) || yieldConv.equals(UK_BUMP_DMO) || yieldConv.equals(GERMAN_BONDS)) {
+    if (yieldConv.equals(US_STREET) || yieldConv.equals(GB_BUMP_DMO) || yieldConv.equals(DE_BONDS)) {
       return convexityFromYieldStandard(bond, settlementDate, yield);
     }
-    if (yieldConv.equals(JAPAN_SIMPLE)) {
+    if (yieldConv.equals(JP_SIMPLE)) {
       LocalDate maturityDate = bond.getUnadjustedEndDate();
       if (settlementDate.isAfter(maturityDate)) {
         return 0d;
@@ -763,7 +771,7 @@ public class DiscountingFixedCouponBondProductPricer {
     throw new UnsupportedOperationException("The convention " + yieldConv.name() + " is not supported.");
   }
 
-  // assumes notional and coupon rate are constant across the payments. 
+  // assumes notional and coupon rate are constant across the payments.
   private double convexityFromYieldStandard(
       ResolvedFixedCouponBond bond,
       LocalDate settlementDate,
@@ -906,7 +914,7 @@ public class DiscountingFixedCouponBondProductPricer {
       int periodsPerYear) {
 
     Payment nominal = bond.getNominalPayment();
-    PointSensitivityBuilder pt = nominalPricer.presentValueSensitivity(
+    PointSensitivityBuilder pt = nominalPricer.presentValueSensitivityWithSpread(
         nominal, discountFactors.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
     if (pt instanceof ZeroRateSensitivity) {
       return IssuerCurveZeroRateSensitivity.of((ZeroRateSensitivity) pt, discountFactors.getLegalEntityGroup());

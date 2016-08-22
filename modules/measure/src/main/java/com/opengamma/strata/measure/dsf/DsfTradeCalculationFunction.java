@@ -7,6 +7,7 @@ package com.opengamma.strata.measure.dsf;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -18,7 +19,6 @@ import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationFunction;
 import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.FunctionRequirements;
-import com.opengamma.strata.calc.runner.FunctionUtils;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.data.FieldName;
@@ -37,18 +37,29 @@ import com.opengamma.strata.product.dsf.ResolvedDsfTrade;
  * Perform calculations on a single {@code DsfTrade} for each of a set of scenarios.
  * <p>
  * This uses the standard discounting calculation method.
+ * An instance of {@link RatesMarketDataLookup} must be specified.
  * The supported built-in measures are:
  * <ul>
  *   <li>{@linkplain Measures#PRESENT_VALUE Present value}
- *   <li>{@linkplain Measures#PRESENT_VALUE_MULTI_CCY Present value with no currency conversion}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_SUM PV01 calibrated sum}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_BUCKETED PV01 calibrated bucketed}
  *   <li>{@linkplain Measures#PV01_MARKET_QUOTE_SUM PV01 market quote sum}
  *   <li>{@linkplain Measures#PV01_MARKET_QUOTE_BUCKETED PV01 market quote bucketed}
+ *   <li>{@linkplain Measures#UNIT_PRICE Unit price}
  *   <li>{@linkplain Measures#CURRENCY_EXPOSURE Currency exposure}
+ *   <li>{@linkplain Measures#RESOLVED_TARGET Resolved trade}
  * </ul>
  * <p>
  * The "natural" currency is the currency of the swap leg that is received.
+ * 
+ * <h4>Price</h4>
+ * The price of a DSF is based on the present value (NPV) of the underlying swap on the delivery date.
+ * For example, a price of 100.182 represents a present value of $100,182.00, if the notional is $100,000.
+ * This price can also be viewed as a percentage present value - {@code (100 + percentPv)}, or 0.182% in this example.
+ * <p>
+ * Strata uses <i>decimal prices</i> for DSFs in the trade model, pricers and market data.
+ * The decimal price is based on the decimal multiplier equivalent to the implied percentage.
+ * Thus the market price of 100.182 is represented in Strata by 1.00182.
  */
 public class DsfTradeCalculationFunction
     implements CalculationFunction<DsfTrade> {
@@ -63,13 +74,12 @@ public class DsfTradeCalculationFunction
           .put(Measures.PV01_CALIBRATED_BUCKETED, DsfMeasureCalculations.DEFAULT::pv01CalibratedBucketed)
           .put(Measures.PV01_MARKET_QUOTE_SUM, DsfMeasureCalculations.DEFAULT::pv01MarketQuoteSum)
           .put(Measures.PV01_MARKET_QUOTE_BUCKETED, DsfMeasureCalculations.DEFAULT::pv01MarketQuoteBucketed)
+          .put(Measures.UNIT_PRICE, DsfMeasureCalculations.DEFAULT::unitPrice)
           .put(Measures.CURRENCY_EXPOSURE, DsfMeasureCalculations.DEFAULT::currencyExposure)
+          .put(Measures.RESOLVED_TARGET, (rt, smd) -> ScenarioArray.ofSingleValue(smd.getScenarioCount(), rt))
           .build();
 
-  private static final ImmutableSet<Measure> MEASURES = ImmutableSet.<Measure>builder()
-      .addAll(CALCULATORS.keySet())
-      .add(Measures.PRESENT_VALUE_MULTI_CCY)
-      .build();
+  private static final ImmutableSet<Measure> MEASURES = CALCULATORS.keySet();
 
   /**
    * Creates an instance.
@@ -86,6 +96,11 @@ public class DsfTradeCalculationFunction
   @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
+  }
+
+  @Override
+  public Optional<String> identifier(DsfTrade target) {
+    return target.getInfo().getId().map(id -> id.toString());
   }
 
   @Override
@@ -138,8 +153,6 @@ public class DsfTradeCalculationFunction
     for (Measure measure : measures) {
       results.put(measure, calculate(measure, resolved, marketData));
     }
-    // The calculated value is the same for these two measures but they are handled differently WRT FX conversion
-    FunctionUtils.duplicateResult(Measures.PRESENT_VALUE, Measures.PRESENT_VALUE_MULTI_CCY, results);
     return results;
   }
 
@@ -151,7 +164,7 @@ public class DsfTradeCalculationFunction
 
     SingleMeasureCalculation calculator = CALCULATORS.get(measure);
     if (calculator == null) {
-      return Result.failure(FailureReason.INVALID_INPUT, "Unsupported measure: {}", measure);
+      return Result.failure(FailureReason.UNSUPPORTED, "Unsupported measure for DsfTrade: {}", measure);
     }
     return Result.of(() -> calculator.calculate(trade, marketData));
   }

@@ -16,7 +16,7 @@ import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.fx.FxIndexRates;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.pricer.swap.PaymentEventPricer;
+import com.opengamma.strata.pricer.swap.SwapPaymentEventPricer;
 import com.opengamma.strata.product.swap.FxResetNotionalExchange;
 
 /**
@@ -26,7 +26,7 @@ import com.opengamma.strata.product.swap.FxResetNotionalExchange;
  * The value of the exchange is calculated by performing an FX conversion on the amount.
  */
 public class DiscountingFxResetNotionalExchangePricer
-    implements PaymentEventPricer<FxResetNotionalExchange> {
+    implements SwapPaymentEventPricer<FxResetNotionalExchange> {
 
   /**
    * Default implementation.
@@ -89,6 +89,7 @@ public class DiscountingFxResetNotionalExchangePricer
     builder.put(ExplainKey.PAYMENT_CURRENCY, currency);
     builder.put(ExplainKey.TRADE_NOTIONAL, event.getNotionalAmount());
     if (paymentDate.isBefore(provider.getValuationDate())) {
+      builder.put(ExplainKey.COMPLETED, Boolean.TRUE);
       builder.put(ExplainKey.FORECAST_VALUE, CurrencyAmount.zero(currency));
       builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
     } else {

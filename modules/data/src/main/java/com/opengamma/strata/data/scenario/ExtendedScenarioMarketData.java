@@ -74,7 +74,7 @@ final class ExtendedScenarioMarketData<T>
 
   @ImmutableValidator
   private void validate() {
-    if (value.getScenarioCount() != 1 && value.getScenarioCount() != underlying.getScenarioCount()) {
+    if (value.isScenarioValue() && value.getScenarioCount() != underlying.getScenarioCount()) {
       throw new IllegalArgumentException(Messages.format(
           "Scenario count mismatch: value has {} scenarios but this market data has {}",
           value.getScenarioCount(), underlying.getScenarioCount()));
@@ -119,6 +119,14 @@ final class ExtendedScenarioMarketData<T>
   }
 
   @Override
+  public Set<MarketDataId<?>> getIds() {
+    return ImmutableSet.<MarketDataId<?>>builder()
+        .addAll(underlying.getIds())
+        .add(id)
+        .build();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public <R> Set<MarketDataId<R>> findIds(MarketDataName<R> name) {
     Set<MarketDataId<R>> ids = underlying.findIds(name);
@@ -129,6 +137,11 @@ final class ExtendedScenarioMarketData<T>
       }
     }
     return ids;
+  }
+
+  @Override
+  public Set<ObservableId> getTimeSeriesIds() {
+    return underlying.getTimeSeriesIds();
   }
 
   @Override

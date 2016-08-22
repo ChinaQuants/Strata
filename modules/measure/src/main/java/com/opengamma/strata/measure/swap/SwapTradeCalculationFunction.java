@@ -7,6 +7,7 @@ package com.opengamma.strata.measure.swap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -17,7 +18,6 @@ import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationFunction;
 import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.FunctionRequirements;
-import com.opengamma.strata.calc.runner.FunctionUtils;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.data.scenario.ScenarioArray;
@@ -34,10 +34,10 @@ import com.opengamma.strata.product.swap.SwapTrade;
  * Perform calculations on a single {@code SwapTrade} for each of a set of scenarios.
  * <p>
  * This uses the standard discounting calculation method.
+ * An instance of {@link RatesMarketDataLookup} must be specified.
  * The supported built-in measures are:
  * <ul>
  *   <li>{@linkplain Measures#PRESENT_VALUE Present value}
- *   <li>{@linkplain Measures#PRESENT_VALUE_MULTI_CCY Present value with no currency conversion}
  *   <li>{@linkplain Measures#EXPLAIN_PRESENT_VALUE Explain present value}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_SUM PV01 calibrated sum}
  *   <li>{@linkplain Measures#PV01_CALIBRATED_BUCKETED PV01 calibrated bucketed}
@@ -51,6 +51,7 @@ import com.opengamma.strata.product.swap.SwapTrade;
  *   <li>{@linkplain Measures#LEG_PRESENT_VALUE Leg present value}
  *   <li>{@linkplain Measures#CURRENCY_EXPOSURE Currency exposure}
  *   <li>{@linkplain Measures#CURRENT_CASH Current cash}
+ *   <li>{@linkplain Measures#RESOLVED_TARGET Resolved trade}
  *   <li>{@linkplain AdvancedMeasures#PV01_SEMI_PARALLEL_GAMMA_BUCKETED PV01 semi-parallel gamma bucketed}
  * </ul>
  * <p>
@@ -78,13 +79,11 @@ public class SwapTradeCalculationFunction
           .put(Measures.LEG_PRESENT_VALUE, SwapMeasureCalculations.DEFAULT::legPresentValue)
           .put(Measures.CURRENCY_EXPOSURE, SwapMeasureCalculations.DEFAULT::currencyExposure)
           .put(Measures.CURRENT_CASH, SwapMeasureCalculations.DEFAULT::currentCash)
+          .put(Measures.RESOLVED_TARGET, (rt, smd) -> ScenarioArray.ofSingleValue(smd.getScenarioCount(), rt))
           .put(AdvancedMeasures.PV01_SEMI_PARALLEL_GAMMA_BUCKETED, SwapMeasureCalculations.DEFAULT::pv01SemiParallelGammaBucketed)
           .build();
 
-  private static final ImmutableSet<Measure> MEASURES = ImmutableSet.<Measure>builder()
-      .addAll(CALCULATORS.keySet())
-      .add(Measures.PRESENT_VALUE_MULTI_CCY)
-      .build();
+  private static final ImmutableSet<Measure> MEASURES = CALCULATORS.keySet();
 
   /**
    * Creates an instance.
@@ -101,6 +100,11 @@ public class SwapTradeCalculationFunction
   @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
+  }
+
+  @Override
+  public Optional<String> identifier(SwapTrade target) {
+    return target.getInfo().getId().map(id -> id.toString());
   }
 
   @Override
@@ -146,8 +150,6 @@ public class SwapTradeCalculationFunction
     for (Measure measure : measures) {
       results.put(measure, calculate(measure, resolved, marketData));
     }
-    // The calculated value is the same for these two measures but they are handled differently WRT FX conversion
-    FunctionUtils.duplicateResult(Measures.PRESENT_VALUE, Measures.PRESENT_VALUE_MULTI_CCY, results);
     return results;
   }
 
@@ -159,7 +161,7 @@ public class SwapTradeCalculationFunction
 
     SingleMeasureCalculation calculator = CALCULATORS.get(measure);
     if (calculator == null) {
-      return Result.failure(FailureReason.INVALID_INPUT, "Unsupported measure: {}", measure);
+      return Result.failure(FailureReason.UNSUPPORTED, "Unsupported measure for SwapTrade: {}", measure);
     }
     return Result.of(() -> calculator.calculate(trade, marketData));
   }

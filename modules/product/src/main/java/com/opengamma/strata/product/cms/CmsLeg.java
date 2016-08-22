@@ -7,7 +7,6 @@ package com.opengamma.strata.product.cms;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -36,12 +35,14 @@ import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.DateAdjuster;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
+import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.FixingRelativeTo;
@@ -64,8 +65,8 @@ import com.opengamma.strata.product.swap.type.IborRateSwapLegConvention;
  * CMS floorlets depending on the data in this leg.
  * The {@code capSchedule} field is used to represent strike values of individual caplets,
  * whereas {@code floorSchedule} is used to represent strike values of individual floorlets.
- * Thus at least one of {@code capSchedule} and {@code floorSchedule} must be empty. 
- * If both the fields are absent, the periodic payments in this leg are CMS coupons. 
+ * Thus at least one of {@code capSchedule} and {@code floorSchedule} must be empty.
+ * If both the fields are absent, the periodic payments in this leg are CMS coupons.
  */
 @BeanDefinition
 public final class CmsLeg
@@ -118,7 +119,7 @@ public final class CmsLeg
   /**
    * The swap index.
    * <p>
-   * The swap rate to be paid is the observed value of this index. 
+   * The swap rate to be paid is the observed value of this index.
    */
   @PropertyDefinition(validate = "notNull")
   private final SwapIndex index;
@@ -151,8 +152,8 @@ public final class CmsLeg
   /**
    * The cap schedule, optional.
    * <p>
-   * This defines the strike value of a cap as an initial value and a list of adjustments. 
-   * Thus individual caplets may have different strike values. 
+   * This defines the strike value of a cap as an initial value and a list of adjustments.
+   * Thus individual caplets may have different strike values.
    * The cap rate is only allowed to change at payment period boundaries.
    * <p>
    * If the product is not a cap, the cap schedule will be absent.
@@ -162,8 +163,8 @@ public final class CmsLeg
   /**
    * The floor schedule, optional.
    * <p>
-   * This defines the strike value of a floor as an initial value and a list of adjustments. 
-   * Thus individual floorlets may have different strike values. 
+   * This defines the strike value of a floor as an initial value and a list of adjustments.
+   * Thus individual floorlets may have different strike values.
    * The floor rate is only allowed to change at payment period boundaries.
    * <p>
    * If the product is not a floor, the floor schedule will be absent.
@@ -209,6 +210,7 @@ public final class CmsLeg
       DayCount dayCount,
       ValueSchedule capSchedule,
       ValueSchedule floorSchedule) {
+
     this.payReceive = ArgChecker.notNull(payReceive, "payReceive");
     this.paymentSchedule = ArgChecker.notNull(paymentSchedule, "paymentSchedule");
     this.paymentDateOffset = paymentDateOffset;
@@ -249,13 +251,22 @@ public final class CmsLeg
     return paymentSchedule.calculatedEndDate();
   }
 
+  /**
+   * Gets the underlying Ibor index that the leg is based on.
+   * 
+   * @return the index
+   */
+  public IborIndex getUnderlyingIndex() {
+    return index.getTemplate().getConvention().getFloatingLeg().getIndex();
+  }
+
   //-------------------------------------------------------------------------
   @Override
   public ResolvedCmsLeg resolve(ReferenceData refData) {
     Schedule adjustedSchedule = paymentSchedule.createSchedule(refData);
-    List<Double> cap = getCapSchedule().isPresent() ? capSchedule.resolveValues(adjustedSchedule.getPeriods()) : null;
-    List<Double> floor = getFloorSchedule().isPresent() ? floorSchedule.resolveValues(adjustedSchedule.getPeriods()) : null;
-    List<Double> notionals = notional.resolveValues(adjustedSchedule.getPeriods());
+    DoubleArray cap = getCapSchedule().isPresent() ? capSchedule.resolveValues(adjustedSchedule) : null;
+    DoubleArray floor = getFloorSchedule().isPresent() ? floorSchedule.resolveValues(adjustedSchedule) : null;
+    DoubleArray notionals = notional.resolveValues(adjustedSchedule);
     DateAdjuster fixingDateAdjuster = fixingDateOffset.resolve(refData);
     DateAdjuster paymentDateAdjuster = paymentDateOffset.resolve(refData);
     ImmutableList.Builder<CmsPeriod> cmsPeriodsBuild = ImmutableList.builder();

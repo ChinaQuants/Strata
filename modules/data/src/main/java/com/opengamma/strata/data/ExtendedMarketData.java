@@ -95,6 +95,14 @@ final class ExtendedMarketData<T>
   }
 
   @Override
+  public Set<MarketDataId<?>> getIds() {
+    return ImmutableSet.<MarketDataId<?>>builder()
+        .addAll(underlying.getIds())
+        .add(id)
+        .build();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public <R> Set<MarketDataId<R>> findIds(MarketDataName<R> name) {
     Set<MarketDataId<R>> ids = underlying.findIds(name);
@@ -105,6 +113,11 @@ final class ExtendedMarketData<T>
       }
     }
     return ids;
+  }
+
+  @Override
+  public Set<ObservableId> getTimeSeriesIds() {
+    return underlying.getTimeSeriesIds();
   }
 
   @Override

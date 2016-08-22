@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.data.MarketDataId;
 import com.opengamma.strata.data.MarketDataName;
@@ -75,6 +76,11 @@ public final class TestMarketDataMap implements ScenarioMarketData {
   }
 
   @Override
+  public Set<MarketDataId<?>> getIds() {
+    return ImmutableSet.copyOf(valueMap.keySet());
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public <T> Set<MarketDataId<T>> findIds(MarketDataName<T> name) {
     // no type check against id.getMarketDataType() as checked in factory
@@ -83,6 +89,11 @@ public final class TestMarketDataMap implements ScenarioMarketData {
         .filter(id -> ((NamedMarketDataId<?>) id).getMarketDataName().equals(name))
         .map(id -> (MarketDataId<T>) id)
         .collect(toImmutableSet());
+  }
+
+  @Override
+  public Set<ObservableId> getTimeSeriesIds() {
+    return timeSeriesMap.keySet();
   }
 
   @Override

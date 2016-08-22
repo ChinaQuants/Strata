@@ -63,6 +63,7 @@ public class ScenarioMarketDataTest {
     assertThrows(() -> test.getValue(ID2), MarketDataNotFoundException.class);
     assertThat(test.findValue(ID1)).hasValue(BOX1);
     assertThat(test.findValue(ID2)).isEmpty();
+    assertThat(test.getIds()).isEqualTo(ImmutableSet.of(ID1));
     assertThat(test.getTimeSeries(ID1)).isEqualTo(TIME_SERIES);
     assertThat(test.getTimeSeries(ID2)).isEqualTo(LocalDateDoubleTimeSeries.empty());
   }
@@ -77,6 +78,7 @@ public class ScenarioMarketDataTest {
     assertThrows(() -> test.getValue(ID2), MarketDataNotFoundException.class);
     assertThat(test.findValue(ID1)).hasValue(MarketDataBox.empty());
     assertThat(test.findValue(ID2)).isEmpty();
+    assertThat(test.getIds()).isEqualTo(ImmutableSet.of(ID1));
     assertThat(test.getTimeSeries(ID1)).isEqualTo(LocalDateDoubleTimeSeries.empty());
     assertThat(test.getTimeSeries(ID2)).isEqualTo(LocalDateDoubleTimeSeries.empty());
   }
@@ -96,6 +98,7 @@ public class ScenarioMarketDataTest {
     assertThrows(() -> test.getValue(ID2), MarketDataNotFoundException.class);
     assertThat(test.findValue(ID1)).isEmpty();
     assertThat(test.findValue(ID2)).isEmpty();
+    assertThat(test.getIds()).isEqualTo(ImmutableSet.of());
     assertThat(test.getTimeSeries(ID1)).isEqualTo(LocalDateDoubleTimeSeries.empty());
     assertThat(test.getTimeSeries(ID2)).isEqualTo(LocalDateDoubleTimeSeries.empty());
   }
@@ -145,7 +148,17 @@ public class ScenarioMarketDataTest {
       }
 
       @Override
+      public Set<MarketDataId<?>> getIds() {
+        return ImmutableSet.of();
+      }
+
+      @Override
       public <T> Set<MarketDataId<T>> findIds(MarketDataName<T> name) {
+        return ImmutableSet.of();
+      }
+
+      @Override
+      public Set<ObservableId> getTimeSeriesIds() {
         return ImmutableSet.of();
       }
     };
@@ -313,6 +326,11 @@ public class ScenarioMarketDataTest {
     }
 
     @Override
+    public Set<MarketDataId<?>> getIds() {
+      return ImmutableSet.of();
+    }
+
+    @Override
     public <T> Set<MarketDataId<T>> findIds(MarketDataName<T> name) {
       return ImmutableSet.of();
     }
@@ -320,6 +338,11 @@ public class ScenarioMarketDataTest {
     @Override
     public LocalDateDoubleTimeSeries getTimeSeries(ObservableId id) {
       throw new UnsupportedOperationException("getTimeSeries(ObservableKey) not implemented");
+    }
+
+    @Override
+    public Set<ObservableId> getTimeSeriesIds() {
+      return ImmutableSet.of();
     }
   }
 }

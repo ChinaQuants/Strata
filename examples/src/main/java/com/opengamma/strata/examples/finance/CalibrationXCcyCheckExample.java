@@ -7,18 +7,16 @@ package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
 import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
-import static java.util.stream.Collectors.toMap;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.FxRate;
-import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
@@ -50,9 +48,9 @@ import com.opengamma.strata.product.Trade;
  * <p>
  * The curves are
  *  - Discounting and Fed Fund forward in USD
- *  - USD Libor 3M forward. 
+ *  - USD Libor 3M forward.
  *  - Discounting and EONIA forward in EUR
- *  - EUR Euribor 3M forward. 
+ *  - EUR Euribor 3M forward.
  * <p>
  * Curve configuration and market data loaded from csv files.
  * Tests that the trades used for calibration have a total converted PV of 0.
@@ -79,30 +77,30 @@ public class CalibrationXCcyCheckExample {
    * The location of the curve calibration groups file.
    */
   private static final ResourceLocator GROUPS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/groups-xccy.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/groups-xccy.csv"));
   /**
    * The location of the curve calibration settings file.
    */
   private static final ResourceLocator SETTINGS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/settings-xccy.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/settings-xccy.csv"));
   /**
    * The location of the curve calibration nodes file.
    */
   private static final ResourceLocator CALIBRATION_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/calibrations-xccy.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/calibrations-xccy.csv"));
   /**
    * The location of the market quotes file.
    */
   private static final ResourceLocator QUOTES_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "quotes/quotes-xccy.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "quotes/quotes-xccy.csv"));
   /**
    * The location of the FX rates file.
    */
   private static final ResourceLocator FX_RATES_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "quotes/fx-rates-xccy.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "quotes/fx-rates-xccy.csv"));
 
   //-------------------------------------------------------------------------
-  /** 
+  /**
    * Runs the calibration and checks that all the trades used in the curve calibration have a PV of 0.
    * 
    * @param args  -p to run the performance estimate
@@ -119,18 +117,11 @@ public class CalibrationXCcyCheckExample {
       Result<?> pv = results.getSecond().getCells().get(i);
       String output = "  |--> PV for " + trade.getClass().getSimpleName() + " computed: " + pv.isSuccess();
       Object pvValue = pv.getValue();
-      ArgChecker.isTrue((pvValue instanceof MultiCurrencyAmount) || (pvValue instanceof CurrencyAmount), "result type");
-      if (pvValue instanceof CurrencyAmount) {
-        CurrencyAmount ca = (CurrencyAmount) pvValue;
-        ArgChecker.isTrue(Math.abs(ca.getAmount()) < TOLERANCE_PV, "PV should be small");
-        output = output + " with value: " + ca;
-      } else {
-        MultiCurrencyAmount pvMCA = (MultiCurrencyAmount) pvValue;
-        double pvConverted = pvMCA.convertedTo(Currency.USD, null).getAmount();
-        ArgChecker.isTrue(Math.abs(pvConverted) < TOLERANCE_PV, "PV should be small");
-        output = output + " with values: " + pvMCA;
-      }
+      ArgChecker.isTrue(pvValue instanceof CurrencyAmount, "result type");
+      CurrencyAmount ca = (CurrencyAmount) pvValue;
+      output += " with value: " + ca;
       System.out.println(output);
+      ArgChecker.isTrue(Math.abs(ca.getAmount()) < TOLERANCE_PV, "PV should be small");
     }
 
     // optionally test performance
@@ -189,18 +180,16 @@ public class CalibrationXCcyCheckExample {
         .build();
 
     // load the curve definition
-    List<CurveGroupDefinition> defns =
+    Map<CurveGroupName, CurveGroupDefinition> defns =
         RatesCalibrationCsvLoader.load(GROUPS_RESOURCE, SETTINGS_RESOURCE, CALIBRATION_RESOURCE);
-
-    Map<CurveGroupName, CurveGroupDefinition> defnMap = defns.stream().collect(toMap(def -> def.getName(), def -> def));
-    CurveGroupDefinition curveGroupDefinition = defnMap.get(CURVE_GROUP_NAME);
+    CurveGroupDefinition curveGroupDefinition = defns.get(CURVE_GROUP_NAME).filtered(VAL_DATE, refData);
 
     // extract the trades used for calibration
     List<Trade> trades = curveGroupDefinition.getCurveDefinitions().stream()
         .flatMap(defn -> defn.getNodes().stream())
         // IborFixingDeposit is not a real trade, so there is no appropriate comparison
         .filter(node -> !(node instanceof IborFixingDepositCurveNode))
-        .map(node -> node.trade(VAL_DATE, 1d, marketData, refData))
+        .map(node -> node.trade(1d, marketData, refData))
         .collect(toImmutableList());
 
     // the columns, specifying the measures to be calculated

@@ -16,13 +16,13 @@ import org.testng.annotations.Test;
 import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
-import com.opengamma.strata.pricer.fx.RecombiningTrinomialTreeData;
+import com.opengamma.strata.pricer.fxopt.RecombiningTrinomialTreeData;
 import com.opengamma.strata.product.common.PutCall;
 
 /**
  * Test {@link TrinomialTree}.
  * <p>
- * Further tests are done for implementations of {@code OptionFunction}. See their test classes. 
+ * Further tests are done for implementations of {@code OptionFunction}. See their test classes.
  */
 @Test
 public class TrinomialTreeTest {

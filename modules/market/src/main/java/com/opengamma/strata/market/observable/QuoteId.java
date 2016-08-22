@@ -56,20 +56,21 @@ import com.opengamma.strata.data.ObservableSource;
  *
  * @see FieldName
  */
-@BeanDefinition(builderScope = "private")
-public final class QuoteId implements ObservableId, ImmutableBean, Serializable {
+@BeanDefinition(builderScope = "private", cacheHashCode = true)
+public final class QuoteId
+    implements ObservableId, ImmutableBean, Serializable {
 
   /**
    * The identifier of the data.
    * This is typically an identifier from an external data provider.
    */
-  @PropertyDefinition(validate = "notNull")
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final StandardId standardId;
   /**
    * The field name in the market data record that contains the market data item.
    * The most common field name is {@linkplain FieldName#MARKET_VALUE market value}.
    */
-  @PropertyDefinition(validate = "notNull")
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final FieldName fieldName;
   /**
    * The source of observable market data.
@@ -142,6 +143,11 @@ public final class QuoteId implements ObservableId, ImmutableBean, Serializable 
    */
   private static final long serialVersionUID = 1L;
 
+  /**
+   * The cached hash code, using the racy single-check idiom.
+   */
+  private int cachedHashCode;
+
   private QuoteId(
       StandardId standardId,
       FieldName fieldName,
@@ -175,6 +181,7 @@ public final class QuoteId implements ObservableId, ImmutableBean, Serializable 
    * This is typically an identifier from an external data provider.
    * @return the value of the property, not null
    */
+  @Override
   public StandardId getStandardId() {
     return standardId;
   }
@@ -185,6 +192,7 @@ public final class QuoteId implements ObservableId, ImmutableBean, Serializable 
    * The most common field name is {@linkplain FieldName#MARKET_VALUE market value}.
    * @return the value of the property, not null
    */
+  @Override
   public FieldName getFieldName() {
     return fieldName;
   }
@@ -216,10 +224,14 @@ public final class QuoteId implements ObservableId, ImmutableBean, Serializable 
 
   @Override
   public int hashCode() {
-    int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(standardId);
-    hash = hash * 31 + JodaBeanUtils.hashCode(fieldName);
-    hash = hash * 31 + JodaBeanUtils.hashCode(observableSource);
+    int hash = cachedHashCode;
+    if (hash == 0) {
+      hash = getClass().hashCode();
+      hash = hash * 31 + JodaBeanUtils.hashCode(standardId);
+      hash = hash * 31 + JodaBeanUtils.hashCode(fieldName);
+      hash = hash * 31 + JodaBeanUtils.hashCode(observableSource);
+      cachedHashCode = hash;
+    }
     return hash;
   }
 

@@ -6,8 +6,8 @@
 package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
-import static java.util.stream.Collectors.toMap;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +28,7 @@ import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.data.ObservableId;
-import com.opengamma.strata.examples.data.ExampleData;
+import com.opengamma.strata.examples.marketdata.ExampleData;
 import com.opengamma.strata.loader.csv.FixingSeriesCsvLoader;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
@@ -72,36 +72,35 @@ public class SwapPricingCcpExample {
    * The location of the curve calibration groups file for CCP1 and CCP2.
    */
   private static final ResourceLocator GROUPS_RESOURCE_CCP1 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/groups.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/groups.csv"));
   private static final ResourceLocator GROUPS_RESOURCE_CCP2 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/groups-ccp2.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/groups-ccp2.csv"));
   /**
    * The location of the curve calibration settings file for CCP1 and CCP2.
    */
   private static final ResourceLocator SETTINGS_RESOURCE_CCP1 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/settings.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/settings.csv"));
   private static final ResourceLocator SETTINGS_RESOURCE_CCP2 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/settings-ccp2.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/settings-ccp2.csv"));
   /**
    * The location of the curve calibration nodes file for CCP1 and CCP2.
    */
   private static final ResourceLocator CALIBRATION_RESOURCE_CCP1 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/calibrations.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/calibrations.csv"));
   private static final ResourceLocator CALIBRATION_RESOURCE_CCP2 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/calibrations-ccp2.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/curves/calibrations-ccp2.csv"));
   /**
    * The location of the market quotes file for CCP1 and CCP2.
    */
   private static final ResourceLocator QUOTES_RESOURCE_CCP1 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/quotes/quotes.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/quotes/quotes.csv"));
   private static final ResourceLocator QUOTES_RESOURCE_CCP2 =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/quotes/quotes-ccp2.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-calibration/quotes/quotes-ccp2.csv"));
   /**
    * The location of the historical fixing file.
    */
   private static final ResourceLocator FIXINGS_RESOURCE =
-      ResourceLocator
-          .of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-marketdata/historical-fixings/usd-libor-3m.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "example-marketdata/historical-fixings/usd-libor-3m.csv"));
 
   /**
    * The first counterparty.
@@ -151,15 +150,16 @@ public class SwapPricingCcpExample {
         .addTimeSeriesMap(fixings)
         .build();
 
+    // the reference data, such as holidays and securities
+    ReferenceData refData = ReferenceData.standard();
+
     // load the curve definition
-    List<CurveGroupDefinition> defnsCcp1 =
+    Map<CurveGroupName, CurveGroupDefinition> defnsCcp1 =
         RatesCalibrationCsvLoader.load(GROUPS_RESOURCE_CCP1, SETTINGS_RESOURCE_CCP1, CALIBRATION_RESOURCE_CCP1);
-    List<CurveGroupDefinition> defnsCcp2 =
+    Map<CurveGroupName, CurveGroupDefinition> defnsCcp2 =
         RatesCalibrationCsvLoader.load(GROUPS_RESOURCE_CCP2, SETTINGS_RESOURCE_CCP2, CALIBRATION_RESOURCE_CCP2);
-    Map<CurveGroupName, CurveGroupDefinition> defnMap = defnsCcp1.stream().collect(toMap(def -> def.getName(), def -> def));
-    defnMap.putAll(defnsCcp2.stream().collect(toMap(def -> def.getName(), def -> def)));
-    CurveGroupDefinition curveGroupDefinitionCcp1 = defnMap.get(CURVE_GROUP_NAME_CCP1);
-    CurveGroupDefinition curveGroupDefinitionCcp2 = defnMap.get(CURVE_GROUP_NAME_CCP2);
+    CurveGroupDefinition curveGroupDefinitionCcp1 = defnsCcp1.get(CURVE_GROUP_NAME_CCP1).filtered(VAL_DATE, refData);
+    CurveGroupDefinition curveGroupDefinitionCcp2 = defnsCcp2.get(CURVE_GROUP_NAME_CCP2).filtered(VAL_DATE, refData);
 
     // the configuration that defines how to create the curves when a curve group is requested
     MarketDataConfig marketDataConfig = MarketDataConfig.builder()
@@ -175,9 +175,6 @@ public class SwapPricingCcpExample {
     TradeCounterpartyCalculationParameter perCounterparty = TradeCounterpartyCalculationParameter.of(
         ImmutableMap.of(CCP1_ID, ratesLookupCcp1, CCP2_ID, ratesLookupCcp2), ratesLookupCcp1);
     CalculationRules rules = CalculationRules.of(functions, perCounterparty);
-
-    // the reference data, such as holidays and securities
-    ReferenceData refData = ReferenceData.standard();
 
     // calibrate the curves and calculate the results
     MarketDataRequirements reqs = MarketDataRequirements.of(rules, trades, columns, refData);

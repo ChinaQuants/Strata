@@ -7,8 +7,8 @@ package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
 import static com.opengamma.strata.measure.StandardComponents.marketDataFactory;
-import static java.util.stream.Collectors.toMap;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
-import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.CalculationRunner;
 import com.opengamma.strata.calc.Column;
@@ -43,7 +42,7 @@ import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
 import com.opengamma.strata.product.Trade;
 
 /**
- * Test for curve calibration with 3 curves in EUR. 
+ * Test for curve calibration with 3 curves in EUR.
  * <p>
  * One curve is used for Discounting and Eonia forward.
  * The other curves are used for EURIBOR 3M and EURIBOR 6M forward.
@@ -77,25 +76,25 @@ public class CalibrationEur3CheckExample {
    * The location of the curve calibration groups file.
    */
   private static final ResourceLocator GROUPS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/groups-eur.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/groups-eur.csv"));
   /**
    * The location of the curve calibration settings file.
    */
   private static final ResourceLocator SETTINGS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/settings-eur.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/settings-eur.csv"));
   /**
    * The location of the curve calibration nodes file.
    */
   private static final ResourceLocator CALIBRATION_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/calibrations-eur.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "curves/calibrations-eur.csv"));
   /**
    * The location of the market quotes file.
    */
   private static final ResourceLocator QUOTES_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "quotes/quotes-eur.csv");
+      ResourceLocator.ofFile(new File(PATH_CONFIG + "quotes/quotes-eur.csv"));
 
   //-------------------------------------------------------------------------
-  /** 
+  /**
    * Runs the calibration and checks that all the trades used in the curve calibration have a PV of 0.
    * 
    * @param args  -p to run the performance estimate
@@ -112,16 +111,11 @@ public class CalibrationEur3CheckExample {
       Result<?> pv = results.getSecond().getCells().get(i);
       String output = "  |--> PV for " + trade.getClass().getSimpleName() + " computed: " + pv.isSuccess();
       Object pvValue = pv.getValue();
-      ArgChecker.isTrue((pvValue instanceof MultiCurrencyAmount) || (pvValue instanceof CurrencyAmount), "result type");
-      if (pvValue instanceof CurrencyAmount) {
-        CurrencyAmount ca = (CurrencyAmount) pvValue;
-        ArgChecker.isTrue(Math.abs(ca.getAmount()) < TOLERANCE_PV, "PV should be small");
-        output = output + " with value: " + ca;
-      } else {
-        MultiCurrencyAmount pvMCA = (MultiCurrencyAmount) pvValue;
-        output = output + " with values: " + pvMCA;
-      }
+      ArgChecker.isTrue(pvValue instanceof CurrencyAmount, "result type");
+      CurrencyAmount ca = (CurrencyAmount) pvValue;
+      output += " with value: " + ca;
       System.out.println(output);
+      ArgChecker.isTrue(Math.abs(ca.getAmount()) < TOLERANCE_PV, "PV should be small");
     }
 
     // optionally test performance
@@ -176,18 +170,16 @@ public class CalibrationEur3CheckExample {
     MarketData marketData = ImmutableMarketData.of(VAL_DATE, quotes);
 
     // load the curve definition
-    List<CurveGroupDefinition> defns =
+    Map<CurveGroupName, CurveGroupDefinition> defns =
         RatesCalibrationCsvLoader.load(GROUPS_RESOURCE, SETTINGS_RESOURCE, CALIBRATION_RESOURCE);
-
-    Map<CurveGroupName, CurveGroupDefinition> defnMap = defns.stream().collect(toMap(def -> def.getName(), def -> def));
-    CurveGroupDefinition curveGroupDefinition = defnMap.get(CURVE_GROUP_NAME);
+    CurveGroupDefinition curveGroupDefinition = defns.get(CURVE_GROUP_NAME).filtered(VAL_DATE, refData);
 
     // extract the trades used for calibration
     List<Trade> trades = curveGroupDefinition.getCurveDefinitions().stream()
         .flatMap(defn -> defn.getNodes().stream())
         // IborFixingDeposit is not a real trade, so there is no appropriate comparison
         .filter(node -> !(node instanceof IborFixingDepositCurveNode))
-        .map(node -> node.trade(VAL_DATE, 1d, marketData, refData))
+        .map(node -> node.trade(1d, marketData, refData))
         .collect(toImmutableList());
 
     // the columns, specifying the measures to be calculated

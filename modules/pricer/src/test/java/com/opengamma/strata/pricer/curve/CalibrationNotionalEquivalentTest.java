@@ -5,10 +5,6 @@
  */
 package com.opengamma.strata.pricer.curve;
 
-/**
- * Test the notional equivalent computation based on present value sensitivity to quote in 
- * the calibrated curves by {@link CurveCalibrator}.
- */
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -28,15 +24,14 @@ import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.Tenor;
-import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.io.ResourceLocator;
-import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.CurveNode;
@@ -44,6 +39,7 @@ import com.opengamma.strata.market.curve.CurveParameterSize;
 import com.opengamma.strata.market.curve.NodalCurveDefinition;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
+import com.opengamma.strata.market.param.CurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.MarketQuoteSensitivityCalculator;
@@ -55,9 +51,12 @@ import com.opengamma.strata.product.common.BuySell;
 import com.opengamma.strata.product.swap.ResolvedSwapTrade;
 import com.opengamma.strata.product.swap.type.ThreeLegBasisSwapConventions;
 
+
 /**
- * Test.
- */
+ * Test the notional equivalent computation based on present value sensitivity to quote in 
+ * the calibrated curves by {@link CurveCalibrator}.
+ */  
+@Test
 public class CalibrationNotionalEquivalentTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -69,7 +68,6 @@ public class CalibrationNotionalEquivalentTest {
   private static final String SETTINGS_FILE = "curve-config/EUR-DSCONOIS-E3BS-E6IRS-settings.csv";
   private static final String NODES_FILE = "curve-config/EUR-DSCONOIS-E3BS-E6IRS-nodes.csv";
   private static final String QUOTES_FILE = "quotes/quotes-20160229-eur.csv";
-  private static final Map<Index, LocalDateDoubleTimeSeries> TS = new HashMap<>();
 
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.PAR_SPREAD;
   private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
@@ -91,7 +89,7 @@ public class CalibrationNotionalEquivalentTest {
       .load(ResourceLocator.of(BASE_DIR + GROUPS_FILE),
           ResourceLocator.of(BASE_DIR + SETTINGS_FILE),
           ResourceLocator.of(BASE_DIR + NODES_FILE))
-      .get(0);
+      .get(CurveGroupName.of("EUR-DSCONOIS-E3BS-E6IRS"));
   private static final CurveGroupDefinition GROUP_DEFINITION_NO_INFO = GROUP_DEFINITION.toBuilder()
       .computeJacobian(false).computePvSensitivityToMarketQuote(false).build();
   private static final CurveGroupDefinition GROUP_DEFINITION_PV_SENSI = GROUP_DEFINITION.toBuilder()
@@ -100,17 +98,16 @@ public class CalibrationNotionalEquivalentTest {
   private static final double TOLERANCE_PV = 1.0E-8;
   private static final double TOLERANCE_PV_DELTA = 1.0E-2;
 
-  @Test
   public void check_pv_with_measures() {
     ImmutableRatesProvider multicurve =
-        CALIBRATOR.calibrate(GROUP_DEFINITION, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+        CALIBRATOR.calibrate(GROUP_DEFINITION, MARKET_QUOTES, REF_DATA);
     // the trades used for calibration
     List<ResolvedTrade> trades = new ArrayList<>();
     ImmutableList<NodalCurveDefinition> curveGroups = GROUP_DEFINITION.getCurveDefinitions();
     for (NodalCurveDefinition entry : curveGroups) {
       ImmutableList<CurveNode> nodes = entry.getNodes();
       for (CurveNode node : nodes) {
-        trades.add(node.resolvedTrade(VALUATION_DATE, 1d, MARKET_QUOTES, REF_DATA));
+        trades.add(node.resolvedTrade(1d, MARKET_QUOTES, REF_DATA));
       }
     }
     // Check PV = 0
@@ -120,10 +117,9 @@ public class CalibrationNotionalEquivalentTest {
     }
   }
 
-  @Test
   public void check_pv_sensitivity() {
     ImmutableRatesProvider multicurve =
-        CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+        CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, MARKET_QUOTES, REF_DATA);
     // the trades used for calibration
     Map<CurveName, List<Trade>> trades = new HashMap<>();
     Map<CurveName, List<ResolvedTrade>> resolvedTrades = new HashMap<>();
@@ -134,8 +130,8 @@ public class CalibrationNotionalEquivalentTest {
       List<Trade> tradesCurve = new ArrayList<>();
       List<ResolvedTrade> resolvedTradesCurve = new ArrayList<>();
       for (CurveNode node : nodes) {
-        tradesCurve.add(node.trade(VALUATION_DATE, 1d, MARKET_QUOTES, REF_DATA));
-        resolvedTradesCurve.add(node.resolvedTrade(VALUATION_DATE, 1d, MARKET_QUOTES, REF_DATA));
+        tradesCurve.add(node.trade(1d, MARKET_QUOTES, REF_DATA));
+        resolvedTradesCurve.add(node.resolvedTrade(1d, MARKET_QUOTES, REF_DATA));
       }
       trades.put(entry.getName(), tradesCurve);
       resolvedTrades.put(entry.getName(), resolvedTradesCurve);
@@ -164,10 +160,9 @@ public class CalibrationNotionalEquivalentTest {
     }
   }
 
-  @Test
   public void check_equivalent_notional() {
     ImmutableRatesProvider multicurve =
-        CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+        CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, MARKET_QUOTES, REF_DATA);
     // Create notional equivalent for a basis trade
     ResolvedSwapTrade trade = ThreeLegBasisSwapConventions.EUR_FIXED_1Y_EURIBOR_3M_EURIBOR_6M
         .createTrade(VALUATION_DATE, Period.ofMonths(7), Tenor.TENOR_6Y, BuySell.SELL, 1_000_000, 0.03, REF_DATA)
@@ -176,6 +171,11 @@ public class CalibrationNotionalEquivalentTest {
     CurrencyParameterSensitivities ps = multicurve.parameterSensitivity(pts);
     CurrencyParameterSensitivities mqs = MQSC.sensitivity(ps, multicurve);
     CurrencyParameterSensitivities notionalEquivalent = NEC.notionalEquivalent(mqs, multicurve);
+    // Check metadata are same as market quote sensitivities.
+    for(CurrencyParameterSensitivity sensi: mqs.getSensitivities()){
+      assertEquals(notionalEquivalent.getSensitivity(sensi.getMarketDataName(), sensi.getCurrency()).getParameterMetadata(), 
+          sensi.getParameterMetadata());
+    }
     // Check sensitivity: trade sensitivity = sum(notional equivalent sensitivities)
     int totalNbParameters = 0;
     Map<CurveName, List<ResolvedTrade>> equivalentTrades = new HashMap<>();
@@ -187,7 +187,7 @@ public class CalibrationNotionalEquivalentTest {
       ImmutableList<CurveNode> nodes = entry.getNodes();
       List<ResolvedTrade> resolvedTradesCurve = new ArrayList<>();
       for (int i = 0; i < nodes.size(); i++) {
-        resolvedTradesCurve.add(nodes.get(i).resolvedTrade(VALUATION_DATE, notionalCurve.get(i), MARKET_QUOTES, REF_DATA));
+        resolvedTradesCurve.add(nodes.get(i).resolvedTrade(notionalCurve.get(i), MARKET_QUOTES, REF_DATA));
       }
       equivalentTrades.put(entry.getName(), resolvedTradesCurve);
       builder.add(entry.toCurveParameterSize());
@@ -216,7 +216,7 @@ public class CalibrationNotionalEquivalentTest {
       start = System.currentTimeMillis();
       for (int i = 0; i < nbTests; i++) {
         ImmutableRatesProvider multicurve1 =
-            CALIBRATOR.calibrate(GROUP_DEFINITION_NO_INFO, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+            CALIBRATOR.calibrate(GROUP_DEFINITION_NO_INFO, MARKET_QUOTES, REF_DATA);
       }
       end = System.currentTimeMillis();
       System.out.println("  |--> calibration only: " + (end - start) + " ms for " + nbTests + " runs.");
@@ -224,7 +224,7 @@ public class CalibrationNotionalEquivalentTest {
       start = System.currentTimeMillis();
       for (int i = 0; i < nbTests; i++) {
         ImmutableRatesProvider multicurve1 =
-            CALIBRATOR.calibrate(GROUP_DEFINITION, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+            CALIBRATOR.calibrate(GROUP_DEFINITION, MARKET_QUOTES, REF_DATA);
       }
       end = System.currentTimeMillis();
       System.out.println("  |--> calibration and Jacobian: " + (end - start) + " ms for " + nbTests + " runs.");
@@ -232,7 +232,7 @@ public class CalibrationNotionalEquivalentTest {
       start = System.currentTimeMillis();
       for (int i = 0; i < nbTests; i++) {
         ImmutableRatesProvider multicurve1 =
-            CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, VALUATION_DATE, MARKET_QUOTES, REF_DATA, TS);
+            CALIBRATOR.calibrate(GROUP_DEFINITION_PV_SENSI, MARKET_QUOTES, REF_DATA);
       }
       end = System.currentTimeMillis();
       System.out.println("  |--> calibration, Jacobian and PV sensi MQ: " + (end - start) + " ms for " + nbTests + " runs.");

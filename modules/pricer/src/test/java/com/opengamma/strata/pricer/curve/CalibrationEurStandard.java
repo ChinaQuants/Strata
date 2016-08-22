@@ -27,7 +27,6 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
-import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.data.ImmutableMarketDataBuilder;
 import com.opengamma.strata.data.MarketData;
@@ -37,14 +36,14 @@ import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.CurveNode;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurveDefinition;
+import com.opengamma.strata.market.curve.interpolator.CurveExtrapolator;
+import com.opengamma.strata.market.curve.interpolator.CurveExtrapolators;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.curve.node.FixedOvernightSwapCurveNode;
 import com.opengamma.strata.market.curve.node.FraCurveNode;
 import com.opengamma.strata.market.curve.node.IborFixingDepositCurveNode;
-import com.opengamma.strata.market.interpolator.CurveExtrapolator;
-import com.opengamma.strata.market.interpolator.CurveExtrapolators;
-import com.opengamma.strata.market.interpolator.CurveInterpolator;
-import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.deposit.type.IborFixingDepositTemplate;
@@ -54,9 +53,7 @@ import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
 
 public class CalibrationEurStandard {
 
-  private static final LocalDate VAL_DATE = LocalDate.of(2015, 6, 30);
   private static final DayCount CURVE_DC = ACT_365F;
-  private static final LocalDateDoubleTimeSeries TS_EMTPY = LocalDateDoubleTimeSeries.empty();
 
   // reference data
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -75,7 +72,6 @@ public class CalibrationEurStandard {
   /** Curves associations to currencies and indices. */
   private static final Map<CurveName, Currency> DSC_NAMES = new HashMap<>();
   private static final Map<CurveName, Set<Index>> IDX_NAMES = new HashMap<>();
-  private static final Map<Index, LocalDateDoubleTimeSeries> TS = new HashMap<>();
   static {
     DSC_NAMES.put(DSCON_CURVE_NAME, EUR);
     Set<Index> eurEoniaSet = new HashSet<>();
@@ -87,9 +83,6 @@ public class CalibrationEurStandard {
     Set<Index> eurEuriabor6Set = new HashSet<>();
     eurEuriabor6Set.add(EUR_EURIBOR_6M);
     IDX_NAMES.put(FWD6_CURVE_NAME, eurEuriabor6Set);
-    TS.put(EUR_EURIBOR_3M, TS_EMTPY);
-    TS.put(EUR_EURIBOR_6M, TS_EMTPY);
-    TS.put(EUR_EONIA, TS_EMTPY);
   }
   private static final CurveInterpolator INTERPOLATOR_LINEAR = CurveInterpolators.LINEAR;
   private static final CurveExtrapolator EXTRAPOLATOR_FLAT = CurveExtrapolators.FLAT;
@@ -120,12 +113,12 @@ public class CalibrationEurStandard {
     String[] fwd6IdValues = fwdIdValue(6, fwd6FixingQuote, fwd6FraQuotes, fwd6IrsQuotes, fwd6FraTenors, fwd6IrsTenors);
     /* All quotes for the curve calibration */
     MarketData allQuotes =
-        allQuotes(dscOisQuotes, dscIdValues, fwd3MarketQuotes, fwd3IdValues, fwd6MarketQuotes, fwd6IdValues);
+        allQuotes(valuationDate, dscOisQuotes, dscIdValues, fwd3MarketQuotes, fwd3IdValues, fwd6MarketQuotes, fwd6IdValues);
     /* All nodes by groups. */
     CurveGroupDefinition config = config(dscOisTenors, dscIdValues, fwd3FraTenors, fwd3IrsTenors, fwd3IdValues,
         fwd6FraTenors, fwd6IrsTenors, fwd6IdValues);
     /* Results */
-    return CALIBRATOR.calibrate(config, valuationDate, allQuotes, REF_DATA, TS);
+    return CALIBRATOR.calibrate(config, allQuotes, REF_DATA);
   }
 
   public static String[] dscIdValues(Period[] dscOisTenors) {
@@ -245,6 +238,7 @@ public class CalibrationEurStandard {
   }
 
   public static MarketData allQuotes(
+      LocalDate valuationDate,
       double[] dscOisQuotes,
       String[] dscIdValues,
       double[] fwd3MarketQuotes,
@@ -252,7 +246,7 @@ public class CalibrationEurStandard {
       double[] fwd6MarketQuotes,
       String[] fwd6IdValue) {
     /* All quotes for the curve calibration */
-    ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(VAL_DATE);
+    ImmutableMarketDataBuilder builder = ImmutableMarketData.builder(valuationDate);
     for (int i = 0; i < dscOisQuotes.length; i++) {
       builder.addValue(QuoteId.of(StandardId.of(SCHEME, dscIdValues[i])), dscOisQuotes[i]);
     }

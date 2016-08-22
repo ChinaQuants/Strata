@@ -11,7 +11,7 @@ import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.result.FailureReason.CALCULATION_FAILED;
 import static com.opengamma.strata.collect.result.FailureReason.ERROR;
 import static com.opengamma.strata.collect.result.FailureReason.MISSING_DATA;
-import static com.opengamma.strata.collect.result.FailureReason.PERMISSION_DENIED;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertSame;
@@ -260,7 +260,9 @@ public class ResultTest {
     assertEquals(item.getReason(), ERROR);
     assertEquals(item.getMessage(), "my failure");
     assertEquals(item.getCauseType().isPresent(), false);
-    assertTrue(item.getStackTrace() != null);
+    assertEquals(item.getStackTrace().contains(".FailureItem.of("), false);
+    assertEquals(item.getStackTrace().contains(".Failure.of("), false);
+    assertEquals(item.getStackTrace().contains(".Result.failure("), false);
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class)
@@ -586,15 +588,15 @@ public class ResultTest {
 
   public void generateFailureFromExceptionWithCustomStatus() {
     Exception exception = new Exception("something went wrong");
-    Result<Object> test = Result.failure(PERMISSION_DENIED, exception);
-    assertEquals(test.getFailure().getReason(), PERMISSION_DENIED);
+    Result<Object> test = Result.failure(CALCULATION_FAILED, exception);
+    assertEquals(test.getFailure().getReason(), CALCULATION_FAILED);
     assertEquals(test.getFailure().getMessage(), "something went wrong");
   }
 
   public void generateFailureFromExceptionWithCustomStatusAndMessage() {
     Exception exception = new Exception("something went wrong");
-    Result<Object> test = Result.failure(PERMISSION_DENIED, exception, "my message");
-    assertEquals(test.getFailure().getReason(), PERMISSION_DENIED);
+    Result<Object> test = Result.failure(CALCULATION_FAILED, exception, "my message");
+    assertEquals(test.getFailure().getReason(), CALCULATION_FAILED);
     assertEquals(test.getFailure().getMessage(), "my message");
   }
 

@@ -11,6 +11,7 @@ import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.joda.beans.BeanDefinition;
@@ -24,15 +25,18 @@ import org.joda.beans.impl.light.LightMetaBean;
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.CalculationTarget;
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirementsBuilder;
+import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.data.FxRateId;
 import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.MarketDataNotFoundException;
 import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.data.ObservableSource;
 import com.opengamma.strata.data.scenario.ScenarioFxRateProvider;
@@ -160,7 +164,7 @@ public final class CalculationTask implements ImmutableBean {
 
     // add requirements for the FX rates needed to convert the output values into the reporting currency
     for (CalculationTaskCell cell : cells) {
-      if (cell.getMeasure().isCurrencyConvertible()) {
+      if (cell.getMeasure().isCurrencyConvertible() && !cell.getReportingCurrency().isNone()) {
         Currency reportingCurrency = cell.reportingCurrency(this, refData);
         List<MarketDataId<FxRate>> fxRateIds = functionRequirements.getOutputCurrencies().stream()
             .filter(outputCurrency -> !outputCurrency.equals(reportingCurrency))
@@ -215,14 +219,55 @@ public final class CalculationTask implements ImmutableBean {
   private Map<Measure, Result<?>> calculate(ScenarioMarketData marketData, ReferenceData refData) {
     try {
       return function.calculate(target, getMeasures(), parameters, marketData, refData);
-
     } catch (RuntimeException ex) {
-      // return a failure for each requested measure with details of the problem
-      Result<?> failure = Result.failure(
-          ex, "Function '{}' threw an exception: {}", function.getClass().getSimpleName(), ex.getMessage());
-      return getMeasures().stream()
-          .collect(toImmutableMap(m -> m, m -> failure));
+      return handleFailure(ex);
     }
+  }
+
+  // handle the failure, extracted to aid inlining
+  private Map<Measure, Result<?>> handleFailure(RuntimeException ex) {
+    Result<?> failure;
+    String fnName = function.getClass().getSimpleName();
+    String exMsg = ex.getMessage();
+    Optional<String> id = function.identifier(target);
+    String targetMsg = id.map(v -> "for ID '" + v + "'").orElse("for target '" + target.toString() + "'");
+    if (ex instanceof MarketDataNotFoundException) {
+      failure = Result.failure(
+          FailureReason.MISSING_DATA,
+          ex,
+          "Missing market data when invoking function '{}' {}: {}",
+          fnName,
+          targetMsg,
+          exMsg);
+
+    } else if (ex instanceof ReferenceDataNotFoundException) {
+      failure = Result.failure(
+          FailureReason.MISSING_DATA,
+          ex,
+          "Missing reference data when invoking function '{}' {}: {}",
+          fnName,
+          targetMsg,
+          exMsg);
+
+    } else if (ex instanceof UnsupportedOperationException) {
+      failure = Result.failure(
+          FailureReason.UNSUPPORTED,
+          ex,
+          "Unsupported operation when invoking function '{}' {}: {}",
+          fnName,
+          targetMsg,
+          exMsg);
+
+    } else {
+      failure = Result.failure(
+          FailureReason.CALCULATION_FAILED,
+          ex,
+          "Error when invoking function '{}' {}: {}",
+          fnName,
+          targetMsg,
+          ex.toString());
+    }
+    return getMeasures().stream().collect(toImmutableMap(m -> m, m -> failure));
   }
 
   //-------------------------------------------------------------------------

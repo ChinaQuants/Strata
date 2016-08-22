@@ -23,8 +23,7 @@ import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.product.swap.ResolvedSwap;
 import com.opengamma.strata.product.swap.ResolvedSwapLeg;
 import com.opengamma.strata.product.swap.Swap;
-import com.opengamma.strata.product.swap.type.FixedIborSwapConvention;
-import com.opengamma.strata.product.swaption.CashSettlement;
+import com.opengamma.strata.product.swaption.CashSwaptionSettlement;
 import com.opengamma.strata.product.swaption.ResolvedSwaption;
 
 /**
@@ -87,7 +86,7 @@ public class SabrSwaptionCashParYieldProductPricer
     ValueDerivatives annuityDerivative = getSwapPricer().getLegPricer().annuityCashDerivative(fixedLeg, forward);
     double annuityCash = annuityDerivative.getValue();
     double annuityCashDr = annuityDerivative.getDerivative(0);
-    LocalDate settlementDate = ((CashSettlement) swaption.getSwaptionSettlement()).getSettlementDate();
+    LocalDate settlementDate = ((CashSwaptionSettlement) swaption.getSwaptionSettlement()).getSettlementDate();
     double discountSettle = ratesProvider.discountFactor(fixedLeg.getCurrency(), settlementDate);
     double strike = calculateStrike(fixedLeg);
     double tenor = swaptionVolatilities.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
@@ -125,8 +124,7 @@ public class SabrSwaptionCashParYieldProductPricer
       SabrSwaptionVolatilities swaptionVolatilities) {
 
     validate(swaption, ratesProvider, swaptionVolatilities);
-    ZonedDateTime expiryDateTime = swaption.getExpiry();
-    double expiry = swaptionVolatilities.relativeTime(expiryDateTime);
+    double expiry = swaptionVolatilities.relativeTime(swaption.getExpiry());
     ResolvedSwap underlying = swaption.getUnderlying();
     ResolvedSwapLeg fixedLeg = fixedLeg(underlying);
     double tenor = swaptionVolatilities.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
@@ -136,19 +134,19 @@ public class SabrSwaptionCashParYieldProductPricer
       return PointSensitivityBuilder.none();
     }
     double forward = getSwapPricer().parRate(underlying, ratesProvider);
-    double volatility = swaptionVolatilities.volatility(expiryDateTime, tenor, strike, forward);
+    double volatility = swaptionVolatilities.volatility(expiry, tenor, strike, forward);
     double numeraire = calculateNumeraire(swaption, fixedLeg, forward, ratesProvider);
     DoubleArray derivative = swaptionVolatilities.volatilityAdjoint(expiry, tenor, strike, forward).getDerivatives();
     double vega = numeraire * swaption.getLongShort().sign() *
         BlackFormulaRepository.vega(forward + shift, strike + shift, expiry, volatility);
     // sensitivities
-    FixedIborSwapConvention conv = swaptionVolatilities.getConvention();
     Currency ccy = fixedLeg.getCurrency();
+    SwaptionVolatilitiesName name = swaptionVolatilities.getName();
     return PointSensitivityBuilder.of(
-        SwaptionSabrSensitivity.of(conv, expiryDateTime, tenor, ALPHA, ccy, vega * derivative.get(2)),
-        SwaptionSabrSensitivity.of(conv, expiryDateTime, tenor, BETA, ccy, vega * derivative.get(3)),
-        SwaptionSabrSensitivity.of(conv, expiryDateTime, tenor, RHO, ccy, vega * derivative.get(4)),
-        SwaptionSabrSensitivity.of(conv, expiryDateTime, tenor, NU, ccy, vega * derivative.get(5)));
+        SwaptionSabrSensitivity.of(name, expiry, tenor, ALPHA, ccy, vega * derivative.get(2)),
+        SwaptionSabrSensitivity.of(name, expiry, tenor, BETA, ccy, vega * derivative.get(3)),
+        SwaptionSabrSensitivity.of(name, expiry, tenor, RHO, ccy, vega * derivative.get(4)),
+        SwaptionSabrSensitivity.of(name, expiry, tenor, NU, ccy, vega * derivative.get(5)));
   }
 
 }

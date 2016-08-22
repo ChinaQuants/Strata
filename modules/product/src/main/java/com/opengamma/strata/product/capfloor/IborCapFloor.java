@@ -25,8 +25,11 @@ import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.Resolvable;
+import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.Product;
 import com.opengamma.strata.product.swap.SwapLeg;
@@ -47,22 +50,23 @@ public final class IborCapFloor
   /**
    * The Ibor cap/floor leg of the product.
    * <p>
-   * This is associated with periodic payments based on Ibor rate. 
-   * The payments are Ibor caplets or Ibor floorlets. 
+   * This is associated with periodic payments based on Ibor rate.
+   * The payments are Ibor caplets or Ibor floorlets.
    */
   @PropertyDefinition(validate = "notNull")
   private final IborCapFloorLeg capFloorLeg;
   /**
-   * The optional pay leg of the product. 
+   * The optional pay leg of the product.
    * <p>
-   * These periodic payments are not made for typical cap/floor products. Instead the premium is paid upfront. 
+   * These periodic payments are not made for typical cap/floor products.
+   * Instead the premium is paid upfront.
    */
   @PropertyDefinition(get = "optional")
   private final SwapLeg payLeg;
 
   //-------------------------------------------------------------------------
   /**
-   * Obtains an instance from a cap/floor leg with no pay leg. 
+   * Obtains an instance from a cap/floor leg with no pay leg.
    * <p>
    * The pay leg is absent in the resulting cap/floor.
    * 
@@ -74,7 +78,7 @@ public final class IborCapFloor
   }
 
   /**
-   * Obtains an instance from a cap/floor leg and a pay leg. 
+   * Obtains an instance from a cap/floor leg and a pay leg.
    * 
    * @param capFloorLeg  the cap/floor leg
    * @param payLeg  the pay leg
@@ -87,10 +91,46 @@ public final class IborCapFloor
   //-------------------------------------------------------------------------
   @ImmutableValidator
   private void validate() {
-    if (getPayLeg().isPresent()) {
-      ArgChecker.isFalse(payLeg.getPayReceive().equals(capFloorLeg.getPayReceive()),
-          "Two legs should have different Pay/Receive flags");
+    if (payLeg != null) {
+      ArgChecker.isFalse(
+          payLeg.getPayReceive().equals(capFloorLeg.getPayReceive()),
+          "Legs must have different Pay/Receive flag, but both were {}", payLeg.getPayReceive());
     }
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Returns the set of payment currencies referred to by the cap/floor.
+   * <p>
+   * This returns the complete set of payment currencies for the cap/floor.
+   * This will typically return one currency, but could return two.
+   * 
+   * @return the set of payment currencies referred to by this swap
+   */
+  public ImmutableSet<Currency> allPaymentCurrencies() {
+    ImmutableSet.Builder<Currency> builder = ImmutableSet.builder();
+    builder.add(capFloorLeg.getCurrency());
+    if (payLeg != null) {
+      builder.add(payLeg.getCurrency());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Returns the set of indices referred to by the cap/floor.
+   * <p>
+   * A cap/floor will typically refer to one index, such as 'GBP-LIBOR-3M'.
+   * Calling this method will return the complete list of indices.
+   * 
+   * @return the set of indices referred to by this cap/floor
+   */
+  public ImmutableSet<Index> allIndices() {
+    ImmutableSet.Builder<Index> builder = ImmutableSet.builder();
+    builder.add(capFloorLeg.getCalculation().getIndex());
+    if (payLeg != null) {
+      payLeg.collectIndices(builder);
+    }
+    return builder.build();
   }
 
   //-------------------------------------------------------------------------
@@ -161,7 +201,8 @@ public final class IborCapFloor
   /**
    * Gets the optional pay leg of the product.
    * <p>
-   * These periodic payments are not made for typical cap/floor products. Instead the premium is paid upfront.
+   * These periodic payments are not made for typical cap/floor products.
+   * Instead the premium is paid upfront.
    * @return the optional value of the property, not null
    */
   public Optional<SwapLeg> getPayLeg() {

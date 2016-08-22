@@ -30,7 +30,7 @@ import com.opengamma.strata.product.rate.RateComputation;
 public class DiscountingCapitalIndexedBondPaymentPeriodPricer {
 
   /**
-   * Default implementation. 
+   * Default implementation.
    */
   public static final DiscountingCapitalIndexedBondPaymentPeriodPricer DEFAULT =
       new DiscountingCapitalIndexedBondPaymentPeriodPricer(RateComputationFn.standard());
@@ -40,7 +40,7 @@ public class DiscountingCapitalIndexedBondPaymentPeriodPricer {
   private final RateComputationFn<RateComputation> rateComputationFn;
 
   /**
-   * Creates an instance. 
+   * Creates an instance.
    * 
    * @param rateComputationFn  the rate computation function
    */
@@ -49,7 +49,7 @@ public class DiscountingCapitalIndexedBondPaymentPeriodPricer {
   }
 
   /**
-   * Obtains the rate computation function. 
+   * Obtains the rate computation function.
    * 
    * @return the rate computation function
    */
@@ -237,10 +237,10 @@ public class DiscountingCapitalIndexedBondPaymentPeriodPricer {
     builder.put(ExplainKey.START_DATE, period.getStartDate());
     builder.put(ExplainKey.UNADJUSTED_START_DATE, period.getUnadjustedStartDate());
     builder.put(ExplainKey.END_DATE, period.getEndDate());
-    builder.put(ExplainKey.ACCRUAL_DAYS,
-        (int) DAYS.between(period.getUnadjustedStartDate(), period.getUnadjustedEndDate()));
     builder.put(ExplainKey.UNADJUSTED_END_DATE, period.getUnadjustedEndDate());
+    builder.put(ExplainKey.DAYS, (int) DAYS.between(period.getUnadjustedStartDate(), period.getUnadjustedEndDate()));
     if (paymentDate.isBefore(ratesProvider.getValuationDate())) {
+      builder.put(ExplainKey.COMPLETED, Boolean.TRUE);
       builder.put(ExplainKey.FORECAST_VALUE, CurrencyAmount.zero(currency));
       builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
     } else {
@@ -281,10 +281,10 @@ public class DiscountingCapitalIndexedBondPaymentPeriodPricer {
     builder.put(ExplainKey.START_DATE, period.getStartDate());
     builder.put(ExplainKey.UNADJUSTED_START_DATE, period.getUnadjustedStartDate());
     builder.put(ExplainKey.END_DATE, period.getEndDate());
-    builder.put(ExplainKey.ACCRUAL_DAYS,
-        (int) DAYS.between(period.getUnadjustedStartDate(), period.getUnadjustedEndDate()));
     builder.put(ExplainKey.UNADJUSTED_END_DATE, period.getUnadjustedEndDate());
+    builder.put(ExplainKey.DAYS, (int) DAYS.between(period.getUnadjustedStartDate(), period.getUnadjustedEndDate()));
     if (paymentDate.isBefore(ratesProvider.getValuationDate())) {
+      builder.put(ExplainKey.COMPLETED, Boolean.TRUE);
       builder.put(ExplainKey.FORECAST_VALUE, CurrencyAmount.zero(currency));
       builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
     } else {

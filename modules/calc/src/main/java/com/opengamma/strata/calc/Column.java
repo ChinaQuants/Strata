@@ -62,7 +62,7 @@ public final class Column implements ImmutableBean {
    * If the result is not associated with a currency, such as for "par rate", then the
    * reporting currency will effectively be ignored.
    * <p>
-   * If empty, the reporting currency from {@link CalculationRules} will be used. 
+   * If empty, the reporting currency from {@link CalculationRules} will be used.
    */
   @PropertyDefinition(get = "optional")
   private final ReportingCurrency reportingCurrency;
@@ -90,7 +90,7 @@ public final class Column implements ImmutableBean {
    * @return a column with the specified measure
    */
   public static Column of(Measure measure) {
-    ColumnName name = ColumnName.of(measure.toString());
+    ColumnName name = ColumnName.of(measure);
     return new Column(name, measure, null, CalculationParameters.empty());
   }
 
@@ -104,7 +104,7 @@ public final class Column implements ImmutableBean {
    * @return a column with the specified measure
    */
   public static Column of(Measure measure, Currency currency) {
-    ColumnName name = ColumnName.of(measure.toString());
+    ColumnName name = ColumnName.of(measure);
     return new Column(name, measure, ReportingCurrency.of(currency), CalculationParameters.empty());
   }
 
@@ -121,7 +121,7 @@ public final class Column implements ImmutableBean {
    * @return a column with the specified measure and reporting currency
    */
   public static Column of(Measure measure, CalculationParameter... parameters) {
-    ColumnName name = ColumnName.of(measure.toString());
+    ColumnName name = ColumnName.of(measure);
     return new Column(name, measure, null, CalculationParameters.of(parameters));
   }
 
@@ -139,7 +139,7 @@ public final class Column implements ImmutableBean {
    * @return a column with the specified measure and reporting currency
    */
   public static Column of(Measure measure, Currency currency, CalculationParameter... parameters) {
-    ColumnName name = ColumnName.of(measure.toString());
+    ColumnName name = ColumnName.of(measure);
     return new Column(name, measure, ReportingCurrency.of(currency), CalculationParameters.of(parameters));
   }
 

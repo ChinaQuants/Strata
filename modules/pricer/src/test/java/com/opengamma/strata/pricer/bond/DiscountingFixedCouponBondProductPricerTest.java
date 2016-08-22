@@ -41,8 +41,8 @@ import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
-import com.opengamma.strata.market.interpolator.CurveInterpolator;
-import com.opengamma.strata.market.interpolator.CurveInterpolators;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountFactors;
@@ -67,7 +67,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
   private static final StandardId SECURITY_ID = StandardId.of("OG-Ticker", "GOVT1-BOND1");
   private static final StandardId ISSUER_ID = StandardId.of("OG-Ticker", "GOVT1");
   private static final LocalDate VAL_DATE = date(2016, 4, 25);
-  private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.GERMAN_BONDS;
+  private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.DE_BONDS;
   private static final double NOTIONAL = 1.0e7;
   private static final double FIXED_RATE = 0.015;
   private static final HolidayCalendarId EUR_CALENDAR = HolidayCalendarIds.EUTA;
@@ -161,7 +161,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
 
   public void test_presentValueWithZSpread_continuous() {
     CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
-    CurrencyAmount expected = PRICER_NOMINAL.presentValue(
+    CurrencyAmount expected = PRICER_NOMINAL.presentValueWithSpread(
         PRODUCT.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, CONTINUOUS, 0);
     int size = PRODUCT.getPeriodicPayments().size();
     double pvcCupon = 0d;
@@ -178,7 +178,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
   public void test_presentValueWithZSpread_periodic() {
     CurrencyAmount computed = PRICER.presentValueWithZSpread(
         PRODUCT, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
-    CurrencyAmount expected = PRICER_NOMINAL.presentValue(
+    CurrencyAmount expected = PRICER_NOMINAL.presentValueWithSpread(
         PRODUCT.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     int size = PRODUCT.getPeriodicPayments().size();
     double pvcCupon = 0d;
@@ -209,7 +209,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
   public void test_presentValueWithZSpread_continuous_noExcoupon() {
     CurrencyAmount computed = PRICER.presentValueWithZSpread(
         PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
-    CurrencyAmount expected = PRICER_NOMINAL.presentValue(
+    CurrencyAmount expected = PRICER_NOMINAL.presentValueWithSpread(
         PRODUCT.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, CONTINUOUS, 0);
     int size = PRODUCT.getPeriodicPayments().size();
     double pvcCupon = 0d;
@@ -226,7 +226,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
   public void test_presentValueWithZSpread_periodic_noExcoupon() {
     CurrencyAmount computed = PRICER.presentValueWithZSpread(
         PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
-    CurrencyAmount expected = PRICER_NOMINAL.presentValue(
+    CurrencyAmount expected = PRICER_NOMINAL.presentValueWithSpread(
         PRODUCT.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     int size = PRODUCT.getPeriodicPayments().size();
     double pvcCupon = 0d;
@@ -514,7 +514,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
       .notional(100)
       .accrualSchedule(SCHEDULE_UK)
       .settlementDateOffset(DaysAdjustment.ofBusinessDays(1, SAT_SUN))
-      .yieldConvention(FixedCouponBondYieldConvention.UK_BUMP_DMO)
+      .yieldConvention(FixedCouponBondYieldConvention.GB_BUMP_DMO)
       .exCouponPeriod(DaysAdjustment.ofCalendarDays(-7,
           BusinessDayAdjustment.of(BusinessDayConventions.PRECEDING, SAT_SUN)))
       .build()
@@ -600,7 +600,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
       .notional(100)
       .accrualSchedule(SCHEDULE_GER)
       .settlementDateOffset(DaysAdjustment.ofBusinessDays(3, SAT_SUN))
-      .yieldConvention(FixedCouponBondYieldConvention.GERMAN_BONDS)
+      .yieldConvention(FixedCouponBondYieldConvention.DE_BONDS)
       .exCouponPeriod(DaysAdjustment.NONE)
       .build()
       .resolve(REF_DATA);
@@ -686,7 +686,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
       .notional(100)
       .accrualSchedule(SCHEDULE_JP)
       .settlementDateOffset(DaysAdjustment.ofBusinessDays(3, JPTO))
-      .yieldConvention(FixedCouponBondYieldConvention.JAPAN_SIMPLE)
+      .yieldConvention(FixedCouponBondYieldConvention.JP_SIMPLE)
       .exCouponPeriod(DaysAdjustment.NONE)
       .build()
       .resolve(REF_DATA);
@@ -771,7 +771,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
 
   public void macaulayDurationFromYieldYieldJP() {
     assertThrows(() -> PRICER.macaulayDurationFromYield(PRODUCT_JP, SETTLEMENT_JP, YIELD_JP),
-        UnsupportedOperationException.class, "The convention JAPAN_SIMPLE is not supported.");
+        UnsupportedOperationException.class, "The convention JP_SIMPLE is not supported.");
   }
 
 }

@@ -14,7 +14,10 @@ import java.util.Objects;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
+import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.FieldName;
 import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.data.ObservableSource;
 
@@ -76,6 +79,7 @@ public class CombinedScenarioMarketDataTest {
 
     ScenarioMarketData combined = marketData1.combinedWith(marketData2);
     assertThat(combined).isEqualTo(expected);
+    assertThat(combined.getIds()).isEqualTo(ImmutableSet.of(TEST_ID1, TEST_ID2, TEST_ID3));
   }
 
   public void test_combinedWithIncompatibleScenarioCount() {
@@ -92,7 +96,7 @@ public class CombinedScenarioMarketDataTest {
 
   public void test_combinedWithReceiverHasOneScenario() {
     ImmutableScenarioMarketData marketData1 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .build();
 
     ImmutableScenarioMarketData marketData2 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
@@ -100,11 +104,13 @@ public class CombinedScenarioMarketDataTest {
         .build();
 
     ImmutableScenarioMarketData expected = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))
         .build();
 
-    assertThat(marketData1.combinedWith(marketData2)).isEqualTo(expected);
+    ScenarioMarketData combined = marketData1.combinedWith(marketData2);
+    assertThat(combined).isEqualTo(expected);
+    assertThat(combined.getIds()).isEqualTo(ImmutableSet.of(TEST_ID1, TEST_ID2));
   }
 
   public void test_combinedWithOtherHasOneScenario() {
@@ -113,15 +119,17 @@ public class CombinedScenarioMarketDataTest {
         .build();
 
     ImmutableScenarioMarketData marketData2 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .build();
 
     ImmutableScenarioMarketData expected = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
-        .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0))
+        .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))
         .build();
 
-    assertThat(marketData1.combinedWith(marketData2)).isEqualTo(expected);
+    ScenarioMarketData combined = marketData1.combinedWith(marketData2);
+    assertThat(combined).isEqualTo(expected);
+    assertThat(combined.getIds()).isEqualTo(ImmutableSet.of(TEST_ID1, TEST_ID2));
   }
 
   //-------------------------------------------------------------------------
@@ -131,6 +139,16 @@ public class CombinedScenarioMarketDataTest {
 
     private TestId(String id) {
       this.id = id;
+    }
+
+    @Override
+    public StandardId getStandardId() {
+      throw new UnsupportedOperationException("getStandardId not implemented");
+    }
+
+    @Override
+    public FieldName getFieldName() {
+      throw new UnsupportedOperationException("getFieldName not implemented");
     }
 
     @Override

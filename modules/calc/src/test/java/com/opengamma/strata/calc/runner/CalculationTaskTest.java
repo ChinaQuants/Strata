@@ -18,6 +18,7 @@ import static org.testng.Assert.assertNotNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -28,11 +29,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.CalculationTarget;
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.ReferenceDataNotFoundException;
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.calc.Measure;
-import com.opengamma.strata.calc.TestingMeasures;
 import com.opengamma.strata.calc.ReportingCurrency;
+import com.opengamma.strata.calc.TestingMeasures;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
 import com.opengamma.strata.calc.marketdata.TestId;
 import com.opengamma.strata.calc.marketdata.TestObservableId;
@@ -41,9 +44,10 @@ import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.data.FxRateId;
 import com.opengamma.strata.data.MarketDataId;
+import com.opengamma.strata.data.MarketDataNotFoundException;
 import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.data.ObservableSource;
-import com.opengamma.strata.data.scenario.CurrencyValuesArray;
+import com.opengamma.strata.data.scenario.CurrencyScenarioArray;
 import com.opengamma.strata.data.scenario.ImmutableScenarioMarketData;
 import com.opengamma.strata.data.scenario.ScenarioArray;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
@@ -93,7 +97,7 @@ public class CalculationTaskTest {
     List<FxRate> rates = ImmutableList.of(1.61, 1.62, 1.63).stream()
         .map(rate -> FxRate.of(GBP, USD, rate))
         .collect(toImmutableList());
-    CurrencyValuesArray list = CurrencyValuesArray.of(GBP, values);
+    CurrencyScenarioArray list = CurrencyScenarioArray.of(GBP, values);
     ScenarioMarketData marketData = ImmutableScenarioMarketData.builder(date(2011, 3, 8))
         .addScenarioValue(FxRateId.of(GBP, USD), rates)
         .build();
@@ -102,7 +106,7 @@ public class CalculationTaskTest {
     CalculationTask task = CalculationTask.of(TARGET, fn, cell);
 
     DoubleArray expectedValues = DoubleArray.of(1 * 1.61, 2 * 1.62, 3 * 1.63);
-    CurrencyValuesArray expectedArray = CurrencyValuesArray.of(USD, expectedValues);
+    CurrencyScenarioArray expectedArray = CurrencyScenarioArray.of(USD, expectedValues);
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
@@ -117,7 +121,7 @@ public class CalculationTaskTest {
     List<FxRate> rates = ImmutableList.of(1.61, 1.62, 1.63).stream()
         .map(rate -> FxRate.of(GBP, USD, rate))
         .collect(toImmutableList());
-    CurrencyValuesArray list = CurrencyValuesArray.of(GBP, values);
+    CurrencyScenarioArray list = CurrencyScenarioArray.of(GBP, values);
     ScenarioMarketData marketData = ImmutableScenarioMarketData.builder(date(2011, 3, 8))
         .addScenarioValue(FxRateId.of(GBP, USD), rates)
         .build();
@@ -125,7 +129,7 @@ public class CalculationTaskTest {
     CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE_MULTI_CCY, REPORTING_CURRENCY_USD);
     CalculationTask task = CalculationTask.of(TARGET, fn, cell);
 
-    CurrencyValuesArray expectedArray = CurrencyValuesArray.of(GBP, values);
+    CurrencyScenarioArray expectedArray = CurrencyScenarioArray.of(GBP, values);
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
@@ -141,7 +145,7 @@ public class CalculationTaskTest {
     List<FxRate> rates = ImmutableList.of(1.61, 1.62, 1.63).stream()
         .map(rate -> FxRate.of(GBP, USD, rate))
         .collect(toImmutableList());
-    CurrencyValuesArray list = CurrencyValuesArray.of(GBP, values);
+    CurrencyScenarioArray list = CurrencyScenarioArray.of(GBP, values);
     ScenarioMarketData marketData = ImmutableScenarioMarketData.builder(date(2011, 3, 8))
         .addScenarioValue(FxRateId.of(GBP, USD), rates)
         .build();
@@ -150,7 +154,7 @@ public class CalculationTaskTest {
     CalculationTask task = CalculationTask.of(TARGET, fn, cell);
 
     DoubleArray expectedValues = DoubleArray.of(1 * 1.61, 2 * 1.62, 3 * 1.63);
-    CurrencyValuesArray expectedArray = CurrencyValuesArray.of(USD, expectedValues);
+    CurrencyScenarioArray expectedArray = CurrencyScenarioArray.of(USD, expectedValues);
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
@@ -170,7 +174,23 @@ public class CalculationTaskTest {
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
-    assertThat(result).hasFailureMessageMatching("Function '.*' threw an exception: This is a failure");
+    assertThat(result)
+        .isFailure(FailureReason.CALCULATION_FAILED)
+        .hasFailureMessageMatching("Error when invoking function 'ConvertibleFunction' for ID '123':.*: This is a failure");
+  }
+
+  /**
+   * Test the result is returned unchanged if using ReportingCurrency.NONE.
+   */
+  public void convertResultCurrencyNoConversionRequested() {
+    SupplierFunction<CurrencyAmount> fn = new SupplierFunction<CurrencyAmount>(() -> CurrencyAmount.of(EUR, 1d));
+    CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE, ReportingCurrency.NONE);
+    CalculationTask task = CalculationTask.of(TARGET, fn, cell);
+    ScenarioMarketData marketData = ImmutableScenarioMarketData.builder(date(2011, 3, 8)).build();
+
+    CalculationResults calculationResults = task.execute(marketData, REF_DATA);
+    Result<?> result = calculationResults.getCells().get(0).getResult();
+    assertThat(result).hasValue(ScenarioArray.of(CurrencyAmount.of(EUR, 1d)));
   }
 
   /**
@@ -206,7 +226,7 @@ public class CalculationTaskTest {
    */
   public void convertResultCurrencyConversionFails() {
     DoubleArray values = DoubleArray.of(1, 2, 3);
-    CurrencyValuesArray list = CurrencyValuesArray.of(GBP, values);
+    CurrencyScenarioArray list = CurrencyScenarioArray.of(GBP, values);
     // Market data doesn't include FX rates, conversion to USD will fail
     ScenarioMarketData marketData = ScenarioMarketData.empty();
     ConvertibleFunction fn = ConvertibleFunction.of(() -> list, GBP);
@@ -215,7 +235,9 @@ public class CalculationTaskTest {
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
-    assertThat(result).hasFailureMessageMatching("Failed to convert value '.*' to currency 'USD'");
+    assertThat(result)
+        .isFailure(FailureReason.CURRENCY_CONVERSION)
+        .hasFailureMessageMatching("Failed to convert value '.*' to currency 'USD'");
   }
 
   /**
@@ -245,8 +267,63 @@ public class CalculationTaskTest {
 
     CalculationResults calculationResults = task.execute(marketData, REF_DATA);
     Result<?> result = calculationResults.getCells().get(0).getResult();
-    assertThat(result).isFailure(FailureReason.ERROR)
-        .hasFailureMessageMatching("Function 'SupplierFunction' threw an exception: foo");
+    assertThat(result)
+        .isFailure(FailureReason.CALCULATION_FAILED)
+        .hasFailureMessageMatching("Error when invoking function 'SupplierFunction' for ID '123': .*: foo");
+  }
+
+  /**
+   * Tests that executing a function that throws a market data exception wraps the exception in a failure result.
+   */
+  public void executeException_marketData() {
+    SupplierFunction<String> fn = SupplierFunction.of(() -> {
+      throw new MarketDataNotFoundException("foo");
+    });
+    CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE, REPORTING_CURRENCY_USD);
+    CalculationTask task = CalculationTask.of(TARGET, fn, cell);
+    ScenarioMarketData marketData = ScenarioMarketData.empty();
+
+    CalculationResults calculationResults = task.execute(marketData, REF_DATA);
+    Result<?> result = calculationResults.getCells().get(0).getResult();
+    assertThat(result)
+        .isFailure(FailureReason.MISSING_DATA)
+        .hasFailureMessageMatching("Missing market data when invoking function 'SupplierFunction' for ID '123': foo");
+  }
+
+  /**
+   * Tests that executing a function that throws a reference data exception wraps the exception in a failure result.
+   */
+  public void executeException_referenceData() {
+    SupplierFunction<String> fn = SupplierFunction.of(() -> {
+      throw new ReferenceDataNotFoundException("foo");
+    });
+    CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE, REPORTING_CURRENCY_USD);
+    CalculationTask task = CalculationTask.of(TARGET, fn, cell);
+    ScenarioMarketData marketData = ScenarioMarketData.empty();
+
+    CalculationResults calculationResults = task.execute(marketData, REF_DATA);
+    Result<?> result = calculationResults.getCells().get(0).getResult();
+    assertThat(result)
+        .isFailure(FailureReason.MISSING_DATA)
+        .hasFailureMessageMatching("Missing reference data when invoking function 'SupplierFunction' for ID '123': foo");
+  }
+
+  /**
+   * Tests that executing a function that throws an unsupported exception wraps the exception in a failure result.
+   */
+  public void executeException_unsupported() {
+    SupplierFunction<String> fn = SupplierFunction.of(() -> {
+      throw new UnsupportedOperationException("foo");
+    });
+    CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE, REPORTING_CURRENCY_USD);
+    CalculationTask task = CalculationTask.of(TARGET, fn, cell);
+    ScenarioMarketData marketData = ScenarioMarketData.empty();
+
+    CalculationResults calculationResults = task.execute(marketData, REF_DATA);
+    Result<?> result = calculationResults.getCells().get(0).getResult();
+    assertThat(result)
+        .isFailure(FailureReason.UNSUPPORTED)
+        .hasFailureMessageMatching("Unsupported operation when invoking function 'SupplierFunction' for ID '123': foo");
   }
 
   /**
@@ -291,6 +368,18 @@ public class CalculationTaskTest {
     assertThat(requirements.getNonObservables()).containsOnly(
         FxRateId.of(GBP, USD, OBS_SOURCE),
         FxRateId.of(EUR, USD, OBS_SOURCE));
+  }
+
+  /**
+   * Tests that no requirements are added when not performing currency conversion.
+   */
+  public void fxConversionRequirements_noConversion() {
+    OutputCurrenciesFunction fn = new OutputCurrenciesFunction();
+    CalculationTaskCell cell = CalculationTaskCell.of(0, 0, TestingMeasures.PRESENT_VALUE, ReportingCurrency.NONE);
+    CalculationTask task = CalculationTask.of(TARGET, fn, cell);
+    MarketDataRequirements requirements = task.requirements(REF_DATA);
+
+    assertThat(requirements.getNonObservables()).isEmpty();
   }
 
   public void testToString() {
@@ -377,14 +466,14 @@ public class CalculationTaskTest {
   private static final class ConvertibleFunction
       implements CalculationFunction<TestTarget> {
 
-    private final Supplier<CurrencyValuesArray> supplier;
+    private final Supplier<CurrencyScenarioArray> supplier;
     private final Currency naturalCurrency;
 
-    static ConvertibleFunction of(Supplier<CurrencyValuesArray> supplier, Currency naturalCurrency) {
+    static ConvertibleFunction of(Supplier<CurrencyScenarioArray> supplier, Currency naturalCurrency) {
       return new ConvertibleFunction(supplier, naturalCurrency);
     }
 
-    private ConvertibleFunction(Supplier<CurrencyValuesArray> supplier, Currency naturalCurrency) {
+    private ConvertibleFunction(Supplier<CurrencyScenarioArray> supplier, Currency naturalCurrency) {
       this.supplier = supplier;
       this.naturalCurrency = naturalCurrency;
     }
@@ -397,6 +486,11 @@ public class CalculationTaskTest {
     @Override
     public Set<Measure> supportedMeasures() {
       return MEASURES;
+    }
+
+    @Override
+    public Optional<String> identifier(TestTarget target) {
+      return Optional.of("123");
     }
 
     @Override
@@ -422,7 +516,7 @@ public class CalculationTaskTest {
         ScenarioMarketData marketData,
         ReferenceData refData) {
 
-      Result<CurrencyValuesArray> result = Result.success(supplier.get());
+      Result<CurrencyScenarioArray> result = Result.success(supplier.get());
       return ImmutableMap.of(TestingMeasures.PRESENT_VALUE, result, TestingMeasures.PRESENT_VALUE_MULTI_CCY, result);
     }
   }
@@ -451,6 +545,11 @@ public class CalculationTaskTest {
     @Override
     public Set<Measure> supportedMeasures() {
       return MEASURES;
+    }
+
+    @Override
+    public Optional<String> identifier(TestTarget target) {
+      return Optional.of("123");
     }
 
     @Override

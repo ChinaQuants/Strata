@@ -6,7 +6,6 @@
 package com.opengamma.strata.pricer.swaption;
 
 import java.io.Serializable;
-import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -32,7 +31,6 @@ import com.opengamma.strata.market.model.SabrParameterType;
 import com.opengamma.strata.market.sensitivity.MutablePointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
-import com.opengamma.strata.product.swap.type.FixedIborSwapConvention;
 
 /**
  * Sensitivity of a swaption to SABR model parameters.
@@ -44,15 +42,15 @@ public final class SwaptionSabrSensitivity
     implements PointSensitivity, PointSensitivityBuilder, ImmutableBean, Serializable {
 
   /**
-  * The convention of the swap for which the data is valid.
-  */
+   * The name of the volatilities.
+   */
   @PropertyDefinition(validate = "notNull")
-  private final FixedIborSwapConvention convention;
+  private final SwaptionVolatilitiesName volatilitiesName;
   /**
-  * The expiry date/time of the option.
-  */
+   * The time to expiry of the option as a year fraction.
+   */
   @PropertyDefinition(validate = "notNull")
-  private final ZonedDateTime expiry;
+  private final double expiry;
   /**
   * The underlying swap tenor.
   */
@@ -76,10 +74,10 @@ public final class SwaptionSabrSensitivity
 
   //-------------------------------------------------------------------------
   /**
-   * Obtains an instance from the specified elements. 
+   * Obtains an instance from the specified elements.
    * 
-   * @param convention  the convention of the swap for which the data is valid
-   * @param expiry  the expiry date/time of the option
+   * @param volatilitiesName  the name of the volatilities
+   * @param expiry  the time to expiry of the option as a year fraction
    * @param tenor  the underlying swap tenor
    * @param sensitivityType  the type of the sensitivity
    * @param sensitivityCurrency  the currency of the sensitivity
@@ -87,15 +85,15 @@ public final class SwaptionSabrSensitivity
    * @return the sensitivity object
    */
   public static SwaptionSabrSensitivity of(
-      FixedIborSwapConvention convention,
-      ZonedDateTime expiry,
+      SwaptionVolatilitiesName volatilitiesName,
+      double expiry,
       double tenor,
       SabrParameterType sensitivityType,
       Currency sensitivityCurrency,
       double sensitivity) {
 
     return new SwaptionSabrSensitivity(
-        convention,
+        volatilitiesName,
         expiry,
         tenor,
         sensitivityType,
@@ -109,12 +107,12 @@ public final class SwaptionSabrSensitivity
     if (this.currency.equals(currency)) {
       return this;
     }
-    return new SwaptionSabrSensitivity(convention, expiry, tenor, sensitivityType, currency, sensitivity);
+    return new SwaptionSabrSensitivity(volatilitiesName, expiry, tenor, sensitivityType, currency, sensitivity);
   }
 
   @Override
   public SwaptionSabrSensitivity withSensitivity(double sensitivity) {
-    return new SwaptionSabrSensitivity(convention, expiry, tenor, sensitivityType, currency, sensitivity);
+    return new SwaptionSabrSensitivity(volatilitiesName, expiry, tenor, sensitivityType, currency, sensitivity);
   }
 
   @Override
@@ -122,11 +120,11 @@ public final class SwaptionSabrSensitivity
     if (other instanceof SwaptionSabrSensitivity) {
       SwaptionSabrSensitivity otherSwpt = (SwaptionSabrSensitivity) other;
       return ComparisonChain.start()
+          .compare(volatilitiesName, otherSwpt.volatilitiesName)
           .compare(currency, otherSwpt.currency)
           .compare(expiry, otherSwpt.expiry)
           .compare(tenor, otherSwpt.tenor)
           .compare(sensitivityType, otherSwpt.sensitivityType)
-          .compare(convention.toString(), otherSwpt.convention.toString())
           .result();
     }
     return getClass().getSimpleName().compareTo(other.getClass().getSimpleName());
@@ -140,13 +138,13 @@ public final class SwaptionSabrSensitivity
   //-------------------------------------------------------------------------
   @Override
   public SwaptionSabrSensitivity multipliedBy(double factor) {
-    return new SwaptionSabrSensitivity(convention, expiry, tenor, sensitivityType, currency, sensitivity * factor);
+    return new SwaptionSabrSensitivity(volatilitiesName, expiry, tenor, sensitivityType, currency, sensitivity * factor);
   }
 
   @Override
   public SwaptionSabrSensitivity mapSensitivity(DoubleUnaryOperator operator) {
     return new SwaptionSabrSensitivity(
-        convention, expiry, tenor, sensitivityType, currency, operator.applyAsDouble(sensitivity));
+        volatilitiesName, expiry, tenor, sensitivityType, currency, operator.applyAsDouble(sensitivity));
   }
 
   @Override
@@ -184,15 +182,15 @@ public final class SwaptionSabrSensitivity
   private static final long serialVersionUID = 1L;
 
   private SwaptionSabrSensitivity(
-      FixedIborSwapConvention convention,
-      ZonedDateTime expiry,
+      SwaptionVolatilitiesName volatilitiesName,
+      double expiry,
       double tenor,
       SabrParameterType sensitivityType,
       Currency currency,
       double sensitivity) {
-    JodaBeanUtils.notNull(convention, "convention");
+    JodaBeanUtils.notNull(volatilitiesName, "volatilitiesName");
     JodaBeanUtils.notNull(expiry, "expiry");
-    this.convention = convention;
+    this.volatilitiesName = volatilitiesName;
     this.expiry = expiry;
     this.tenor = tenor;
     this.sensitivityType = sensitivityType;
@@ -217,19 +215,19 @@ public final class SwaptionSabrSensitivity
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the convention of the swap for which the data is valid.
+   * Gets the name of the volatilities.
    * @return the value of the property, not null
    */
-  public FixedIborSwapConvention getConvention() {
-    return convention;
+  public SwaptionVolatilitiesName getVolatilitiesName() {
+    return volatilitiesName;
   }
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the expiry date/time of the option.
+   * Gets the time to expiry of the option as a year fraction.
    * @return the value of the property, not null
    */
-  public ZonedDateTime getExpiry() {
+  public double getExpiry() {
     return expiry;
   }
 
@@ -279,7 +277,7 @@ public final class SwaptionSabrSensitivity
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       SwaptionSabrSensitivity other = (SwaptionSabrSensitivity) obj;
-      return JodaBeanUtils.equal(convention, other.convention) &&
+      return JodaBeanUtils.equal(volatilitiesName, other.volatilitiesName) &&
           JodaBeanUtils.equal(expiry, other.expiry) &&
           JodaBeanUtils.equal(tenor, other.tenor) &&
           JodaBeanUtils.equal(sensitivityType, other.sensitivityType) &&
@@ -292,7 +290,7 @@ public final class SwaptionSabrSensitivity
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(convention);
+    hash = hash * 31 + JodaBeanUtils.hashCode(volatilitiesName);
     hash = hash * 31 + JodaBeanUtils.hashCode(expiry);
     hash = hash * 31 + JodaBeanUtils.hashCode(tenor);
     hash = hash * 31 + JodaBeanUtils.hashCode(sensitivityType);
@@ -305,7 +303,7 @@ public final class SwaptionSabrSensitivity
   public String toString() {
     StringBuilder buf = new StringBuilder(224);
     buf.append("SwaptionSabrSensitivity{");
-    buf.append("convention").append('=').append(convention).append(',').append(' ');
+    buf.append("volatilitiesName").append('=').append(volatilitiesName).append(',').append(' ');
     buf.append("expiry").append('=').append(expiry).append(',').append(' ');
     buf.append("tenor").append('=').append(tenor).append(',').append(' ');
     buf.append("sensitivityType").append('=').append(sensitivityType).append(',').append(' ');
@@ -326,15 +324,15 @@ public final class SwaptionSabrSensitivity
     static final Meta INSTANCE = new Meta();
 
     /**
-     * The meta-property for the {@code convention} property.
+     * The meta-property for the {@code volatilitiesName} property.
      */
-    private final MetaProperty<FixedIborSwapConvention> convention = DirectMetaProperty.ofImmutable(
-        this, "convention", SwaptionSabrSensitivity.class, FixedIborSwapConvention.class);
+    private final MetaProperty<SwaptionVolatilitiesName> volatilitiesName = DirectMetaProperty.ofImmutable(
+        this, "volatilitiesName", SwaptionSabrSensitivity.class, SwaptionVolatilitiesName.class);
     /**
      * The meta-property for the {@code expiry} property.
      */
-    private final MetaProperty<ZonedDateTime> expiry = DirectMetaProperty.ofImmutable(
-        this, "expiry", SwaptionSabrSensitivity.class, ZonedDateTime.class);
+    private final MetaProperty<Double> expiry = DirectMetaProperty.ofImmutable(
+        this, "expiry", SwaptionSabrSensitivity.class, Double.TYPE);
     /**
      * The meta-property for the {@code tenor} property.
      */
@@ -360,7 +358,7 @@ public final class SwaptionSabrSensitivity
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
         this, null,
-        "convention",
+        "volatilitiesName",
         "expiry",
         "tenor",
         "sensitivityType",
@@ -376,8 +374,8 @@ public final class SwaptionSabrSensitivity
     @Override
     protected MetaProperty<?> metaPropertyGet(String propertyName) {
       switch (propertyName.hashCode()) {
-        case 2039569265:  // convention
-          return convention;
+        case 2100884654:  // volatilitiesName
+          return volatilitiesName;
         case -1289159373:  // expiry
           return expiry;
         case 110246592:  // tenor
@@ -409,18 +407,18 @@ public final class SwaptionSabrSensitivity
 
     //-----------------------------------------------------------------------
     /**
-     * The meta-property for the {@code convention} property.
+     * The meta-property for the {@code volatilitiesName} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<FixedIborSwapConvention> convention() {
-      return convention;
+    public MetaProperty<SwaptionVolatilitiesName> volatilitiesName() {
+      return volatilitiesName;
     }
 
     /**
      * The meta-property for the {@code expiry} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<ZonedDateTime> expiry() {
+    public MetaProperty<Double> expiry() {
       return expiry;
     }
 
@@ -460,8 +458,8 @@ public final class SwaptionSabrSensitivity
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
       switch (propertyName.hashCode()) {
-        case 2039569265:  // convention
-          return ((SwaptionSabrSensitivity) bean).getConvention();
+        case 2100884654:  // volatilitiesName
+          return ((SwaptionSabrSensitivity) bean).getVolatilitiesName();
         case -1289159373:  // expiry
           return ((SwaptionSabrSensitivity) bean).getExpiry();
         case 110246592:  // tenor
@@ -493,8 +491,8 @@ public final class SwaptionSabrSensitivity
    */
   private static final class Builder extends DirectFieldsBeanBuilder<SwaptionSabrSensitivity> {
 
-    private FixedIborSwapConvention convention;
-    private ZonedDateTime expiry;
+    private SwaptionVolatilitiesName volatilitiesName;
+    private double expiry;
     private double tenor;
     private SabrParameterType sensitivityType;
     private Currency currency;
@@ -510,8 +508,8 @@ public final class SwaptionSabrSensitivity
     @Override
     public Object get(String propertyName) {
       switch (propertyName.hashCode()) {
-        case 2039569265:  // convention
-          return convention;
+        case 2100884654:  // volatilitiesName
+          return volatilitiesName;
         case -1289159373:  // expiry
           return expiry;
         case 110246592:  // tenor
@@ -530,11 +528,11 @@ public final class SwaptionSabrSensitivity
     @Override
     public Builder set(String propertyName, Object newValue) {
       switch (propertyName.hashCode()) {
-        case 2039569265:  // convention
-          this.convention = (FixedIborSwapConvention) newValue;
+        case 2100884654:  // volatilitiesName
+          this.volatilitiesName = (SwaptionVolatilitiesName) newValue;
           break;
         case -1289159373:  // expiry
-          this.expiry = (ZonedDateTime) newValue;
+          this.expiry = (Double) newValue;
           break;
         case 110246592:  // tenor
           this.tenor = (Double) newValue;
@@ -581,7 +579,7 @@ public final class SwaptionSabrSensitivity
     @Override
     public SwaptionSabrSensitivity build() {
       return new SwaptionSabrSensitivity(
-          convention,
+          volatilitiesName,
           expiry,
           tenor,
           sensitivityType,
@@ -594,7 +592,7 @@ public final class SwaptionSabrSensitivity
     public String toString() {
       StringBuilder buf = new StringBuilder(224);
       buf.append("SwaptionSabrSensitivity.Builder{");
-      buf.append("convention").append('=').append(JodaBeanUtils.toString(convention)).append(',').append(' ');
+      buf.append("volatilitiesName").append('=').append(JodaBeanUtils.toString(volatilitiesName)).append(',').append(' ');
       buf.append("expiry").append('=').append(JodaBeanUtils.toString(expiry)).append(',').append(' ');
       buf.append("tenor").append('=').append(JodaBeanUtils.toString(tenor)).append(',').append(' ');
       buf.append("sensitivityType").append('=').append(JodaBeanUtils.toString(sensitivityType)).append(',').append(' ');

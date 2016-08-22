@@ -12,7 +12,6 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.YearMonth;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -44,6 +43,7 @@ import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.product.rate.InflationEndInterpolatedRateComputation;
 import com.opengamma.strata.product.rate.InflationEndMonthRateComputation;
 import com.opengamma.strata.product.rate.InflationInterpolatedRateComputation;
@@ -51,7 +51,7 @@ import com.opengamma.strata.product.rate.InflationMonthlyRateComputation;
 import com.opengamma.strata.product.rate.RateComputation;
 
 /**
- * Defines the calculation of a swap leg of a zero-coupon inflation coupon based on a price index. 
+ * Defines the calculation of a swap leg of a zero-coupon inflation coupon based on a price index.
  * <p>
  * This defines the data necessary to calculate the amount payable on the leg.
  * The amount is based on the observed value of a price index.
@@ -86,7 +86,7 @@ public final class InflationRateCalculation
   @PropertyDefinition(validate = "notNull")
   private final Period lag;
   /**
-   * Reference price index calculation method. 
+   * Reference price index calculation method.
    * <p>
    * This specifies how the reference index calculation occurs.
    */
@@ -208,7 +208,7 @@ public final class InflationRateCalculation
       ReferenceData refData) {
 
     // resolve data by schedule
-    List<Double> resolvedGearings = firstNonNull(gearing, ALWAYS_1).resolveValues(accrualSchedule.getPeriods());
+    DoubleArray resolvedGearings = firstNonNull(gearing, ALWAYS_1).resolveValues(accrualSchedule);
     // build accrual periods
     ImmutableList.Builder<RateAccrualPeriod> accrualPeriods = ImmutableList.builder();
     for (int i = 0; i < accrualSchedule.size(); i++) {

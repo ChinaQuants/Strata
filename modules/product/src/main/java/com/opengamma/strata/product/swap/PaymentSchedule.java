@@ -40,6 +40,7 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.Schedule;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.product.common.PayReceive;
 
 /**
@@ -186,7 +187,7 @@ public final class PaymentSchedule
       PayReceive payReceive,
       ReferenceData refData) {
 
-    List<Double> notionals = notionalSchedule.getAmount().resolveValues(paymentSchedule.getPeriods());
+    DoubleArray notionals = notionalSchedule.getAmount().resolveValues(paymentSchedule);
     // resolve against reference data once
     DateAdjuster paymentDateAdjuster = paymentDateOffset.resolve(refData);
     Function<SchedulePeriod, FxReset> fxResetFn =
@@ -246,10 +247,10 @@ public final class PaymentSchedule
       Payment payment = Payment.of(amount, paymentDate);
       if (fxReset != null) {
         CurrencyAmount notionalAmount = CurrencyAmount.of(fxReset.getReferenceCurrency(), notional);
-        return KnownAmountNotionalPaymentPeriod.of(payment, paymentPeriod, notionalAmount, fxReset.getObservation());
+        return KnownAmountNotionalSwapPaymentPeriod.of(payment, paymentPeriod, notionalAmount, fxReset.getObservation());
       } else {
         CurrencyAmount notionalAmount = CurrencyAmount.of(currency, notional);
-        return KnownAmountNotionalPaymentPeriod.of(payment, paymentPeriod, notionalAmount);
+        return KnownAmountNotionalSwapPaymentPeriod.of(payment, paymentPeriod, notionalAmount);
       }
     }
     // rate based computation

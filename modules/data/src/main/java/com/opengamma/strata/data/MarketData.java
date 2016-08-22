@@ -121,6 +121,13 @@ public interface MarketData {
 
   //-------------------------------------------------------------------------
   /**
+   * Gets the market data identifiers.
+   *
+   * @return the set of market data identifiers
+   */
+  public abstract Set<MarketDataId<?>> getIds();
+
+  /**
    * Finds the market data identifiers associated with the specified name.
    * <p>
    * This returns the unique identifiers that refer to the specified name.
@@ -133,6 +140,13 @@ public interface MarketData {
   public abstract <T> Set<MarketDataId<T>> findIds(MarketDataName<T> name);
 
   //-------------------------------------------------------------------------
+  /**
+   * Gets the time-series identifiers.
+   *
+   * @return the set of observable identifiers
+   */
+  public abstract Set<ObservableId> getTimeSeriesIds();
+  
   /**
    * Gets the time-series identified by the specified identifier, empty if not found.
    *
