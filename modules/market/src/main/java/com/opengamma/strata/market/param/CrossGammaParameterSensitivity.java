@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
+ * Copyright (C) 2016 - present by OpenGamma Inc. and the OpenGamma group of companies
  *
  * Please see distribution for license.
  */
@@ -31,24 +31,30 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.FxConvertible;
 import com.opengamma.strata.basics.currency.FxRateProvider;
+import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
+import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.data.MarketDataName;
 import com.opengamma.strata.market.curve.Curve;
-import com.opengamma.strata.market.surface.Surface;
 
 /**
- * Currency-based parameter sensitivity for parameterized market data, such as a curve.
+ * The second order parameter sensitivity for parameterized market data.
  * <p>
  * Parameter sensitivity is the sensitivity of a value to the parameters of a
  * {@linkplain ParameterizedData parameterized market data} object that is used to determine the value.
- * Common {@code ParameterizedData} implementations include {@link Curve} and {@link Surface}.
+ * The main application of this class is the parameter sensitivities for curves.
+ * Thus {@code ParameterizedData} is typically {@link Curve}.
  * <p>
- * The sensitivity is expressed as an array, with one entry for each parameter in the {@code ParameterizedData}.
+ * The sensitivity is expressed as a matrix.
+ * The {@code (i,j)} component is the sensitivity of the {@code i}-th component of the {@code parameterMetadata} delta to
+ * the {@code j}-th parameter in {@code order}.
+ * <p>
  * The sensitivity represents a monetary value in the specified currency.
  */
 @BeanDefinition(builderScope = "private")
-public final class CurrencyParameterSensitivity
-    implements FxConvertible<CurrencyParameterSensitivity>, ImmutableBean {
+public final class CrossGammaParameterSensitivity
+    implements FxConvertible<CrossGammaParameterSensitivity>, ImmutableBean {
 
   /**
    * The market data name.
@@ -65,21 +71,34 @@ public final class CurrencyParameterSensitivity
   @PropertyDefinition(validate = "notNull", builderType = "List<? extends ParameterMetadata>")
   private final ImmutableList<ParameterMetadata> parameterMetadata;
   /**
-   * The currency of the sensitivity.
+   * The sensitivity order.
+   * <p>
+   * This defines the order of sensitivity values, which can be used as a key to interpret {@code sensitivity}.
    */
+  @PropertyDefinition(validate = "notNull", builderType = "List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>>")
+  private final ImmutableList<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>> order;
+
+  /**
+  * The currency of the sensitivity.
+  */
   @PropertyDefinition(validate = "notNull")
   private final Currency currency;
   /**
    * The parameter sensitivity values.
    * <p>
-   * There is one sensitivity value for each parameter.
+   * The curve delta sensitivities to parameterized market data.
+   * This is a {@code n x m} matrix, where {@code n} must agree with the size of {@code parameterMetadata} and 
+   * {@code m} must be the sum of parameter count in {@code order}.
    */
   @PropertyDefinition(validate = "notNull")
-  private final DoubleArray sensitivity;
+  private final DoubleMatrix sensitivity;
 
   //-------------------------------------------------------------------------
   /**
    * Obtains an instance from the market data name, metadata, currency and sensitivity.
+   * <p>
+   * This creates a sensitivity instance which stores the second order sensitivity values to a single market data, i.e., 
+   * the block diagonal part of the full second order sensitivity matrix.
    * <p>
    * The market data name identifies the {@link ParameterizedData} instance that was queried.
    * The parameter metadata provides information on each parameter.
@@ -91,39 +110,86 @@ public final class CurrencyParameterSensitivity
    * @param sensitivity  the sensitivity values, one for each parameter
    * @return the sensitivity object
    */
-  public static CurrencyParameterSensitivity of(
+  public static CrossGammaParameterSensitivity of(
       MarketDataName<?> marketDataName,
       List<? extends ParameterMetadata> parameterMetadata,
       Currency currency,
-      DoubleArray sensitivity) {
+      DoubleMatrix sensitivity) {
 
-    return new CurrencyParameterSensitivity(marketDataName, parameterMetadata, currency, sensitivity);
+    return of(marketDataName, parameterMetadata, marketDataName, parameterMetadata, currency, sensitivity);
   }
 
   /**
-   * Obtains an instance from the market data name, currency and sensitivity.
+   * Obtains an instance from the market data names, metadatas, currency and sensitivity.
+   * <p>
+   * This creates a sensitivity instance which stores the second order sensitivity values: the delta of a market data 
+   * to another market data. The first market data and the second market data can be the same.
    * <p>
    * The market data name identifies the {@link ParameterizedData} instance that was queried.
-   * The parameter metadata will be empty.
-   * The size of the parameter metadata list must match the size of the sensitivity array.
+   * The parameter metadata provides information on each parameter.
    * 
-   * @param marketDataName  the name of the market data that the sensitivity refers to
+   * @param marketDataName  the name of the first market data that the sensitivity refers to
+   * @param parameterMetadata  the first parameter metadata
+   * @param marketDataNameOther  the name of the second market data that the sensitivity refers to
+   * @param parameterMetadataOther  the second parameter metadata
    * @param currency  the currency of the sensitivity
    * @param sensitivity  the sensitivity values, one for each parameter
    * @return the sensitivity object
    */
-  public static CurrencyParameterSensitivity of(
+  public static CrossGammaParameterSensitivity of(
       MarketDataName<?> marketDataName,
+      List<? extends ParameterMetadata> parameterMetadata,
+      MarketDataName<?> marketDataNameOther,
+      List<? extends ParameterMetadata> parameterMetadataOther,
       Currency currency,
-      DoubleArray sensitivity) {
+      DoubleMatrix sensitivity) {
 
-    return of(marketDataName, ParameterMetadata.listOfEmpty(sensitivity.size()), currency, sensitivity);
+    return new CrossGammaParameterSensitivity(marketDataName, parameterMetadata,
+        ImmutableList.of(Pair.of(marketDataNameOther, parameterMetadataOther)), currency, sensitivity);
+  }
+
+  /**
+   * Obtains an instance from the market data names, metadatas, currency and sensitivity.
+   * <p>
+   * This creates a sensitivity instance which stores the second order sensitivity values: the delta of a market data 
+   * to a set of other market data. 
+   * The market data set is represented in terms of {@code List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>>}. 
+   * which defines the order of the sensitivity values.
+   * <p>
+   * The market data name identifies the {@link ParameterizedData} instance that was queried.
+   * The parameter metadata provides information on each parameter.
+   * 
+   * @param marketDataName  the name of the market data that the sensitivity refers to
+   * @param parameterMetadata  the parameter metadata
+   * @param order  the order
+   * @param currency  the currency of the sensitivity
+   * @param sensitivity  the sensitivity values, one for each parameter
+   * @return the sensitivity object
+   */
+  public static CrossGammaParameterSensitivity of(
+      MarketDataName<?> marketDataName,
+      List<? extends ParameterMetadata> parameterMetadata,
+      List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>> order,
+      Currency currency,
+      DoubleMatrix sensitivity) {
+
+    return new CrossGammaParameterSensitivity(marketDataName, parameterMetadata,
+        order, currency, sensitivity);
   }
 
   @ImmutableValidator
   private void validate() {
-    if (sensitivity.size() != parameterMetadata.size()) {
-      throw new IllegalArgumentException("Length of sensitivity and parameter metadata must match");
+    int col = sensitivity.columnCount();
+    int row = sensitivity.rowCount();
+    if (row != parameterMetadata.size()) {
+      throw new IllegalArgumentException("row count of sensitivity and parameter metadata size must match");
+    }
+    int nParamsTotal = 0;
+    for (Pair<MarketDataName<?>, List<? extends ParameterMetadata>> entry : order) {
+      nParamsTotal += entry.getSecond().size();
+    }
+    if (col != nParamsTotal) {
+      throw new IllegalArgumentException("column count of sensitivity and total parameter metadata size of order must match");
     }
   }
 
@@ -137,7 +203,7 @@ public final class CurrencyParameterSensitivity
    * @return the number of parameters
    */
   public int getParameterCount() {
-    return sensitivity.size();
+    return sensitivity.rowCount();
   }
 
   /**
@@ -159,9 +225,10 @@ public final class CurrencyParameterSensitivity
    * @param other  the other sensitivity object
    * @return positive if greater, zero if equal, negative if less
    */
-  public int compareKey(CurrencyParameterSensitivity other) {
+  public int compareKey(CrossGammaParameterSensitivity other) {
     return ComparisonChain.start()
         .compare(marketDataName, other.marketDataName)
+        .compare(order.toString(), other.order.toString())
         .compare(currency, other.currency)
         .result();
   }
@@ -178,7 +245,7 @@ public final class CurrencyParameterSensitivity
    * @throws RuntimeException if no FX rate could be found
    */
   @Override
-  public CurrencyParameterSensitivity convertedTo(Currency resultCurrency, FxRateProvider rateProvider) {
+  public CrossGammaParameterSensitivity convertedTo(Currency resultCurrency, FxRateProvider rateProvider) {
     if (currency.equals(resultCurrency)) {
       return this;
     }
@@ -195,7 +262,7 @@ public final class CurrencyParameterSensitivity
    * @param factor  the multiplicative factor
    * @return an instance based on this one, with each sensitivity multiplied by the factor
    */
-  public CurrencyParameterSensitivity multipliedBy(double factor) {
+  public CrossGammaParameterSensitivity multipliedBy(double factor) {
     return mapSensitivity(s -> s * factor);
   }
 
@@ -211,13 +278,13 @@ public final class CurrencyParameterSensitivity
    * @param operator  the operator to be applied to the sensitivities
    * @return an instance based on this one, with the operator applied to the sensitivity values
    */
-  public CurrencyParameterSensitivity mapSensitivity(DoubleUnaryOperator operator) {
+  public CrossGammaParameterSensitivity mapSensitivity(DoubleUnaryOperator operator) {
     return mapSensitivity(operator, currency);
   }
 
   // maps the sensitivities and potentially changes the currency
-  private CurrencyParameterSensitivity mapSensitivity(DoubleUnaryOperator operator, Currency currency) {
-    return new CurrencyParameterSensitivity(marketDataName, parameterMetadata, currency, sensitivity.map(operator));
+  private CrossGammaParameterSensitivity mapSensitivity(DoubleUnaryOperator operator, Currency currency) {
+    return new CrossGammaParameterSensitivity(marketDataName, parameterMetadata, order, currency, sensitivity.map(operator));
   }
 
   /**
@@ -226,8 +293,8 @@ public final class CurrencyParameterSensitivity
    * @param sensitivity  the new sensitivity values
    * @return an instance based on this one, with the specified sensitivity values
    */
-  public CurrencyParameterSensitivity withSensitivity(DoubleArray sensitivity) {
-    return new CurrencyParameterSensitivity(marketDataName, parameterMetadata, currency, sensitivity);
+  public CrossGammaParameterSensitivity withSensitivity(DoubleMatrix sensitivity) {
+    return new CrossGammaParameterSensitivity(marketDataName, parameterMetadata, order, currency, sensitivity);
   }
 
   //-------------------------------------------------------------------------
@@ -237,54 +304,95 @@ public final class CurrencyParameterSensitivity
    * @return the total sensitivity values
    */
   public CurrencyAmount total() {
-    return CurrencyAmount.of(currency, sensitivity.sum());
+    return CurrencyAmount.of(currency, sensitivity.total());
   }
 
-  //-------------------------------------------------------------------------
   /**
-   * Converts this instance to the equivalent unit sensitivity.
-   * <p>
-   * The result has the same sensitivity values, but no longer records the currency.
+   * Returns the diagonal part of the sensitivity as {@code CurrencyParameterSensitivity}.
    * 
-   * @return an instance based on this one, with the currency removed
+   * @return the diagonal part
    */
-  public UnitParameterSensitivity toUnitParameterSensitivity() {
-    return UnitParameterSensitivity.of(marketDataName, parameterMetadata, sensitivity);
+  public CurrencyParameterSensitivity diagonal() {
+    CrossGammaParameterSensitivity blockDiagonal = getSensitivity(getMarketDataName());
+    int size = getParameterCount();
+    return CurrencyParameterSensitivity.of(
+        getMarketDataName(),
+        getParameterMetadata(),
+        getCurrency(),
+        DoubleArray.of(size, i -> blockDiagonal.getSensitivity().get(i, i)));
+  }
+
+  /**
+   * Returns the sensitivity to the market data specified by {@code name}.
+   * <p>
+   * This returns a sensitivity instance which stores the sensitivity of the {@code marketDataName} delta to another 
+   * market data of {@code name}.
+   * 
+   * @param name  the name
+   * @return the sensitivity
+   * @throws IllegalArgumentException if the name does not match an entry
+   */
+  public CrossGammaParameterSensitivity getSensitivity(MarketDataName<?> name) {
+    Pair<Integer, List<? extends ParameterMetadata>> indexAndMetadata = findStartIndexAndMetadata(name);
+    int startIndex = indexAndMetadata.getFirst();
+    int rowCt = getParameterCount();
+    int colCt = indexAndMetadata.getSecond().size();
+    double[][] sensi = new double[rowCt][colCt];
+    for (int i = 0; i < rowCt; ++i) {
+      System.arraycopy(getSensitivity().rowArray(i), startIndex, sensi[i], 0, colCt);
+    }
+    return CrossGammaParameterSensitivity.of(
+        getMarketDataName(), getParameterMetadata(), name, indexAndMetadata.getSecond(), getCurrency(),
+        DoubleMatrix.ofUnsafe(sensi));
+  }
+
+  private Pair<Integer, List<? extends ParameterMetadata>> findStartIndexAndMetadata(MarketDataName<?> name) {
+    int startIndex = 0;
+    for (Pair<MarketDataName<?>, List<? extends ParameterMetadata>> entry : order) {
+      if (entry.getFirst().equals(name)) {
+        return Pair.of(startIndex, entry.getSecond());
+      }
+      startIndex += entry.getSecond().size();
+    }
+    throw new IllegalArgumentException(Messages.format("Unable to find sensitivity: {} and {}", marketDataName, name));
   }
 
   //------------------------- AUTOGENERATED START -------------------------
   ///CLOVER:OFF
   /**
-   * The meta-bean for {@code CurrencyParameterSensitivity}.
+   * The meta-bean for {@code CrossGammaParameterSensitivity}.
    * @return the meta-bean, not null
    */
-  public static CurrencyParameterSensitivity.Meta meta() {
-    return CurrencyParameterSensitivity.Meta.INSTANCE;
+  public static CrossGammaParameterSensitivity.Meta meta() {
+    return CrossGammaParameterSensitivity.Meta.INSTANCE;
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(CurrencyParameterSensitivity.Meta.INSTANCE);
+    JodaBeanUtils.registerMetaBean(CrossGammaParameterSensitivity.Meta.INSTANCE);
   }
 
-  private CurrencyParameterSensitivity(
+  private CrossGammaParameterSensitivity(
       MarketDataName<?> marketDataName,
       List<? extends ParameterMetadata> parameterMetadata,
+      List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>> order,
       Currency currency,
-      DoubleArray sensitivity) {
+      DoubleMatrix sensitivity) {
     JodaBeanUtils.notNull(marketDataName, "marketDataName");
     JodaBeanUtils.notNull(parameterMetadata, "parameterMetadata");
+    JodaBeanUtils.notNull(order, "order");
     JodaBeanUtils.notNull(currency, "currency");
     JodaBeanUtils.notNull(sensitivity, "sensitivity");
     this.marketDataName = marketDataName;
     this.parameterMetadata = ImmutableList.copyOf(parameterMetadata);
+    this.order = ImmutableList.copyOf(order);
     this.currency = currency;
     this.sensitivity = sensitivity;
     validate();
   }
 
   @Override
-  public CurrencyParameterSensitivity.Meta metaBean() {
-    return CurrencyParameterSensitivity.Meta.INSTANCE;
+  public CrossGammaParameterSensitivity.Meta metaBean() {
+    return CrossGammaParameterSensitivity.Meta.INSTANCE;
   }
 
   @Override
@@ -321,6 +429,17 @@ public final class CurrencyParameterSensitivity
 
   //-----------------------------------------------------------------------
   /**
+   * Gets the sensitivity order.
+   * <p>
+   * This defines the order of sensitivity values, which can be used as a key to interpret {@code sensitivity}.
+   * @return the value of the property, not null
+   */
+  public ImmutableList<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>> getOrder() {
+    return order;
+  }
+
+  //-----------------------------------------------------------------------
+  /**
    * Gets the currency of the sensitivity.
    * @return the value of the property, not null
    */
@@ -332,10 +451,12 @@ public final class CurrencyParameterSensitivity
   /**
    * Gets the parameter sensitivity values.
    * <p>
-   * There is one sensitivity value for each parameter.
+   * The curve delta sensitivities to parameterized market data.
+   * This is a {@code n x m} matrix, where {@code n} must agree with the size of {@code parameterMetadata} and
+   * {@code m} must be the sum of parameter count in {@code order}.
    * @return the value of the property, not null
    */
-  public DoubleArray getSensitivity() {
+  public DoubleMatrix getSensitivity() {
     return sensitivity;
   }
 
@@ -346,9 +467,10 @@ public final class CurrencyParameterSensitivity
       return true;
     }
     if (obj != null && obj.getClass() == this.getClass()) {
-      CurrencyParameterSensitivity other = (CurrencyParameterSensitivity) obj;
+      CrossGammaParameterSensitivity other = (CrossGammaParameterSensitivity) obj;
       return JodaBeanUtils.equal(marketDataName, other.marketDataName) &&
           JodaBeanUtils.equal(parameterMetadata, other.parameterMetadata) &&
+          JodaBeanUtils.equal(order, other.order) &&
           JodaBeanUtils.equal(currency, other.currency) &&
           JodaBeanUtils.equal(sensitivity, other.sensitivity);
     }
@@ -360,6 +482,7 @@ public final class CurrencyParameterSensitivity
     int hash = getClass().hashCode();
     hash = hash * 31 + JodaBeanUtils.hashCode(marketDataName);
     hash = hash * 31 + JodaBeanUtils.hashCode(parameterMetadata);
+    hash = hash * 31 + JodaBeanUtils.hashCode(order);
     hash = hash * 31 + JodaBeanUtils.hashCode(currency);
     hash = hash * 31 + JodaBeanUtils.hashCode(sensitivity);
     return hash;
@@ -367,10 +490,11 @@ public final class CurrencyParameterSensitivity
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(160);
-    buf.append("CurrencyParameterSensitivity{");
+    StringBuilder buf = new StringBuilder(192);
+    buf.append("CrossGammaParameterSensitivity{");
     buf.append("marketDataName").append('=').append(marketDataName).append(',').append(' ');
     buf.append("parameterMetadata").append('=').append(parameterMetadata).append(',').append(' ');
+    buf.append("order").append('=').append(order).append(',').append(' ');
     buf.append("currency").append('=').append(currency).append(',').append(' ');
     buf.append("sensitivity").append('=').append(JodaBeanUtils.toString(sensitivity));
     buf.append('}');
@@ -379,7 +503,7 @@ public final class CurrencyParameterSensitivity
 
   //-----------------------------------------------------------------------
   /**
-   * The meta-bean for {@code CurrencyParameterSensitivity}.
+   * The meta-bean for {@code CrossGammaParameterSensitivity}.
    */
   public static final class Meta extends DirectMetaBean {
     /**
@@ -392,23 +516,29 @@ public final class CurrencyParameterSensitivity
      */
     @SuppressWarnings({"unchecked", "rawtypes" })
     private final MetaProperty<MarketDataName<?>> marketDataName = DirectMetaProperty.ofImmutable(
-        this, "marketDataName", CurrencyParameterSensitivity.class, (Class) MarketDataName.class);
+        this, "marketDataName", CrossGammaParameterSensitivity.class, (Class) MarketDataName.class);
     /**
      * The meta-property for the {@code parameterMetadata} property.
      */
     @SuppressWarnings({"unchecked", "rawtypes" })
     private final MetaProperty<ImmutableList<ParameterMetadata>> parameterMetadata = DirectMetaProperty.ofImmutable(
-        this, "parameterMetadata", CurrencyParameterSensitivity.class, (Class) ImmutableList.class);
+        this, "parameterMetadata", CrossGammaParameterSensitivity.class, (Class) ImmutableList.class);
+    /**
+     * The meta-property for the {@code order} property.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes" })
+    private final MetaProperty<ImmutableList<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>>> order = DirectMetaProperty.ofImmutable(
+        this, "order", CrossGammaParameterSensitivity.class, (Class) ImmutableList.class);
     /**
      * The meta-property for the {@code currency} property.
      */
     private final MetaProperty<Currency> currency = DirectMetaProperty.ofImmutable(
-        this, "currency", CurrencyParameterSensitivity.class, Currency.class);
+        this, "currency", CrossGammaParameterSensitivity.class, Currency.class);
     /**
      * The meta-property for the {@code sensitivity} property.
      */
-    private final MetaProperty<DoubleArray> sensitivity = DirectMetaProperty.ofImmutable(
-        this, "sensitivity", CurrencyParameterSensitivity.class, DoubleArray.class);
+    private final MetaProperty<DoubleMatrix> sensitivity = DirectMetaProperty.ofImmutable(
+        this, "sensitivity", CrossGammaParameterSensitivity.class, DoubleMatrix.class);
     /**
      * The meta-properties.
      */
@@ -416,6 +546,7 @@ public final class CurrencyParameterSensitivity
         this, null,
         "marketDataName",
         "parameterMetadata",
+        "order",
         "currency",
         "sensitivity");
 
@@ -432,6 +563,8 @@ public final class CurrencyParameterSensitivity
           return marketDataName;
         case -1169106440:  // parameterMetadata
           return parameterMetadata;
+        case 106006350:  // order
+          return order;
         case 575402001:  // currency
           return currency;
         case 564403871:  // sensitivity
@@ -441,13 +574,13 @@ public final class CurrencyParameterSensitivity
     }
 
     @Override
-    public BeanBuilder<? extends CurrencyParameterSensitivity> builder() {
-      return new CurrencyParameterSensitivity.Builder();
+    public BeanBuilder<? extends CrossGammaParameterSensitivity> builder() {
+      return new CrossGammaParameterSensitivity.Builder();
     }
 
     @Override
-    public Class<? extends CurrencyParameterSensitivity> beanType() {
-      return CurrencyParameterSensitivity.class;
+    public Class<? extends CrossGammaParameterSensitivity> beanType() {
+      return CrossGammaParameterSensitivity.class;
     }
 
     @Override
@@ -473,6 +606,14 @@ public final class CurrencyParameterSensitivity
     }
 
     /**
+     * The meta-property for the {@code order} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<ImmutableList<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>>> order() {
+      return order;
+    }
+
+    /**
      * The meta-property for the {@code currency} property.
      * @return the meta-property, not null
      */
@@ -484,7 +625,7 @@ public final class CurrencyParameterSensitivity
      * The meta-property for the {@code sensitivity} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<DoubleArray> sensitivity() {
+    public MetaProperty<DoubleMatrix> sensitivity() {
       return sensitivity;
     }
 
@@ -493,13 +634,15 @@ public final class CurrencyParameterSensitivity
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
       switch (propertyName.hashCode()) {
         case 842855857:  // marketDataName
-          return ((CurrencyParameterSensitivity) bean).getMarketDataName();
+          return ((CrossGammaParameterSensitivity) bean).getMarketDataName();
         case -1169106440:  // parameterMetadata
-          return ((CurrencyParameterSensitivity) bean).getParameterMetadata();
+          return ((CrossGammaParameterSensitivity) bean).getParameterMetadata();
+        case 106006350:  // order
+          return ((CrossGammaParameterSensitivity) bean).getOrder();
         case 575402001:  // currency
-          return ((CurrencyParameterSensitivity) bean).getCurrency();
+          return ((CrossGammaParameterSensitivity) bean).getCurrency();
         case 564403871:  // sensitivity
-          return ((CurrencyParameterSensitivity) bean).getSensitivity();
+          return ((CrossGammaParameterSensitivity) bean).getSensitivity();
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -517,14 +660,15 @@ public final class CurrencyParameterSensitivity
 
   //-----------------------------------------------------------------------
   /**
-   * The bean-builder for {@code CurrencyParameterSensitivity}.
+   * The bean-builder for {@code CrossGammaParameterSensitivity}.
    */
-  private static final class Builder extends DirectFieldsBeanBuilder<CurrencyParameterSensitivity> {
+  private static final class Builder extends DirectFieldsBeanBuilder<CrossGammaParameterSensitivity> {
 
     private MarketDataName<?> marketDataName;
     private List<? extends ParameterMetadata> parameterMetadata = ImmutableList.of();
+    private List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>> order = ImmutableList.of();
     private Currency currency;
-    private DoubleArray sensitivity;
+    private DoubleMatrix sensitivity;
 
     /**
      * Restricted constructor.
@@ -540,6 +684,8 @@ public final class CurrencyParameterSensitivity
           return marketDataName;
         case -1169106440:  // parameterMetadata
           return parameterMetadata;
+        case 106006350:  // order
+          return order;
         case 575402001:  // currency
           return currency;
         case 564403871:  // sensitivity
@@ -559,11 +705,14 @@ public final class CurrencyParameterSensitivity
         case -1169106440:  // parameterMetadata
           this.parameterMetadata = (List<? extends ParameterMetadata>) newValue;
           break;
+        case 106006350:  // order
+          this.order = (List<Pair<MarketDataName<?>, List<? extends ParameterMetadata>>>) newValue;
+          break;
         case 575402001:  // currency
           this.currency = (Currency) newValue;
           break;
         case 564403871:  // sensitivity
-          this.sensitivity = (DoubleArray) newValue;
+          this.sensitivity = (DoubleMatrix) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -596,10 +745,11 @@ public final class CurrencyParameterSensitivity
     }
 
     @Override
-    public CurrencyParameterSensitivity build() {
-      return new CurrencyParameterSensitivity(
+    public CrossGammaParameterSensitivity build() {
+      return new CrossGammaParameterSensitivity(
           marketDataName,
           parameterMetadata,
+          order,
           currency,
           sensitivity);
     }
@@ -607,10 +757,11 @@ public final class CurrencyParameterSensitivity
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(160);
-      buf.append("CurrencyParameterSensitivity.Builder{");
+      StringBuilder buf = new StringBuilder(192);
+      buf.append("CrossGammaParameterSensitivity.Builder{");
       buf.append("marketDataName").append('=').append(JodaBeanUtils.toString(marketDataName)).append(',').append(' ');
       buf.append("parameterMetadata").append('=').append(JodaBeanUtils.toString(parameterMetadata)).append(',').append(' ');
+      buf.append("order").append('=').append(JodaBeanUtils.toString(order)).append(',').append(' ');
       buf.append("currency").append('=').append(JodaBeanUtils.toString(currency)).append(',').append(' ');
       buf.append("sensitivity").append('=').append(JodaBeanUtils.toString(sensitivity));
       buf.append('}');
