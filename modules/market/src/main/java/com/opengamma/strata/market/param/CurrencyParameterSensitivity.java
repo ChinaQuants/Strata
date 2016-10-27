@@ -5,6 +5,7 @@
  */
 package com.opengamma.strata.market.param;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -48,7 +49,7 @@ import com.opengamma.strata.market.surface.Surface;
  */
 @BeanDefinition(builderScope = "private")
 public final class CurrencyParameterSensitivity
-    implements FxConvertible<CurrencyParameterSensitivity>, ImmutableBean {
+    implements FxConvertible<CurrencyParameterSensitivity>, ImmutableBean, Serializable {
 
   /**
    * The market data name.
@@ -63,7 +64,7 @@ public final class CurrencyParameterSensitivity
    * There is one entry for each parameter.
    */
   @PropertyDefinition(validate = "notNull", builderType = "List<? extends ParameterMetadata>")
-  private final List<ParameterMetadata> parameterMetadata;
+  private final ImmutableList<ParameterMetadata> parameterMetadata;
   /**
    * The currency of the sensitivity.
    */
@@ -266,6 +267,11 @@ public final class CurrencyParameterSensitivity
     JodaBeanUtils.registerMetaBean(CurrencyParameterSensitivity.Meta.INSTANCE);
   }
 
+  /**
+   * The serialization version id.
+   */
+  private static final long serialVersionUID = 1L;
+
   private CurrencyParameterSensitivity(
       MarketDataName<?> marketDataName,
       List<? extends ParameterMetadata> parameterMetadata,
@@ -315,7 +321,7 @@ public final class CurrencyParameterSensitivity
    * There is one entry for each parameter.
    * @return the value of the property, not null
    */
-  public List<ParameterMetadata> getParameterMetadata() {
+  public ImmutableList<ParameterMetadata> getParameterMetadata() {
     return parameterMetadata;
   }
 
@@ -397,8 +403,8 @@ public final class CurrencyParameterSensitivity
      * The meta-property for the {@code parameterMetadata} property.
      */
     @SuppressWarnings({"unchecked", "rawtypes" })
-    private final MetaProperty<List<ParameterMetadata>> parameterMetadata = DirectMetaProperty.ofImmutable(
-        this, "parameterMetadata", CurrencyParameterSensitivity.class, (Class) List.class);
+    private final MetaProperty<ImmutableList<ParameterMetadata>> parameterMetadata = DirectMetaProperty.ofImmutable(
+        this, "parameterMetadata", CurrencyParameterSensitivity.class, (Class) ImmutableList.class);
     /**
      * The meta-property for the {@code currency} property.
      */
@@ -468,7 +474,7 @@ public final class CurrencyParameterSensitivity
      * The meta-property for the {@code parameterMetadata} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<List<ParameterMetadata>> parameterMetadata() {
+    public MetaProperty<ImmutableList<ParameterMetadata>> parameterMetadata() {
       return parameterMetadata;
     }
 

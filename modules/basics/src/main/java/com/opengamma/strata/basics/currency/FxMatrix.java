@@ -5,6 +5,7 @@
  */
 package com.opengamma.strata.basics.currency;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -31,6 +32,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.tuple.Pair;
 
@@ -45,7 +47,7 @@ import com.opengamma.strata.collect.tuple.Pair;
  */
 @BeanDefinition(builderScope = "private", constructorScope = "package")
 public final class FxMatrix
-    implements FxRateProvider, ImmutableBean {
+    implements FxRateProvider, ImmutableBean, Serializable {
 
   /**
    * An empty FX matrix containing neither currencies nor rates.
@@ -203,9 +205,8 @@ public final class FxMatrix
     if (index1 != null && index2 != null) {
       return rates.get(index1, index2);
     } else {
-      throw new IllegalArgumentException(
-          "No rate found for " + baseCurrency + "/" + counterCurrency +
-              " - FX matrix only contains rates for: " + currencies.keySet());
+      throw new IllegalArgumentException(Messages.format(
+          "No FX rate found for {}/{}, matrix only contains rates for {}", baseCurrency, counterCurrency, currencies.keySet()));
     }
   }
 
@@ -299,6 +300,11 @@ public final class FxMatrix
   static {
     JodaBeanUtils.registerMetaBean(FxMatrix.Meta.INSTANCE);
   }
+
+  /**
+   * The serialization version id.
+   */
+  private static final long serialVersionUID = 1L;
 
   /**
    * Creates an instance.

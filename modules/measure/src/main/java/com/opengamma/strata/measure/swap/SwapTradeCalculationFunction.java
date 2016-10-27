@@ -7,6 +7,7 @@ package com.opengamma.strata.measure.swap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -19,7 +20,6 @@ import com.opengamma.strata.calc.runner.CalculationParameters;
 import com.opengamma.strata.calc.runner.FunctionRequirements;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.Result;
-import com.opengamma.strata.data.scenario.ScenarioArray;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.measure.AdvancedMeasures;
 import com.opengamma.strata.measure.Measures;
@@ -50,7 +50,9 @@ import com.opengamma.strata.product.swap.SwapTrade;
  *   <li>{@linkplain Measures#LEG_PRESENT_VALUE Leg present value}
  *   <li>{@linkplain Measures#CURRENCY_EXPOSURE Currency exposure}
  *   <li>{@linkplain Measures#CURRENT_CASH Current cash}
+ *   <li>{@linkplain Measures#RESOLVED_TARGET Resolved trade}
  *   <li>{@linkplain AdvancedMeasures#PV01_SEMI_PARALLEL_GAMMA_BUCKETED PV01 semi-parallel gamma bucketed}
+ *   <li>{@linkplain AdvancedMeasures#PV01_SINGLE_NODE_GAMMA_BUCKETED PV01 single node gamma bucketed}
  * </ul>
  * <p>
  * The "natural" currency is the currency of the swaption, which is limited to be single-currency.
@@ -77,7 +79,9 @@ public class SwapTradeCalculationFunction
           .put(Measures.LEG_PRESENT_VALUE, SwapMeasureCalculations.DEFAULT::legPresentValue)
           .put(Measures.CURRENCY_EXPOSURE, SwapMeasureCalculations.DEFAULT::currencyExposure)
           .put(Measures.CURRENT_CASH, SwapMeasureCalculations.DEFAULT::currentCash)
+          .put(Measures.RESOLVED_TARGET, (rt, smd) -> rt)
           .put(AdvancedMeasures.PV01_SEMI_PARALLEL_GAMMA_BUCKETED, SwapMeasureCalculations.DEFAULT::pv01SemiParallelGammaBucketed)
+          .put(AdvancedMeasures.PV01_SINGLE_NODE_GAMMA_BUCKETED, SwapMeasureCalculations.DEFAULT::pv01SingleNodeGammaBucketed)
           .build();
 
   private static final ImmutableSet<Measure> MEASURES = CALCULATORS.keySet();
@@ -97,6 +101,11 @@ public class SwapTradeCalculationFunction
   @Override
   public Set<Measure> supportedMeasures() {
     return MEASURES;
+  }
+
+  @Override
+  public Optional<String> identifier(SwapTrade target) {
+    return target.getInfo().getId().map(id -> id.toString());
   }
 
   @Override
@@ -161,7 +170,7 @@ public class SwapTradeCalculationFunction
   //-------------------------------------------------------------------------
   @FunctionalInterface
   interface SingleMeasureCalculation {
-    public abstract ScenarioArray<?> calculate(
+    public abstract Object calculate(
         ResolvedSwapTrade trade,
         RatesScenarioMarketData marketData);
   }
