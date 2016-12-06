@@ -585,8 +585,8 @@ public final class PeriodicSchedule
   // dedicated list implementation for backwards looping for performance
   // only implements those methods that are needed
   private static class BackwardsList extends AbstractList<LocalDate> {
-    int first;
-    LocalDate[] array;
+    private int first;
+    private LocalDate[] array;
 
     BackwardsList(int capacity) {
       this.array = new LocalDate[capacity];
@@ -704,8 +704,11 @@ public final class PeriodicSchedule
     ImmutableList<LocalDate> deduplicated = ImmutableSet.copyOf(adj).asList();
     if (deduplicated.size() < adj.size()) {
       throw new ScheduleException(
-          this, "Schedule calculation resulted in duplicate adjusted dates {} from unadjusted dates {} " +
-              "using adjustment '{}'", adj, unadj, businessDayAdjustment);
+          this,
+          "Schedule calculation resulted in duplicate adjusted dates {} from unadjusted dates {} using adjustment '{}'",
+          adj,
+          unadj,
+          businessDayAdjustment);
     }
     return deduplicated;
   }
