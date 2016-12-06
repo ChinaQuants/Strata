@@ -1,3 +1,8 @@
+/**
+ * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
+ *
+ * Please see distribution for license.
+ */
 package com.opengamma.strata.pricer.fxopt;
 
 import com.opengamma.strata.basics.currency.Currency;
@@ -289,8 +294,7 @@ public class VannaVolgaFxVanillaOptionProductPricer {
       double strike,
       double timeToExpiry,
       double volATM,
-      double[] strikesReference
-      ) {
+      double[] strikesReference) {
 
     double lnk21 = Math.log(strikesReference[1] / strikesReference[0]);
     double lnk31 = Math.log(strikesReference[2] / strikesReference[0]);
